@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'auth_service.dart';
+import 'login/login_page.dart';
+import '../home/home_page.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -19,10 +21,10 @@ class AuthGate extends StatelessWidget {
         }
 
         if (!snapshot.hasData) {
-          return const Placeholder(); // Login vendrá aquí
+          return const LoginPage();
         }
 
-        return const Placeholder(); // Home vendrá aquí
+        return const HomePage();
       },
     );
   }
