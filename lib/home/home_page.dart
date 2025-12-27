@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../auth/auth_service.dart';
 
 class HomePage extends StatelessWidget {
@@ -7,8 +6,8 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
     final authService = AuthService();
+    final user = authService.currentUser;
 
     return Scaffold(
       appBar: AppBar(
