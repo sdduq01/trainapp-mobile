@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../models/onboarding_data.dart';
 
 class OnboardingStep2Page extends StatefulWidget {
@@ -27,13 +28,8 @@ class _OnboardingStep2PageState extends State<OnboardingStep2Page> {
       trainingExperienceMonths: _experienceMonths.round(),
     );
 
-    // Por ahora solo debug
-    debugPrint('ONBOARDING COMPLETO');
+    debugPrint('🔥 ONBOARDING COMPLETO 🔥');
     debugPrint(finalData.toString());
-
-    // En el próximo paso:
-    // - Guardar en Firestore
-    // - Redirigir a Home
   }
 
   @override
@@ -47,6 +43,34 @@ class _OnboardingStep2PageState extends State<OnboardingStep2Page> {
         padding: const EdgeInsets.all(16),
         child: ListView(
           children: [
+            // ✅ CONFIRMACIÓN VISUAL
+            const Center(
+              child: Text(
+                'STEP 2 OK 🔥',
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // 🔍 Mostrar datos recibidos (debug UX)
+            Card(
+              color: Colors.grey.shade100,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  previousData.toString(),
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
             const Text(
               '¿Cuál es tu objetivo?',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
