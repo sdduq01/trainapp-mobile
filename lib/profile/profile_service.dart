@@ -6,13 +6,14 @@ class ProfileService {
 
   Future<UserProfile?> getProfile(String uid) async {
     final doc = await _db.collection('profiles').doc(uid).get();
-
     if (!doc.exists) return null;
-
     return UserProfile.fromMap(uid, doc.data()!);
   }
 
-  Future<void> createProfile(UserProfile profile) async {
-    await _db.collection('profiles').doc(profile.uid).set(profile.toMap());
+  Future<void> saveProfile(UserProfile profile) async {
+    await _db
+        .collection('profiles')
+        .doc(profile.uid)
+        .set(profile.toMap(), SetOptions(merge: true));
   }
 }
