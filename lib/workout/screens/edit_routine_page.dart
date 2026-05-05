@@ -1,0 +1,422 @@
+import 'package:flutter/material.dart';
+import '../models/exercise.dart';
+import '../models/routine.dart';
+import '../services/exercise_service.dart';
+import '../services/routine_service.dart';
+
+class EditRoutinePage extends StatefulWidget {
+  final Routine routine;
+  const EditRoutinePage({required this.routine, super.key});
+
+  @override
+  State<EditRoutinePage> createState() => _EditRoutinePageState();
+}
+
+class _EditRoutinePageState extends State<EditRoutinePage> {
+  late Routine _routine;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _routine = widget.routine;
+  }
+
+  // ── Mutaciones de rutina ─────────────────────────────────
+
+  void _removeExercise(int dayIdx, int exIdx) {
+    final days = _copyDays();
+    final exercises = List<RoutineExercise>.from(days[dayIdx].exercises)
+      ..removeAt(exIdx);
+    days[dayIdx] = _copyDay(days[dayIdx], exercises: exercises);
+    setState(() => _routine = _copyRoutine(days));
+  }
+
+  void _updateExercise(int dayIdx, int exIdx, RoutineExercise updated) {
+    final days = _copyDays();
+    final exercises = List<RoutineExercise>.from(days[dayIdx].exercises);
+    exercises[exIdx] = updated;
+    days[dayIdx] = _copyDay(days[dayIdx], exercises: exercises);
+    setState(() => _routine = _copyRoutine(days));
+  }
+
+  void _addExercise(int dayIdx, RoutineExercise exercise) {
+    final days = _copyDays();
+    final exercises = List<RoutineExercise>.from(days[dayIdx].exercises)
+      ..add(exercise);
+    days[dayIdx] = _copyDay(days[dayIdx], exercises: exercises);
+    setState(() => _routine = _copyRoutine(days));
+  }
+
+  // ── Helpers de copia inmutable ───────────────────────────
+
+  List<RoutineDay> _copyDays() => List<RoutineDay>.from(_routine.days);
+
+  RoutineDay _copyDay(RoutineDay day, {required List<RoutineExercise> exercises}) =>
+      RoutineDay(dayNumber: day.dayNumber, name: day.name, focus: day.focus, exercises: exercises);
+
+  Routine _copyRoutine(List<RoutineDay> days) => Routine(
+        userId: _routine.userId,
+        type: _routine.type,
+        name: _routine.name,
+        weekNumber: _routine.weekNumber,
+        createdAt: _routine.createdAt,
+        days: days,
+      );
+
+  // ── Guardar ──────────────────────────────────────────────
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    try {
+      await RoutineService().saveRoutine(_routine);
+      if (mounted) Navigator.pop(context, _routine);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al guardar: $e')),
+        );
+      }
+    }
+  }
+
+  // ── Diálogo de edición ───────────────────────────────────
+
+  Future<void> _showEditDialog(int dayIdx, int exIdx) async {
+    final ex = _routine.days[dayIdx].exercises[exIdx];
+    int sets = ex.sets;
+    int repsMin = ex.repsMin;
+    int repsMax = ex.repsMax;
+    String weightUnit = ex.weightUnit;
+    double progressionStep = ex.progressionStep;
+
+    const steps = [1.0, 1.25, 2.5, 5.0, 10.0];
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text(ex.name, style: const TextStyle(fontSize: 16)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _Counter(
+                  label: 'Series',
+                  value: sets,
+                  min: 1, max: 8,
+                  onChanged: (v) => setDialogState(() => sets = v),
+                ),
+                const SizedBox(height: 16),
+                _Counter(
+                  label: 'Reps mínimas',
+                  value: repsMin,
+                  min: 1, max: 30,
+                  onChanged: (v) => setDialogState(() => repsMin = v),
+                ),
+                const SizedBox(height: 16),
+                _Counter(
+                  label: 'Reps máximas',
+                  value: repsMax,
+                  min: 1, max: 30,
+                  onChanged: (v) => setDialogState(() => repsMax = v),
+                ),
+                const SizedBox(height: 20),
+                const Divider(),
+                const SizedBox(height: 8),
+                const Text('Unidad de peso', style: TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'kg', label: Text('kg')),
+                    ButtonSegment(value: 'lbs', label: Text('lbs')),
+                  ],
+                  selected: {weightUnit},
+                  onSelectionChanged: (s) =>
+                      setDialogState(() => weightUnit = s.first),
+                ),
+                const SizedBox(height: 16),
+                const Text('Incremento de progresión', style: TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  children: steps.map((s) {
+                    final label = s % 1 == 0 ? '${s.toInt()}' : '$s';
+                    return ChoiceChip(
+                      label: Text('$label ${weightUnit == 'lbs' ? 'lb' : 'kg'}'),
+                      selected: progressionStep == s,
+                      onSelected: (_) => setDialogState(() => progressionStep = s),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () {
+                _updateExercise(
+                  dayIdx, exIdx,
+                  RoutineExercise(
+                    exerciseId: ex.exerciseId,
+                    name: ex.name,
+                    sets: sets,
+                    repsMin: repsMin,
+                    repsMax: repsMax < repsMin ? repsMin : repsMax,
+                    currentWeight: ex.currentWeight,
+                    restSeconds: ex.restSeconds,
+                    weightUnit: weightUnit,
+                    progressionStep: progressionStep,
+                  ),
+                );
+                Navigator.pop(ctx);
+              },
+              child: const Text('Guardar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Sheet de agregar ejercicio (desde Firestore) ─────────
+
+  Future<void> _showAddExerciseSheet(int dayIdx) async {
+    // Carga ejercicios de Firestore antes de abrir el sheet
+    List<Exercise>? catalog;
+    String? error;
+    try {
+      catalog = await ExerciseService().getExercises();
+    } catch (e) {
+      error = e.toString();
+    }
+
+    if (!mounted) return;
+
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudieron cargar ejercicios: $error')),
+      );
+      return;
+    }
+
+    final day = _routine.days[dayIdx];
+    final existing = day.exercises.map((e) => e.exerciseId).toSet();
+
+    // Prioriza ejercicios del mismo grupo muscular del día
+    final primary = catalog!.where((e) =>
+        e.muscle == day.focus ||
+        (day.focus == 'upper' && (e.muscle == 'push' || e.muscle == 'pull')) ||
+        (day.focus == 'lower' && e.muscle == 'legs')).toList();
+    final others = catalog.where((e) => !primary.contains(e)).toList();
+    final sorted = [...primary, ...others];
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.6,
+        maxChildSize: 0.9,
+        builder: (_, controller) => Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'Agregar ejercicio — ${day.name}',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                controller: controller,
+                itemCount: sorted.length,
+                itemBuilder: (_, i) {
+                  final ex = sorted[i];
+                  final alreadyAdded = existing.contains(ex.id);
+                  return ListTile(
+                    title: Text(ex.name),
+                    subtitle: Text(ex.muscle),
+                    trailing: alreadyAdded
+                        ? const Icon(Icons.check, color: Colors.green)
+                        : const Icon(Icons.add),
+                    enabled: !alreadyAdded,
+                    onTap: alreadyAdded ? null : () {
+                      _addExercise(
+                        dayIdx,
+                        RoutineExercise(
+                          exerciseId: ex.id,
+                          name: ex.name,
+                          sets: ex.defaultSets,
+                          repsMin: ex.defaultRepsMin,
+                          repsMax: ex.defaultRepsMax,
+                          restSeconds: ex.restSeconds,
+                          weightUnit: ex.defaultWeightUnit,
+                          progressionStep: ex.defaultProgressionStep,
+                        ),
+                      );
+                      Navigator.pop(context);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── UI ───────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Editar rutina'),
+        actions: [
+          _saving
+              ? const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: SizedBox(
+                    width: 20, height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              : TextButton(
+                  onPressed: _save,
+                  child: const Text('Guardar'),
+                ),
+        ],
+      ),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(12),
+        itemCount: _routine.days.length,
+        itemBuilder: (_, dayIdx) {
+          final day = _routine.days[dayIdx];
+          return Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Día ${day.dayNumber} · ${day.name}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => _showAddExerciseSheet(dayIdx),
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('Agregar'),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                ReorderableListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: day.exercises.length,
+                  onReorder: (oldIdx, newIdx) {
+                    final days = _copyDays();
+                    final exercises = List<RoutineExercise>.from(days[dayIdx].exercises);
+                    if (newIdx > oldIdx) newIdx--;
+                    final item = exercises.removeAt(oldIdx);
+                    exercises.insert(newIdx, item);
+                    days[dayIdx] = _copyDay(days[dayIdx], exercises: exercises);
+                    setState(() => _routine = _copyRoutine(days));
+                  },
+                  itemBuilder: (_, exIdx) {
+                    final ex = day.exercises[exIdx];
+                    return ListTile(
+                      key: ValueKey('${dayIdx}_$exIdx'),
+                      title: Text(ex.name),
+                      subtitle: Text(
+                        '${ex.sets} series · ${ex.repsMin}–${ex.repsMax} reps'
+                        ' · +${_stepLabel(ex.progressionStep)} ${ex.weightUnit}',
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit_outlined, size: 20),
+                            onPressed: () => _showEditDialog(dayIdx, exIdx),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                            onPressed: () => _removeExercise(dayIdx, exIdx),
+                          ),
+                          const Icon(Icons.drag_handle, color: Colors.grey),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  String _stepLabel(double step) =>
+      step % 1 == 0 ? '${step.toInt()}' : '$step';
+}
+
+// ── Widget contador ──────────────────────────────────────────
+
+class _Counter extends StatelessWidget {
+  final String label;
+  final int value;
+  final int min;
+  final int max;
+  final ValueChanged<int> onChanged;
+
+  const _Counter({
+    required this.label,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(child: Text(label)),
+        IconButton(
+          icon: const Icon(Icons.remove),
+          onPressed: value > min ? () => onChanged(value - 1) : null,
+        ),
+        SizedBox(
+          width: 32,
+          child: Text(
+            '$value',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.add),
+          onPressed: value < max ? () => onChanged(value + 1) : null,
+        ),
+      ],
+    );
+  }
+}

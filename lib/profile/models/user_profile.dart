@@ -11,6 +11,7 @@ class UserProfile {
   final double? height;
   final double? bodyFat;
   final int? trainingExperienceMonths;
+  final int? trainingDaysPerWeek;
   final TrainingGoal? goal;
   final bool completedOnboarding;
 
@@ -20,6 +21,7 @@ class UserProfile {
     this.height,
     this.bodyFat,
     this.trainingExperienceMonths,
+    this.trainingDaysPerWeek,
     this.goal,
     required this.completedOnboarding,
   });
@@ -30,11 +32,12 @@ class UserProfile {
       weight: (data['weight'] as num?)?.toDouble(),
       height: (data['height'] as num?)?.toDouble(),
       bodyFat: (data['bodyFat'] as num?)?.toDouble(),
-      trainingExperienceMonths: data['trainingExperienceMonths'],
+      trainingExperienceMonths: data['trainingExperienceMonths'] as int?,
+      trainingDaysPerWeek: data['trainingDaysPerWeek'] as int?,
       goal: data['goal'] != null
-          ? TrainingGoal.values[data['goal']]
+          ? TrainingGoal.values[data['goal'] as int]
           : null,
-      completedOnboarding: data['completedOnboarding'] ?? false,
+      completedOnboarding: data['completedOnboarding'] as bool? ?? false,
     );
   }
 
@@ -44,8 +47,30 @@ class UserProfile {
       'height': height,
       'bodyFat': bodyFat,
       'trainingExperienceMonths': trainingExperienceMonths,
+      'trainingDaysPerWeek': trainingDaysPerWeek,
       'goal': goal?.index,
       'completedOnboarding': completedOnboarding,
     };
+  }
+
+  UserProfile copyWith({
+    double? weight,
+    double? height,
+    double? bodyFat,
+    int? trainingExperienceMonths,
+    TrainingGoal? goal,
+    bool? completedOnboarding,
+  }) {
+    return UserProfile(
+      uid: uid,
+      weight: weight ?? this.weight,
+      height: height ?? this.height,
+      bodyFat: bodyFat ?? this.bodyFat,
+      trainingExperienceMonths:
+          trainingExperienceMonths ?? this.trainingExperienceMonths,
+      goal: goal ?? this.goal,
+      completedOnboarding:
+          completedOnboarding ?? this.completedOnboarding,
+    );
   }
 }

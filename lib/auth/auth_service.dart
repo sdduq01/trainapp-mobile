@@ -17,6 +17,16 @@ class AuthService {
     );
   }
 
+  Future<void> signUpWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    await _auth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+  }
+
   Future<void> signOut() async {
     await _auth.signOut();
   }

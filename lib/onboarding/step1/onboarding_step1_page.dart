@@ -75,18 +75,65 @@ class _OnboardingStep1PageState extends State<OnboardingStep1Page> {
             ),
             const SizedBox(height: 12),
 
-            Wrap(
-              spacing: 8,
+            Column(
               children: [
                 for (final option in bodyFatOptions)
-                  ChoiceChip(
-                    label: Text(option['label'] as String),
-                    selected: _selectedBodyFat == option['value'],
-                    onSelected: (_) {
-                      setState(() {
-                        _selectedBodyFat = option['value'] as double;
-                      });
-                    },
+                  GestureDetector(
+                    onTap: () => setState(() {
+                      _selectedBodyFat = option['value'] as double;
+                    }),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: _selectedBodyFat == option['value']
+                            ? Theme.of(context).colorScheme.primaryContainer
+                            : Theme.of(context).colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _selectedBodyFat == option['value']
+                              ? Theme.of(context).colorScheme.primary
+                              : Colors.transparent,
+                          width: 2,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Text(
+                            option['emoji'] as String,
+                            style: const TextStyle(fontSize: 28),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  option['label'] as String,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                                Text(
+                                  option['description'] as String,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (_selectedBodyFat == option['value'])
+                            Icon(
+                              Icons.check_circle,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
               ],
             ),
