@@ -88,6 +88,7 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
     int sets = ex.sets;
     int repsMin = ex.repsMin;
     int repsMax = ex.repsMax;
+    int restSeconds = ex.restSeconds;
     String weightUnit = ex.weightUnit;
     double progressionStep = ex.progressionStep;
 
@@ -122,6 +123,13 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
                   value: repsMax,
                   min: 1, max: 30,
                   onChanged: (v) => setDialogState(() => repsMax = v),
+                ),
+                const SizedBox(height: 16),
+                _Counter(
+                  label: 'Descanso (seg)',
+                  value: restSeconds,
+                  min: 30, max: 300, step: 15,
+                  onChanged: (v) => setDialogState(() => restSeconds = v),
                 ),
                 const SizedBox(height: 20),
                 const Divider(),
@@ -170,7 +178,7 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
                     repsMin: repsMin,
                     repsMax: repsMax < repsMin ? repsMin : repsMax,
                     currentWeight: ex.currentWeight,
-                    restSeconds: ex.restSeconds,
+                    restSeconds: restSeconds,
                     weightUnit: weightUnit,
                     progressionStep: progressionStep,
                   ),
@@ -347,6 +355,7 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
                       title: Text(ex.name),
                       subtitle: Text(
                         '${ex.sets} series · ${ex.repsMin}–${ex.repsMax} reps'
+                        ' · ${ex.restSeconds}s descanso'
                         ' · +${_stepLabel(ex.progressionStep)} ${ex.weightUnit}',
                       ),
                       trailing: Row(
@@ -385,6 +394,7 @@ class _Counter extends StatelessWidget {
   final int value;
   final int min;
   final int max;
+  final int step;
   final ValueChanged<int> onChanged;
 
   const _Counter({
@@ -392,6 +402,7 @@ class _Counter extends StatelessWidget {
     required this.value,
     required this.min,
     required this.max,
+    this.step = 1,
     required this.onChanged,
   });
 
@@ -402,10 +413,12 @@ class _Counter extends StatelessWidget {
         Expanded(child: Text(label)),
         IconButton(
           icon: const Icon(Icons.remove),
-          onPressed: value > min ? () => onChanged(value - 1) : null,
+          onPressed: value > min
+              ? () => onChanged((value - step).clamp(min, max))
+              : null,
         ),
         SizedBox(
-          width: 32,
+          width: 40,
           child: Text(
             '$value',
             textAlign: TextAlign.center,
@@ -414,7 +427,9 @@ class _Counter extends StatelessWidget {
         ),
         IconButton(
           icon: const Icon(Icons.add),
-          onPressed: value < max ? () => onChanged(value + 1) : null,
+          onPressed: value < max
+              ? () => onChanged((value + step).clamp(min, max))
+              : null,
         ),
       ],
     );

@@ -11,6 +11,13 @@ class TrainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1565C0),
+          primary: const Color(0xFF1565C0),
+        ),
+        useMaterial3: true,
+      ),
       home: const AuthGate(),
       routes: {
         '/onboarding/step1': (_) => const OnboardingStep1Page(),

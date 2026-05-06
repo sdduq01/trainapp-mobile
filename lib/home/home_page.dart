@@ -4,7 +4,11 @@ import '../auth/auth_service.dart';
 import '../auth/auth_gate.dart';
 import '../workout/models/routine.dart';
 import '../workout/services/routine_service.dart';
+import '../workout/services/session_service.dart';
 import '../workout/screens/edit_routine_page.dart';
+import '../workout/screens/workout_session_page.dart';
+import '../workout/screens/history_page.dart';
+import 'weekly_progress_chart.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -16,6 +20,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   Routine? _routine;
   bool _loading = true;
+  int _chartKey = 0;
   final _user = FirebaseAuth.instance.currentUser;
 
   @override
@@ -35,9 +40,90 @@ class _HomePageState extends State<HomePage> {
       context,
       MaterialPageRoute(builder: (_) => EditRoutinePage(routine: _routine!)),
     );
-    if (updated != null) {
-      setState(() => _routine = updated);
+    if (updated != null) setState(() => _routine = updated);
+  }
+
+  static int _weekOfYear(DateTime date) =>
+      (date.difference(DateTime(date.year, 1, 1)).inDays / 7).floor() + 1;
+
+  Future<void> _onSessionCompleted() async {
+    setState(() => _chartKey++);
+
+    if (_routine == null) return;
+    final sessions = await SessionService().getSessionsForUser(_user!.uid);
+    final now = DateTime.now();
+    final currentWeek = _weekOfYear(now);
+    final sessionsThisWeek = sessions
+        .where((s) => s.date.year == now.year && _weekOfYear(s.date) == currentWeek)
+        .length;
+
+    if (mounted && sessionsThisWeek >= _routine!.days.length) {
+      _showYeahBuddyDialog(currentWeek);
     }
+  }
+
+  void _showYeahBuddyDialog(int weekNumber) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.black,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(28, 36, 28, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('🔥', style: TextStyle(fontSize: 64)),
+              const SizedBox(height: 16),
+              const Text(
+                'YEAHHHH\nBUDDY!!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 44,
+                  fontWeight: FontWeight.w900,
+                  height: 1.1,
+                  letterSpacing: 3,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Semana $weekNumber COMPLETADA 💪',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.green,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                "Ain't nothing but a peanut!",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white54, fontSize: 13),
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    'LIGHT WEIGHT BABY! 🏋️',
+                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -46,6 +132,14 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text('TrainApp'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: 'Historial',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const HistoryPage()),
+            ),
+          ),
           if (_routine != null)
             IconButton(
               icon: const Icon(Icons.edit_outlined),
@@ -70,15 +164,25 @@ class _HomePageState extends State<HomePage> {
           ? const Center(child: CircularProgressIndicator())
           : _routine == null
               ? const Center(child: Text('No tienes una rutina asignada aún.'))
-              : _RoutineView(routine: _routine!),
+              : _RoutineView(
+                  routine: _routine!,
+                  chartKey: _chartKey,
+                  onSessionCompleted: _onSessionCompleted,
+                ),
     );
   }
 }
 
 class _RoutineView extends StatelessWidget {
   final Routine routine;
+  final int chartKey;
+  final VoidCallback onSessionCompleted;
 
-  const _RoutineView({required this.routine});
+  const _RoutineView({
+    required this.routine,
+    required this.chartKey,
+    required this.onSessionCompleted,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -108,9 +212,16 @@ class _RoutineView extends StatelessWidget {
         const SizedBox(height: 20),
 
         for (final day in routine.days) ...[
-          _DayCard(day: day),
+          _DayCard(day: day, onSessionCompleted: onSessionCompleted),
           const SizedBox(height: 12),
         ],
+
+        const Divider(height: 32),
+        WeeklyProgressChart(
+          key: ValueKey(chartKey),
+          plannedDaysPerWeek: routine.days.length,
+        ),
+        const SizedBox(height: 16),
       ],
     );
   }
@@ -118,8 +229,9 @@ class _RoutineView extends StatelessWidget {
 
 class _DayCard extends StatelessWidget {
   final RoutineDay day;
+  final VoidCallback onSessionCompleted;
 
-  const _DayCard({required this.day});
+  const _DayCard({required this.day, required this.onSessionCompleted});
 
   IconData get _icon {
     return switch (day.focus) {
@@ -163,6 +275,25 @@ class _DayCard extends StatelessWidget {
                     )
                   : const Text('— kg', style: TextStyle(color: Colors.grey)),
             ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+            child: SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                icon: const Icon(Icons.play_arrow),
+                label: const Text('Iniciar sesión'),
+                onPressed: () async {
+                  final completed = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => WorkoutSessionPage(day: day),
+                    ),
+                  );
+                  if (completed == true) onSessionCompleted();
+                },
+              ),
+            ),
+          ),
         ],
       ),
     );
