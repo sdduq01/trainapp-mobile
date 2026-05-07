@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../workout/services/progression_service.dart';
 import '../workout/services/session_service.dart';
 
 class WeeklyProgressChart extends StatefulWidget {
   final int plannedDaysPerWeek;
+  final int totalRoutineExercises;
 
-  const WeeklyProgressChart({required this.plannedDaysPerWeek, super.key});
+  const WeeklyProgressChart({
+    required this.plannedDaysPerWeek,
+    required this.totalRoutineExercises,
+    super.key,
+  });
 
   @override
   State<WeeklyProgressChart> createState() => _WeeklyProgressChartState();
@@ -42,11 +48,19 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
   }
 
   Future<void> _load() async {
-    final sessions = await SessionService().getSessionsForUser(_userId);
     final now = DateTime.now();
     final currentYear = now.year;
     final currentWeek = _weekNumber(now);
     final planned = widget.plannedDaysPerWeek;
+
+    final sessions = await SessionService().getSessionsForUser(_userId);
+    Map<int, int> progressionsByWeek = {};
+    try {
+      progressionsByWeek =
+          await ProgressionService().getProgressionsByWeek(_userId, currentYear);
+    } catch (_) {
+      // Colección aún sin reglas o sin datos — el chart carga igual sin progresos
+    }
 
     // Agrupar sesiones por semana (solo año actual)
     final Map<int, int> byWeek = {};
@@ -59,7 +73,12 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
 
     final stats = List.generate(
       currentWeek,
-      (i) => _WeekStat(week: i + 1, done: byWeek[i + 1] ?? 0, planned: planned),
+      (i) => _WeekStat(
+        week: i + 1,
+        done: byWeek[i + 1] ?? 0,
+        planned: planned,
+        progressions: progressionsByWeek[i + 1] ?? 0,
+      ),
     );
 
     // Racha: semanas completas consecutivas hacia atrás
@@ -181,6 +200,17 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
             barColor = Colors.red.shade400;
           }
 
+          final isProgressionWeek =
+              stat.progressions > widget.totalRoutineExercises * 0.3;
+          final Border? border;
+          if (isProgressionWeek) {
+            border = Border.all(color: const Color(0xFFFFD700), width: 2.5);
+          } else if (isCurrentWeek) {
+            border = Border.all(color: colorScheme.primary, width: 2);
+          } else {
+            border = null;
+          }
+
           return Padding(
             padding: const EdgeInsets.only(right: _barGap),
             child: SizedBox(
@@ -189,8 +219,9 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Etiqueta con el número de sesiones encima de la barra
-                  if (stat.done > 0) ...[
+                  if (isProgressionWeek) ...[
+                    const Text('⚡', style: TextStyle(fontSize: 9)),
+                  ] else if (stat.done > 0) ...[
                     Text(
                       '${stat.done}',
                       style: TextStyle(
@@ -199,8 +230,8 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
                         color: barColor,
                       ),
                     ),
-                    const SizedBox(height: 2),
                   ],
+                  const SizedBox(height: 2),
                   // Barra
                   Container(
                     width: _barWidth,
@@ -208,9 +239,7 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
                     decoration: BoxDecoration(
                       color: barColor,
                       borderRadius: BorderRadius.circular(4),
-                      border: isCurrentWeek
-                          ? Border.all(color: colorScheme.primary, width: 2)
-                          : null,
+                      border: border,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -234,13 +263,36 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
   }
 
   Widget _buildLegend() {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _LegendDot(color: Colors.green, label: '≥75%'),
-        const SizedBox(width: 12),
-        _LegendDot(color: Colors.amber, label: '≥50%'),
-        const SizedBox(width: 12),
-        _LegendDot(color: Colors.red.shade400, label: '<50%'),
+        Row(
+          children: [
+            _LegendDot(color: Colors.green, label: '≥75%'),
+            const SizedBox(width: 12),
+            _LegendDot(color: Colors.amber, label: '≥50%'),
+            const SizedBox(width: 12),
+            _LegendDot(color: Colors.red.shade400, label: '<50%'),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                border: Border.all(color: const Color(0xFFFFD700), width: 2),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '>30% de ejercicios con progresión',
+              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -272,6 +324,12 @@ class _WeekStat {
   final int week;
   final int done;
   final int planned;
+  final int progressions;
 
-  const _WeekStat({required this.week, required this.done, required this.planned});
+  const _WeekStat({
+    required this.week,
+    required this.done,
+    required this.planned,
+    this.progressions = 0,
+  });
 }

@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/routine.dart';
 import '../models/workout_session.dart';
+import '../services/progression_service.dart';
+import '../services/routine_service.dart';
 import '../services/session_service.dart';
 
 class WorkoutSessionPage extends StatefulWidget {
@@ -267,10 +269,104 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
     );
 
     await SessionService().saveSession(session);
+    final progressed = await _applyProgression();
+
+    if (progressed.isNotEmpty) {
+      await ProgressionService().saveProgressionEvent(_userId, progressed.length);
+    }
 
     if (!mounted) return;
     setState(() => _saving = false);
-    _showCompletionDialog();
+    if (progressed.isNotEmpty) {
+      _showProgressionDialog(progressed);
+    } else {
+      _showCompletionDialog();
+    }
+  }
+
+  // Retorna lista de (nombre, pesoHoy, pesoSiguiente, unidad) para ejercicios que progresan.
+  // Siempre persiste el mayor peso usado en la sesión aunque no haya progresión.
+  Future<List<(String, double, double, String)>> _applyProgression() async {
+    final progressed = <(String, double, double, String)>[];
+    final routine = await RoutineService().getRoutine(_userId);
+    if (routine == null) return progressed;
+
+    bool changed = false;
+    final updatedDays = routine.days.map((day) {
+      if (day.dayNumber != widget.day.dayNumber) return day;
+
+      final updatedExercises = day.exercises.map((routineEx) {
+        final logIdx = widget.day.exercises
+            .indexWhere((e) => e.exerciseId == routineEx.exerciseId);
+        if (logIdx == -1) return routineEx;
+
+        final logged = _logged[logIdx];
+        final weights = logged
+            .where((s) => s != null && s.$2 > 0)
+            .map((s) => s!.$2)
+            .toList();
+        if (weights.isEmpty) return routineEx;
+
+        final maxWeightUsed = weights.reduce((a, b) => a > b ? a : b);
+
+        final setsAtMax = logged
+            .where((s) => s != null && s.$1 >= routineEx.repsMax && s.$2 > 0)
+            .length;
+
+        double newWeight;
+        bool didProgress = false;
+
+        if (routineEx.progressionStep > 0 && setsAtMax / routineEx.sets > 0.9) {
+          newWeight = maxWeightUsed + routineEx.progressionStep;
+          didProgress = true;
+        } else {
+          // Guarda el mayor peso usado aunque no haya progresión
+          newWeight = maxWeightUsed > routineEx.currentWeight
+              ? maxWeightUsed
+              : routineEx.currentWeight;
+        }
+
+        if (newWeight == routineEx.currentWeight) return routineEx;
+
+        changed = true;
+        if (didProgress) {
+          progressed.add(
+              (routineEx.name, maxWeightUsed, newWeight, routineEx.weightUnit));
+        }
+
+        return RoutineExercise(
+          exerciseId: routineEx.exerciseId,
+          name: routineEx.name,
+          sets: routineEx.sets,
+          repsMin: routineEx.repsMin,
+          repsMax: routineEx.repsMax,
+          currentWeight: newWeight,
+          restSeconds: routineEx.restSeconds,
+          weightUnit: routineEx.weightUnit,
+          progressionStep: routineEx.progressionStep,
+        );
+      }).toList();
+
+      return RoutineDay(
+        dayNumber: day.dayNumber,
+        name: day.name,
+        focus: day.focus,
+        exercises: updatedExercises,
+      );
+    }).toList();
+
+    if (changed) {
+      await RoutineService().saveRoutine(Routine(
+        userId: routine.userId,
+        type: routine.type,
+        name: routine.name,
+        weekNumber: routine.weekNumber,
+        createdAt: routine.createdAt,
+        days: updatedDays,
+      ));
+    }
+
+    return progressed;
   }
 
   void _showCompletionDialog() {
@@ -289,6 +385,108 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
             child: const Text('Volver al inicio'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showProgressionDialog(List<(String, double, double, String)> progressed) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black87,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.black,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(28, 36, 28, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('💪', style: TextStyle(fontSize: 64)),
+              const SizedBox(height: 16),
+              const Text(
+                'PROGRESIÓN\nDESBLOQUEADA',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 32,
+                  fontWeight: FontWeight.w900,
+                  height: 1.1,
+                  letterSpacing: 2,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                '"Es una desgracia envejecer sin ver\nla belleza y la fuerza de la que\ntu cuerpo es capaz"',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 13,
+                  fontStyle: FontStyle.italic,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                '— Sócrates',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white38,
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Divider(color: Colors.white24),
+              const SizedBox(height: 12),
+              for (final p in progressed)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.trending_up, color: Colors.green, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          p.$1,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${p.$2} → ${p.$3} ${p.$4}',
+                        style: const TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).pop(true);
+                  },
+                  child: const Text(
+                    'SEGUIR CRECIENDO 🏋️',
+                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

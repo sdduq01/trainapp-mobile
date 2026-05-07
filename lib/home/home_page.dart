@@ -3,11 +3,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../auth/auth_service.dart';
 import '../auth/auth_gate.dart';
 import '../workout/models/routine.dart';
+import '../workout/services/progression_service.dart';
 import '../workout/services/routine_service.dart';
 import '../workout/services/session_service.dart';
 import '../workout/screens/edit_routine_page.dart';
 import '../workout/screens/workout_session_page.dart';
 import '../workout/screens/history_page.dart';
+import '../workout/screens/routine_catalog_page.dart';
 import 'weekly_progress_chart.dart';
 
 class HomePage extends StatefulWidget {
@@ -48,17 +50,32 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _onSessionCompleted() async {
     setState(() => _chartKey++);
+    await _loadRoutine(); // refresca pesos actualizados por progresión
 
-    if (_routine == null) return;
-    final sessions = await SessionService().getSessionsForUser(_user!.uid);
     final now = DateTime.now();
     final currentWeek = _weekOfYear(now);
+
+    final totalExercises = _routine?.days
+            .fold(0, (sum, d) => sum + d.exercises.length) ??
+        0;
+    final showSeneca = await ProgressionService().checkAndMarkSenecaMilestone(
+      _user!.uid, now.year, currentWeek, totalExercises,
+    );
+    if (mounted && showSeneca) {
+      _showSenecaDialog();
+      return;
+    }
+
+    if (_routine == null) return;
+    final sessions = await SessionService().getSessionsForUser(_user.uid);
     final sessionsThisWeek = sessions
         .where((s) => s.date.year == now.year && _weekOfYear(s.date) == currentWeek)
         .length;
 
-    if (mounted && sessionsThisWeek >= _routine!.days.length) {
-      _showYeahBuddyDialog(currentWeek);
+    if (sessionsThisWeek >= _routine!.days.length) {
+      final showYeahBuddy = await ProgressionService()
+          .checkAndMarkYeahBuddyMilestone(_user.uid, currentWeek);
+      if (mounted && showYeahBuddy) _showYeahBuddyDialog(currentWeek);
     }
   }
 
@@ -126,6 +143,75 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _showSenecaDialog() {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.black,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(28, 36, 28, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('🏆', style: TextStyle(fontSize: 64)),
+              const SizedBox(height: 16),
+              const Text(
+                '¡MÁS DEL 30%\nDE PROGRESOS!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.amber,
+                  fontSize: 32,
+                  fontWeight: FontWeight.w900,
+                  height: 1.1,
+                  letterSpacing: 2,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                '"Una gema no puede ser pulida\nsin fricción, ni un hombre\nperfeccionado sin pruebas"',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 13,
+                  fontStyle: FontStyle.italic,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                '— Séneca',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white38,
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.amber,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    'SEGUIR PULIENDO 💎',
+                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -139,6 +225,20 @@ class _HomePageState extends State<HomePage> {
               context,
               MaterialPageRoute(builder: (_) => const HistoryPage()),
             ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.menu_book),
+            tooltip: 'Catálogo de rutinas',
+            onPressed: () async {
+              final activated = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(builder: (_) => const RoutineCatalogPage()),
+              );
+              if (activated == true) {
+                setState(() => _loading = true);
+                await _loadRoutine();
+              }
+            },
           ),
           if (_routine != null)
             IconButton(
@@ -220,6 +320,8 @@ class _RoutineView extends StatelessWidget {
         WeeklyProgressChart(
           key: ValueKey(chartKey),
           plannedDaysPerWeek: routine.days.length,
+          totalRoutineExercises:
+              routine.days.fold(0, (sum, d) => sum + d.exercises.length),
         ),
         const SizedBox(height: 16),
       ],

@@ -41,6 +41,7 @@ const catalog = [
   { id: 'remo_barra',         name: 'Remo con Barra',                  muscle: 'pull', defaultSets: 4, defaultRepsMin: 8,  defaultRepsMax: 10, restSeconds: 90,  defaultWeightUnit: 'kg',  defaultProgressionStep: 5   },
   { id: 'remo_mancuerna',     name: 'Remo con Mancuerna',              muscle: 'pull', defaultSets: 3, defaultRepsMin: 10, defaultRepsMax: 12, restSeconds: 75,  defaultWeightUnit: 'kg',  defaultProgressionStep: 2.5 },
   { id: 'remo_cable',         name: 'Remo en Cable',                   muscle: 'pull', defaultSets: 3, defaultRepsMin: 10, defaultRepsMax: 12, restSeconds: 75,  defaultWeightUnit: 'kg',  defaultProgressionStep: 2.5 },
+  { id: 'remo_gironda',       name: 'Remo Gironda',                    muscle: 'pull', defaultSets: 4, defaultRepsMin: 8,  defaultRepsMax: 12, restSeconds: 90,  defaultWeightUnit: 'kg',  defaultProgressionStep: 5   },
   { id: 'face_pull',          name: 'Face Pull',                       muscle: 'pull', defaultSets: 3, defaultRepsMin: 15, defaultRepsMax: 20, restSeconds: 60,  defaultWeightUnit: 'kg',  defaultProgressionStep: 2.5 },
 
   // PULL · Bíceps
