@@ -6,6 +6,7 @@ import '../workout/models/routine.dart';
 import '../workout/services/progression_service.dart';
 import '../workout/services/routine_service.dart';
 import '../workout/services/session_service.dart';
+import '../profile/screens/profile_page.dart';
 import '../workout/screens/edit_routine_page.dart';
 import '../workout/screens/workout_session_page.dart';
 import '../workout/screens/history_page.dart';
@@ -218,6 +219,20 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text('TrainApp'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            tooltip: 'Mi perfil',
+            onPressed: () async {
+              final regenerated = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfilePage()),
+              );
+              if (regenerated == true) {
+                setState(() => _loading = true);
+                await _loadRoutine();
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.history),
             tooltip: 'Historial',

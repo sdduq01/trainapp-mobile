@@ -26,6 +26,7 @@ class _OnboardingStep2PageState extends State<OnboardingStep2Page> {
     TrainingGoal.muscleGain: 'Ganar masa muscular',
     TrainingGoal.recomposition: 'Recomposición corporal',
     TrainingGoal.sportComplement: 'Deporte complementario',
+    TrainingGoal.mentalHealth: 'Salud mental',
   };
 
   bool get _isValid => _selectedGoal != null && !_loading;
@@ -44,6 +45,7 @@ class _OnboardingStep2PageState extends State<OnboardingStep2Page> {
         weight: previousData.weight,
         height: previousData.height,
         bodyFat: previousData.bodyFat,
+        birthDate: previousData.birthDate,
         trainingExperienceMonths: _experienceMonths.round(),
         trainingDaysPerWeek: _trainingDays,
         goal: _selectedGoal,

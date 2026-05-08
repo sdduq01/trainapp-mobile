@@ -4,8 +4,14 @@ import 'dart:typed_data';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../profile/models/user_profile.dart';
+import '../../profile/profile_service.dart';
+import '../models/progression_type.dart';
 import '../models/routine.dart';
 import '../models/workout_session.dart';
+import '../services/exercise_notes_service.dart';
+import '../services/exercise_pr_service.dart';
+import '../services/progression_logic.dart';
 import '../services/progression_service.dart';
 import '../services/routine_service.dart';
 import '../services/session_service.dart';
@@ -23,11 +29,23 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
   final _userId = FirebaseAuth.instance.currentUser!.uid;
   final _audioPlayer = AudioPlayer();
 
+  static const int kNoteMaxLength = 200;
+
   int _exerciseIndex = 0;
   int _setIndex = 0;
 
   // [exerciseIndex][setIndex] = (repsDone, weight) | null
   late List<List<(int, double)?>> _logged;
+
+  // exerciseId → apunte. Cargado en initState y editado en sesión.
+  final Map<String, String> _notes = {};
+
+  // Configuración de intensidad cargada del perfil.
+  bool _intensityEnabled = false;
+  int _failureCadence = UserProfile.kFailureCadenceDefault;
+
+  // Semana de la rutina (1-indexada). Calculada a partir de routine.createdAt.
+  int _weekIndex = 1;
 
   late TextEditingController _weightCtrl;
   late TextEditingController _repsCtrl;
@@ -129,14 +147,146 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
         .map((e) => List<(int, double)?>.filled(e.sets, null))
         .toList();
     _initControllers();
+    _loadNotes();
+    _loadIntensityConfig();
+  }
+
+  Future<void> _loadIntensityConfig() async {
+    final results = await Future.wait([
+      ProfileService().getProfile(_userId),
+      RoutineService().getRoutine(_userId),
+    ]);
+    final profile = results[0] as UserProfile?;
+    final routine = results[1] as Routine?;
+    if (!mounted) return;
+    setState(() {
+      if (profile != null) {
+        _intensityEnabled = profile.intensityEnabled;
+        _failureCadence = profile.failureWeekCadence;
+      }
+      if (routine != null) {
+        _weekIndex = ProgressionLogic.weekIndexFor(routine);
+      }
+      // Re-prefilar el set activo con el target dinámico (puede haber
+      // cambiado tras conocer cadencia/semana).
+      _refillControllers();
+    });
+  }
+
+  SetTarget _currentTarget() {
+    final ex = _currentExercise;
+    if (_setIndex == 0) {
+      return ProgressionLogic.targetForSet(
+        exercise: ex,
+        setIndex: 0,
+        weekIndex: _weekIndex,
+        intensityEnabled: _intensityEnabled,
+        failureCadence: _failureCadence,
+      );
+    }
+
+    // A partir de set 2, el peso/reps depende de lo que el usuario hizo en el
+    // set anterior (sobre todo en piramidal).
+    final prev = _logged[_exerciseIndex][_setIndex - 1];
+    final prevWeight = prev?.$2 ?? ex.currentWeight;
+    final prevReps = prev?.$1 ?? 0;
+
+    switch (ex.progressionType) {
+      case ProgressionType.none:
+      case ProgressionType.doubleLinear:
+        final base = ProgressionLogic.targetForSet(
+          exercise: ex,
+          setIndex: _setIndex,
+          weekIndex: _weekIndex,
+          intensityEnabled: _intensityEnabled,
+          failureCadence: _failureCadence,
+        );
+        return SetTarget(
+          weight: prevWeight,
+          reps: base.reps,
+          rir: base.rir,
+          isFailure: base.isFailure,
+        );
+
+      case ProgressionType.pyramid:
+        final hitMax = prevReps >= ex.repsMax;
+        final newWeight = hitMax
+            ? prevWeight + ex.progressionStep
+            : prevWeight;
+        final rir =
+            ProgressionLogic.pyramidRirMap(ex.sets)[_setIndex];
+        final isFailure =
+            _intensityEnabled && _isLastSet && rir == 0;
+        return SetTarget(
+          weight: newWeight,
+          reps: ex.repsMax,
+          rir: _intensityEnabled ? rir : null,
+          isFailure: isFailure,
+        );
+
+      case ProgressionType.reversePyramid:
+        final newWeight = prevWeight - ex.progressionStep;
+        final reps = ex.repsMin + _setIndex;
+        final rir =
+            ProgressionLogic.reversePyramidRirMap(ex.sets)[_setIndex];
+        final isFailure =
+            _intensityEnabled && _isLastSet && rir == 0;
+        return SetTarget(
+          weight: newWeight,
+          reps: reps,
+          rir: _intensityEnabled ? rir : null,
+          isFailure: isFailure,
+        );
+    }
+  }
+
+  void _refillControllers() {
+    final t = _currentTarget();
+    _weightCtrl.text = t.weight > 0 ? _trimDouble(t.weight) : '';
+    _repsCtrl.text = t.reps.toString();
+  }
+
+  static String _trimDouble(double v) =>
+      v % 1 == 0 ? v.toStringAsFixed(0) : v.toString();
+
+  Future<void> _loadNotes() async {
+    final ids = widget.day.exercises.map((e) => e.exerciseId).toList();
+    final notes = await ExerciseNotesService().getForExercises(_userId, ids);
+    if (!mounted) return;
+    setState(() {
+      _notes
+        ..clear()
+        ..addAll(notes);
+    });
+  }
+
+  Future<void> _editNote() async {
+    final ex = _currentExercise;
+    final saved = await showDialog<String>(
+      context: context,
+      builder: (_) => _NoteEditorDialog(
+        exerciseName: ex.name,
+        initialNote: _notes[ex.exerciseId] ?? '',
+        maxLength: kNoteMaxLength,
+      ),
+    );
+    if (saved == null) return;
+    final trimmed = saved.trim();
+    await ExerciseNotesService().upsert(_userId, ex.exerciseId, trimmed);
+    if (!mounted) return;
+    setState(() {
+      if (trimmed.isEmpty) {
+        _notes.remove(ex.exerciseId);
+      } else {
+        _notes[ex.exerciseId] = trimmed;
+      }
+    });
   }
 
   void _initControllers() {
-    final ex = _currentExercise;
-    _weightCtrl = TextEditingController(
-      text: ex.currentWeight > 0 ? ex.currentWeight.toString() : '',
-    );
-    _repsCtrl = TextEditingController(text: ex.repsMax.toString());
+    _weightCtrl = TextEditingController();
+    _repsCtrl = TextEditingController();
+    _refillControllers();
   }
 
   void _disposeControllers() {
@@ -218,11 +368,8 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
   }
 
   void _advanceSet() {
-    final prevWeight =
-        _logged[_exerciseIndex][_setIndex]?.$2 ?? _currentExercise.currentWeight;
     setState(() => _setIndex++);
-    _repsCtrl.text   = _currentExercise.repsMax.toString();
-    _weightCtrl.text = prevWeight > 0 ? prevWeight.toString() : '';
+    _refillControllers();
   }
 
   void _advanceExercise() {
@@ -284,10 +431,71 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
     }
   }
 
-  // Retorna lista de (nombre, pesoHoy, pesoSiguiente, unidad) para ejercicios que progresan.
-  // Siempre persiste el mayor peso usado en la sesión aunque no haya progresión.
+  // Evalúa el resultado de la sesión para un ejercicio según su tipo de
+  // progresión. Devuelve null si no hay nada que escribir (sin sets logueados,
+  // o tipo `none`).
+  ({double newWeight, double referenceWeight, bool didProgress})? _evalProgression(
+    RoutineExercise ex,
+    List<(int, double)?> logged,
+  ) {
+    final weights = logged.where((s) => s != null && s.$2 > 0).map((s) => s!.$2);
+    if (weights.isEmpty) return null;
+    final maxWeightUsed = weights.reduce((a, b) => a > b ? a : b);
+
+    switch (ex.progressionType) {
+      case ProgressionType.none:
+        // No actualiza currentWeight desde la sesión. El usuario edita manual.
+        return null;
+
+      case ProgressionType.doubleLinear:
+        final setsAtMax = logged
+            .where((s) => s != null && s.$1 >= ex.repsMax && s.$2 > 0)
+            .length;
+        if (ex.progressionStep > 0 && setsAtMax / ex.sets > 0.9) {
+          return (
+            newWeight: maxWeightUsed + ex.progressionStep,
+            referenceWeight: maxWeightUsed,
+            didProgress: true,
+          );
+        }
+        // Definición de marcas: persiste el mayor peso usado aunque no progrese.
+        final preserved = maxWeightUsed > ex.currentWeight
+            ? maxWeightUsed
+            : ex.currentWeight;
+        return (
+          newWeight: preserved,
+          referenceWeight: maxWeightUsed,
+          didProgress: false,
+        );
+
+      case ProgressionType.pyramid:
+        final newWeight = ProgressionLogic.evalPyramidOverload(ex, logged);
+        if (newWeight == null) return null;
+        // Referencia para el dialog: el peso del set 2 actual = currentWeight + step
+        // (que es el peso con el que arrancará la próxima sesión).
+        return (
+          newWeight: newWeight,
+          referenceWeight: ex.currentWeight,
+          didProgress: true,
+        );
+
+      case ProgressionType.reversePyramid:
+        final newWeight =
+            ProgressionLogic.evalReversePyramidOverload(ex, logged);
+        if (newWeight == null) return null;
+        return (
+          newWeight: newWeight,
+          referenceWeight: ex.currentWeight,
+          didProgress: true,
+        );
+    }
+  }
+
+  // Recorre la rutina, aplica la progresión por tipo, y persiste cambios en
+  // routine + PRs. Devuelve la lista de progresiones para mostrar el dialog.
   Future<List<(String, double, double, String)>> _applyProgression() async {
     final progressed = <(String, double, double, String)>[];
+    final prUpdates = <String, ExercisePr>{};
     final routine = await RoutineService().getRoutine(_userId);
     if (routine == null) return progressed;
 
@@ -301,50 +509,23 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
         if (logIdx == -1) return routineEx;
 
         final logged = _logged[logIdx];
-        final weights = logged
-            .where((s) => s != null && s.$2 > 0)
-            .map((s) => s!.$2)
-            .toList();
-        if (weights.isEmpty) return routineEx;
+        if (logged.every((s) => s == null)) return routineEx;
 
-        final maxWeightUsed = weights.reduce((a, b) => a > b ? a : b);
+        final outcome = _evalProgression(routineEx, logged);
+        if (outcome == null) return routineEx;
 
-        final setsAtMax = logged
-            .where((s) => s != null && s.$1 >= routineEx.repsMax && s.$2 > 0)
-            .length;
-
-        double newWeight;
-        bool didProgress = false;
-
-        if (routineEx.progressionStep > 0 && setsAtMax / routineEx.sets > 0.9) {
-          newWeight = maxWeightUsed + routineEx.progressionStep;
-          didProgress = true;
-        } else {
-          // Guarda el mayor peso usado aunque no haya progresión
-          newWeight = maxWeightUsed > routineEx.currentWeight
-              ? maxWeightUsed
-              : routineEx.currentWeight;
-        }
-
+        final newWeight = outcome.newWeight;
         if (newWeight == routineEx.currentWeight) return routineEx;
 
         changed = true;
-        if (didProgress) {
+        prUpdates[routineEx.exerciseId] =
+            ExercisePr(weight: newWeight, unit: routineEx.weightUnit);
+        if (outcome.didProgress) {
           progressed.add(
-              (routineEx.name, maxWeightUsed, newWeight, routineEx.weightUnit));
+              (routineEx.name, outcome.referenceWeight, newWeight, routineEx.weightUnit));
         }
 
-        return RoutineExercise(
-          exerciseId: routineEx.exerciseId,
-          name: routineEx.name,
-          sets: routineEx.sets,
-          repsMin: routineEx.repsMin,
-          repsMax: routineEx.repsMax,
-          currentWeight: newWeight,
-          restSeconds: routineEx.restSeconds,
-          weightUnit: routineEx.weightUnit,
-          progressionStep: routineEx.progressionStep,
-        );
+        return routineEx.copyWith(currentWeight: newWeight);
       }).toList();
 
       return RoutineDay(
@@ -364,6 +545,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
         createdAt: routine.createdAt,
         days: updatedDays,
       ));
+      await ExercisePrService().upsertMany(_userId, prUpdates);
     }
 
     return progressed;
@@ -685,7 +867,14 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
                   '${ex.sets} series · ${ex.repsMin}–${ex.repsMax} reps · ${ex.restSeconds}s descanso',
                   style: TextStyle(color: Colors.grey[600]),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 16),
+
+                _NoteCard(
+                  note: _notes[ex.exerciseId],
+                  onTap: _editNote,
+                ),
+
+                const SizedBox(height: 20),
 
                 for (int s = 0; s < _setIndex; s++) ...[
                   _CompletedSetTile(
@@ -703,6 +892,8 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
                   weightUnit: ex.weightUnit,
                   weightCtrl: _weightCtrl,
                   repsCtrl: _repsCtrl,
+                  rir: _currentTarget().rir,
+                  isFailure: _currentTarget().isFailure,
                 ),
 
                 const SizedBox(height: 28),
@@ -731,6 +922,128 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
 }
 
 // ── Widgets auxiliares ────────────────────────────────────────
+
+class _NoteEditorDialog extends StatefulWidget {
+  final String exerciseName;
+  final String initialNote;
+  final int maxLength;
+
+  const _NoteEditorDialog({
+    required this.exerciseName,
+    required this.initialNote,
+    required this.maxLength,
+  });
+
+  @override
+  State<_NoteEditorDialog> createState() => _NoteEditorDialogState();
+}
+
+class _NoteEditorDialogState extends State<_NoteEditorDialog> {
+  late final TextEditingController _ctrl =
+      TextEditingController(text: widget.initialNote);
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.exerciseName, style: const TextStyle(fontSize: 16)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Apunte personal',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _ctrl,
+            autofocus: true,
+            maxLength: widget.maxLength,
+            maxLines: 4,
+            minLines: 2,
+            decoration: const InputDecoration(
+              hintText: 'Ej: Banco en 2, retracción escapular…',
+              border: OutlineInputBorder(),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _ctrl.text),
+          child: const Text('Guardar'),
+        ),
+      ],
+    );
+  }
+}
+
+class _NoteCard extends StatelessWidget {
+  final String? note;
+  final VoidCallback onTap;
+
+  const _NoteCard({required this.note, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasNote = note != null && note!.isNotEmpty;
+    final scheme = Theme.of(context).colorScheme;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: hasNote
+              ? Colors.amber.withValues(alpha: 0.10)
+              : scheme.surfaceContainerHighest.withValues(alpha: 0.4),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: hasNote
+                ? Colors.amber.withValues(alpha: 0.5)
+                : Colors.grey.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              hasNote ? Icons.sticky_note_2_outlined : Icons.note_add_outlined,
+              size: 20,
+              color: hasNote ? Colors.amber[800] : Colors.grey[600],
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                hasNote ? note! : 'Agregar apunte (ajuste de máquina, cue técnico…)',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: hasNote ? Colors.black87 : Colors.grey[600],
+                  fontStyle: hasNote ? FontStyle.normal : FontStyle.italic,
+                  height: 1.35,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Icon(Icons.edit_outlined, size: 16, color: Colors.grey[500]),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _CompletedSetTile extends StatelessWidget {
   final int setNumber;
@@ -783,6 +1096,8 @@ class _ActiveSetCard extends StatelessWidget {
   final String weightUnit;
   final TextEditingController weightCtrl;
   final TextEditingController repsCtrl;
+  final int? rir;
+  final bool isFailure;
 
   const _ActiveSetCard({
     required this.setNumber,
@@ -790,6 +1105,8 @@ class _ActiveSetCard extends StatelessWidget {
     required this.weightUnit,
     required this.weightCtrl,
     required this.repsCtrl,
+    this.rir,
+    this.isFailure = false,
   });
 
   @override
@@ -799,18 +1116,33 @@ class _ActiveSetCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colorScheme.primary, width: 2),
-        color: colorScheme.primaryContainer.withValues(alpha: 0.25),
+        border: Border.all(
+          color: isFailure ? Colors.red.shade700 : colorScheme.primary,
+          width: 2,
+        ),
+        color: isFailure
+            ? Colors.red.withValues(alpha: 0.06)
+            : colorScheme.primaryContainer.withValues(alpha: 0.25),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Serie $setNumber de $totalSets',
-            style: TextStyle(
-              color: colorScheme.primary,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Serie $setNumber de $totalSets',
+                  style: TextStyle(
+                    color: isFailure ? Colors.red.shade700 : colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              if (isFailure)
+                const _FailureBadge()
+              else if (rir != null)
+                _RirBadge(rir: rir!),
+            ],
           ),
           const SizedBox(height: 12),
           Row(
@@ -868,6 +1200,74 @@ class _ActiveSetCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _RirBadge extends StatelessWidget {
+  final int rir;
+  const _RirBadge({required this.rir});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black87,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        'RIR $rir',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+}
+
+/// Indicador de "FALLO" estilo Mortal Kombat fatality.
+class _FailureBadge extends StatelessWidget {
+  const _FailureBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return ShaderMask(
+      shaderCallback: (rect) => const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Color(0xFFFFE066),
+          Color(0xFFFF1A1A),
+          Color(0xFF7A0000),
+        ],
+        stops: [0.0, 0.55, 1.0],
+      ).createShader(rect),
+      child: const Text(
+        'FALLO',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 22,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 4,
+          height: 1,
+          shadows: [
+            Shadow(
+              color: Colors.black87,
+              offset: Offset(0, 2),
+              blurRadius: 4,
+            ),
+            Shadow(
+              color: Color(0xFFFF3B3B),
+              offset: Offset(0, 0),
+              blurRadius: 8,
+            ),
+          ],
+        ),
       ),
     );
   }

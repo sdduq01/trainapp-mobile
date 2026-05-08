@@ -66,10 +66,13 @@ function loadJsonFiles(dir) {
   });
 }
 
+const VALID_CATEGORIES = ['recommended', 'sport', 'macro', 'limited'];
+const VALID_PROGRESSION_TYPES = ['none', 'doubleLinear', 'pyramid', 'reversePyramid'];
+
 function validateRoutine(file, r) {
   const errs = [];
-  if (!r.category || !['recommended', 'sport'].includes(r.category)) {
-    errs.push(`category debe ser "recommended" o "sport"`);
+  if (!r.category || !VALID_CATEGORIES.includes(r.category)) {
+    errs.push(`category debe ser uno de: ${VALID_CATEGORIES.join(', ')}`);
   }
   if (!r.name || typeof r.name !== 'string' || !r.name.trim()) {
     errs.push(`name vacío`);
@@ -103,6 +106,10 @@ function validateRoutine(file, r) {
           if (e.repsMax !== undefined && e.repsMin !== undefined && e.repsMax < e.repsMin) {
             errs.push(`days[${i}].exercises[${j}]: repsMax (${e.repsMax}) < repsMin (${e.repsMin})`);
           }
+          if (e.progressionType !== undefined &&
+              !VALID_PROGRESSION_TYPES.includes(e.progressionType)) {
+            errs.push(`days[${i}].exercises[${j}]: progressionType debe ser uno de: ${VALID_PROGRESSION_TYPES.join(', ')}`);
+          }
         });
       }
     });
@@ -131,6 +138,7 @@ function normalize(r) {
       restSeconds:     e.restSeconds,
       weightUnit:      e.weightUnit ?? 'kg',
       progressionStep: e.progressionStep ?? 2.5,
+      progressionType: e.progressionType ?? 'doubleLinear',
     })),
   }));
 

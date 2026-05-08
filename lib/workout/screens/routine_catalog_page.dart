@@ -15,16 +15,19 @@ class RoutineCatalogPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 6,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Catálogo de rutinas'),
           bottom: const TabBar(
             isScrollable: true,
             tabs: [
-              Tab(icon: Icon(Icons.star_outline),       text: 'Recomendadas'),
-              Tab(icon: Icon(Icons.sports_soccer),      text: 'Deportes'),
-              Tab(icon: Icon(Icons.tune),               text: 'Personalizadas'),
+              Tab(icon: Icon(Icons.star_outline),         text: 'Recomendadas'),
+              Tab(icon: Icon(Icons.sports_soccer),        text: 'Deportes'),
+              Tab(icon: Icon(Icons.lock_outline),         text: 'Top Secret'),
+              Tab(icon: Icon(Icons.timeline),             text: 'Macro ciclos'),
+              Tab(icon: Icon(Icons.diamond_outlined),     text: 'Edición limitada'),
+              Tab(icon: Icon(Icons.tune),                 text: 'Personalizadas'),
             ],
           ),
         ),
@@ -32,6 +35,9 @@ class RoutineCatalogPage extends StatelessWidget {
           children: [
             _TemplateListTab(category: 'recommended', emptyMsg: 'Aún no hay rutinas recomendadas.'),
             _TemplateListTab(category: 'sport',       emptyMsg: 'Aún no hay rutinas por deporte.'),
+            _TopSecretTab(),
+            _TemplateListTab(category: 'macro',       emptyMsg: 'Aún no hay macro ciclos.'),
+            _TemplateListTab(category: 'limited',     emptyMsg: 'Aún no hay rutinas de edición limitada.'),
             _CustomTab(),
           ],
         ),
@@ -158,6 +164,100 @@ class _TemplateCard extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+//   Tab Top Secret · vista enigmática estoica
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _TopSecretTab extends StatelessWidget {
+  const _TopSecretTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.black,
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 36),
+      child: Center(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.lock_outline,
+                color: Color(0xFF8B0000),
+                size: 72,
+              ),
+              const SizedBox(height: 28),
+              const Text(
+                'TOP SECRET',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(0xFFC41E3A),
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 6,
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'No todas las puertas se abren con curiosidad.\n'
+                'Algunas rutinas no se exhiben: aguardan al que ya '
+                'ha forjado el cuerpo y la voluntad para recibirlas.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  height: 1.6,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+              const SizedBox(height: 28),
+              Container(
+                width: 60,
+                height: 1,
+                color: Colors.white24,
+              ),
+              const SizedBox(height: 28),
+              const Text(
+                '"La fortuna favorece al que se prepara,\n'
+                'no al que la implora."',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  height: 1.6,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                '— Séneca',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(0xFFC41E3A),
+                  fontSize: 13,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+              const SizedBox(height: 36),
+              const Text(
+                'Vuelve cuando el hierro te haya forjado.\n'
+                'Pocos llegan. Menos permanecen.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white38,
+                  fontSize: 12,
+                  height: 1.6,
+                  letterSpacing: 1,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 //   Tab Personalizadas (botones de acción + ClaudIA)
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -263,7 +363,7 @@ Future<void> _activateTemplate(BuildContext context, RoutineTemplate t) async {
       title: const Text('Activar rutina'),
       content: Text(
         '¿Reemplazar tu rutina actual por "${t.name}"?\n\n'
-        'Tus marcas (pesos) actuales se reiniciarán.',
+        'Los pesos de los ejercicios que ya tienes registrados se mantendrán.',
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
@@ -284,7 +384,9 @@ Future<void> _activateTemplate(BuildContext context, RoutineTemplate t) async {
 
   bool saved = false;
   try {
-    await RoutineService().saveRoutine(t.toRoutine(user.uid));
+    final hydrated =
+        await RoutineService().hydrateWithPRs(t.toRoutine(user.uid));
+    await RoutineService().saveRoutine(hydrated);
     saved = true;
   } catch (e) {
     if (context.mounted) {

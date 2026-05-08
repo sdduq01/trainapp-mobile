@@ -14,17 +14,39 @@ class _OnboardingStep1PageState extends State<OnboardingStep1Page> {
   final _heightController = TextEditingController();
 
   double? _selectedBodyFat;
+  DateTime? _birthDate;
 
   bool get _isValid =>
       _weightController.text.isNotEmpty &&
       _heightController.text.isNotEmpty &&
-      _selectedBodyFat != null;
+      _selectedBodyFat != null &&
+      _birthDate != null;
+
+  Future<void> _pickBirthDate() async {
+    final now = DateTime.now();
+    final initial = _birthDate ?? DateTime(now.year - 25, now.month, now.day);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(now.year - 100),
+      lastDate: DateTime(now.year - 13, now.month, now.day),
+      helpText: 'Selecciona tu fecha de nacimiento',
+    );
+    if (picked != null) setState(() => _birthDate = picked);
+  }
+
+  String _formatDate(DateTime d) {
+    final dd = d.day.toString().padLeft(2, '0');
+    final mm = d.month.toString().padLeft(2, '0');
+    return '$dd/$mm/${d.year}';
+  }
 
   void _continue() {
     final data = OnboardingData(
       weight: double.tryParse(_weightController.text),
       height: double.tryParse(_heightController.text),
       bodyFat: _selectedBodyFat,
+      birthDate: _birthDate,
     );
 
     Navigator.pushNamed(
@@ -66,6 +88,27 @@ class _OnboardingStep1PageState extends State<OnboardingStep1Page> {
                 labelText: 'Altura (cm)',
               ),
               onChanged: (_) => setState(() {}),
+            ),
+
+            const SizedBox(height: 16),
+
+            InkWell(
+              onTap: _pickBirthDate,
+              borderRadius: BorderRadius.circular(8),
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: 'Fecha de nacimiento',
+                  prefixIcon: Icon(Icons.cake_outlined),
+                ),
+                child: Text(
+                  _birthDate == null
+                      ? 'Selecciona tu fecha de nacimiento'
+                      : _formatDate(_birthDate!),
+                  style: TextStyle(
+                    color: _birthDate == null ? Colors.grey[600] : null,
+                  ),
+                ),
+              ),
             ),
 
             const SizedBox(height: 24),

@@ -1,3 +1,5 @@
+import 'progression_type.dart';
+
 class RoutineExercise {
   final String exerciseId;
   final String name;
@@ -8,6 +10,7 @@ class RoutineExercise {
   final int restSeconds;
   final String weightUnit;       // 'kg' | 'lbs'
   final double progressionStep;  // e.g. 1.25, 2.5, 5.0, 10.0
+  final ProgressionType progressionType;
 
   const RoutineExercise({
     required this.exerciseId,
@@ -19,6 +22,7 @@ class RoutineExercise {
     required this.restSeconds,
     this.weightUnit = 'kg',
     this.progressionStep = 2.5,
+    this.progressionType = ProgressionType.doubleLinear,
   });
 
   Map<String, dynamic> toMap() => {
@@ -31,6 +35,7 @@ class RoutineExercise {
         'restSeconds': restSeconds,
         'weightUnit': weightUnit,
         'progressionStep': progressionStep,
+        'progressionType': progressionType.id,
       };
 
   factory RoutineExercise.fromMap(Map<String, dynamic> m) => RoutineExercise(
@@ -43,6 +48,33 @@ class RoutineExercise {
         restSeconds: m['restSeconds'] as int,
         weightUnit: m['weightUnit'] as String? ?? 'kg',
         progressionStep: (m['progressionStep'] as num?)?.toDouble() ?? 2.5,
+        progressionType:
+            ProgressionTypeX.fromId(m['progressionType'] as String?),
+      );
+
+  RoutineExercise copyWith({
+    String? exerciseId,
+    String? name,
+    int? sets,
+    int? repsMin,
+    int? repsMax,
+    double? currentWeight,
+    int? restSeconds,
+    String? weightUnit,
+    double? progressionStep,
+    ProgressionType? progressionType,
+  }) =>
+      RoutineExercise(
+        exerciseId: exerciseId ?? this.exerciseId,
+        name: name ?? this.name,
+        sets: sets ?? this.sets,
+        repsMin: repsMin ?? this.repsMin,
+        repsMax: repsMax ?? this.repsMax,
+        currentWeight: currentWeight ?? this.currentWeight,
+        restSeconds: restSeconds ?? this.restSeconds,
+        weightUnit: weightUnit ?? this.weightUnit,
+        progressionStep: progressionStep ?? this.progressionStep,
+        progressionType: progressionType ?? this.progressionType,
       );
 }
 

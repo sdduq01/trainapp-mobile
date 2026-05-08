@@ -260,14 +260,16 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
     setState(() => _saving = true);
     bool saved = false;
     try {
-      await RoutineService().saveRoutine(Routine(
+      final routine = Routine(
         userId: user.uid,
         type: 'Custom',
         name: _nameCtrl.text.trim(),
         weekNumber: 1,
         createdAt: DateTime.now(),
         days: _days,
-      ));
+      );
+      final hydrated = await RoutineService().hydrateWithPRs(routine);
+      await RoutineService().saveRoutine(hydrated);
       saved = true;
     } catch (e) {
       if (mounted) {

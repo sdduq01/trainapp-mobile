@@ -4,6 +4,7 @@ class OnboardingData {
   final double? weight;
   final double? height;
   final double? bodyFat;
+  final DateTime? birthDate;
   final int? trainingExperienceMonths;
   final TrainingGoal? goal;
 
@@ -11,6 +12,7 @@ class OnboardingData {
     this.weight,
     this.height,
     this.bodyFat,
+    this.birthDate,
     this.trainingExperienceMonths,
     this.goal,
   });
@@ -19,6 +21,7 @@ class OnboardingData {
     double? weight,
     double? height,
     double? bodyFat,
+    DateTime? birthDate,
     int? trainingExperienceMonths,
     TrainingGoal? goal,
   }) {
@@ -26,6 +29,7 @@ class OnboardingData {
       weight: weight ?? this.weight,
       height: height ?? this.height,
       bodyFat: bodyFat ?? this.bodyFat,
+      birthDate: birthDate ?? this.birthDate,
       trainingExperienceMonths:
           trainingExperienceMonths ?? this.trainingExperienceMonths,
       goal: goal ?? this.goal,
@@ -39,6 +43,7 @@ OnboardingData(
   weight: $weight,
   height: $height,
   bodyFat: $bodyFat,
+  birthDate: $birthDate,
   trainingExperienceMonths: $trainingExperienceMonths,
   goal: $goal
 )

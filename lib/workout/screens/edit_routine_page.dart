@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/exercise.dart';
+import '../models/progression_type.dart';
 import '../models/routine.dart';
 import '../services/exercise_service.dart';
 import '../services/routine_service.dart';
@@ -48,6 +49,32 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
     setState(() => _routine = _copyRoutine(days));
   }
 
+  void _removeDay(int dayIdx) {
+    final days = _copyDays()..removeAt(dayIdx);
+    setState(() => _routine = _copyRoutine(_renumber(days)));
+  }
+
+  void _addDay(String name, String focus) {
+    final days = _copyDays()
+      ..add(RoutineDay(
+        dayNumber: _routine.days.length + 1,
+        name: name,
+        focus: focus,
+        exercises: const [],
+      ));
+    setState(() => _routine = _copyRoutine(_renumber(days)));
+  }
+
+  List<RoutineDay> _renumber(List<RoutineDay> days) => [
+        for (int i = 0; i < days.length; i++)
+          RoutineDay(
+            dayNumber: i + 1,
+            name: days[i].name,
+            focus: days[i].focus,
+            exercises: days[i].exercises,
+          ),
+      ];
+
   // ── Helpers de copia inmutable ───────────────────────────
 
   List<RoutineDay> _copyDays() => List<RoutineDay>.from(_routine.days);
@@ -91,6 +118,7 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
     int restSeconds = ex.restSeconds;
     String weightUnit = ex.weightUnit;
     double progressionStep = ex.progressionStep;
+    ProgressionType progressionType = ex.progressionType;
 
     const steps = [1.0, 1.25, 2.5, 5.0, 10.0];
 
@@ -159,6 +187,22 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
                     );
                   }).toList(),
                 ),
+                const SizedBox(height: 16),
+                const Text('Tipo de progresión',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: ProgressionType.values
+                      .map((p) => ChoiceChip(
+                            label: Text(p.label),
+                            selected: progressionType == p,
+                            onSelected: (_) =>
+                                setDialogState(() => progressionType = p),
+                          ))
+                      .toList(),
+                ),
               ],
             ),
           ),
@@ -181,6 +225,7 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
                     restSeconds: restSeconds,
                     weightUnit: weightUnit,
                     progressionStep: progressionStep,
+                    progressionType: progressionType,
                   ),
                 );
                 Navigator.pop(ctx);
@@ -191,6 +236,42 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
         ),
       ),
     );
+  }
+
+  // ── Diálogos de día ──────────────────────────────────────
+
+  Future<void> _confirmAndRemoveDay(int dayIdx) async {
+    final day = _routine.days[dayIdx];
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('¿Eliminar día?'),
+        content: Text(
+          'Se eliminará "Día ${day.dayNumber} · ${day.name}" '
+          'con sus ${day.exercises.length} ejercicios.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) _removeDay(dayIdx);
+  }
+
+  Future<void> _showAddDayDialog() async {
+    final result = await showDialog<({String name, String focus})>(
+      context: context,
+      builder: (_) => const _AddDayDialog(),
+    );
+    if (result != null) _addDay(result.name, result.focus);
   }
 
   // ── Sheet de agregar ejercicio (desde Firestore) ─────────
@@ -305,8 +386,21 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(12),
-        itemCount: _routine.days.length,
+        itemCount: _routine.days.length + 1,
         itemBuilder: (_, dayIdx) {
+          if (dayIdx == _routine.days.length) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: OutlinedButton.icon(
+                onPressed: _showAddDayDialog,
+                icon: const Icon(Icons.add),
+                label: const Text('Agregar día'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                ),
+              ),
+            );
+          }
           final day = _routine.days[dayIdx];
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
@@ -330,6 +424,14 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
                         onPressed: () => _showAddExerciseSheet(dayIdx),
                         icon: const Icon(Icons.add, size: 18),
                         label: const Text('Agregar'),
+                      ),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.red,
+                        ),
+                        tooltip: 'Eliminar día',
+                        onPressed: () => _confirmAndRemoveDay(dayIdx),
                       ),
                     ],
                   ),
@@ -430,6 +532,90 @@ class _Counter extends StatelessWidget {
           onPressed: value < max
               ? () => onChanged((value + step).clamp(min, max))
               : null,
+        ),
+      ],
+    );
+  }
+}
+
+// ── Dialog: agregar día ─────────────────────────────────────
+
+class _AddDayDialog extends StatefulWidget {
+  const _AddDayDialog();
+
+  @override
+  State<_AddDayDialog> createState() => _AddDayDialogState();
+}
+
+class _AddDayDialogState extends State<_AddDayDialog> {
+  final _nameCtrl = TextEditingController();
+  String _focus = 'push';
+
+  static const Map<String, String> _focusOptions = {
+    'push': 'Push',
+    'pull': 'Pull',
+    'legs': 'Legs',
+    'upper': 'Upper',
+    'lower': 'Lower',
+    'full': 'Full body',
+    'other': 'Otro',
+  };
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Nuevo día'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _nameCtrl,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Nombre del día',
+                hintText: 'Ej: Push, Brazos, Cardio…',
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Enfoque',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: _focusOptions.entries
+                  .map((e) => ChoiceChip(
+                        label: Text(e.value),
+                        selected: _focus == e.key,
+                        onSelected: (_) => setState(() => _focus = e.key),
+                      ))
+                  .toList(),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final name = _nameCtrl.text.trim();
+            if (name.isEmpty) return;
+            Navigator.pop(context, (name: name, focus: _focus));
+          },
+          child: const Text('Agregar'),
         ),
       ],
     );
