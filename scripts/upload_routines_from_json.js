@@ -28,7 +28,7 @@ const PROJECT_ID  = 'trainapp-prod';
 const DATABASE_ID = 'trainapp';
 const COLLECTION  = 'routine_templates';
 
-const DEFAULT_DIR = '/mnt/c/Users/sdduq/OneDrive/Documentos/TrainApp/Rutinas';
+const DEFAULT_DIR = './scripts/routines_templates';
 const ROUTINES_DIR = process.env.ROUTINES_DIR || DEFAULT_DIR;
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -37,7 +37,7 @@ function slugify(s) {
   return s
     .toString()
     .toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '') // sin tildes
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '')
     .slice(0, 60);

@@ -1,0 +1,163 @@
+{
+  "id": "rec_ppl_3",
+  "category": "recommended",
+  "name": "PPL · 3 días",
+  "description": "Push / Pull / Legs en 3 días por semana. Ideal para principiantes o agendas apretadas. Cubre todo el cuerpo con frecuencia 1.",
+  "type": "PPL",
+  "sport": null,
+  "days": [
+    {
+      "dayNumber": 1,
+      "name": "Push",
+      "focus": "push",
+      "exercises": [
+        {
+          "exerciseId": "press_banca",
+          "name": "Press de Banca",
+          "sets": 4,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "press_militar",
+          "name": "Press Militar",
+          "sets": 4,
+          "repsMin": 8,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "elev_laterales",
+          "name": "Elevaciones Laterales",
+          "sets": 3,
+          "repsMin": 12,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1.25
+        },
+        {
+          "exerciseId": "ext_triceps_cable",
+          "name": "Extensión de Tríceps en Cable",
+          "sets": 3,
+          "repsMin": 12,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        }
+      ]
+    },
+    {
+      "dayNumber": 2,
+      "name": "Pull",
+      "focus": "pull",
+      "exercises": [
+        {
+          "exerciseId": "jalon_pecho",
+          "name": "Jalón al Pecho",
+          "sets": 4,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 5.0
+        },
+        {
+          "exerciseId": "remo_barra",
+          "name": "Remo con Barra",
+          "sets": 4,
+          "repsMin": 8,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 5.0
+        },
+        {
+          "exerciseId": "face_pull",
+          "name": "Face Pull",
+          "sets": 3,
+          "repsMin": 15,
+          "repsMax": 20,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "curl_barra",
+          "name": "Curl de Bíceps con Barra",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        }
+      ]
+    },
+    {
+      "dayNumber": 3,
+      "name": "Legs",
+      "focus": "legs",
+      "exercises": [
+        {
+          "exerciseId": "sentadilla",
+          "name": "Sentadilla con Barra",
+          "sets": 4,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 5.0
+        },
+        {
+          "exerciseId": "peso_muerto_rumano",
+          "name": "Peso Muerto Rumano",
+          "sets": 4,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 5.0
+        },
+        {
+          "exerciseId": "prensa_piernas",
+          "name": "Prensa de Piernas",
+          "sets": 4,
+          "repsMin": 10,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 10.0
+        },
+        {
+          "exerciseId": "elev_talones",
+          "name": "Elevación de Talones",
+          "sets": 4,
+          "repsMin": 15,
+          "repsMax": 20,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 5.0
+        }
+      ]
+    }
+  ]
+}
