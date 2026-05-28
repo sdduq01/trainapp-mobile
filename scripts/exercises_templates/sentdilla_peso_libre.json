@@ -1,0 +1,11 @@
+  {
+    "id": "sentadilla_peso_libre",
+    "name": "Sentadilla con Peso Libre",
+    "muscle": "legs",
+    "defaultSets": 3,
+    "defaultRepsMin": 6,
+    "defaultRepsMax": 10,
+    "restSeconds": 180,
+    "defaultWeightUnit": "kg",
+    "defaultProgressionStep": 5
+  }

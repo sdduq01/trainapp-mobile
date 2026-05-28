@@ -1,0 +1,11 @@
+{
+  "id": "encogimiento_barra",
+  "name": "Encogimiento de Hombros con Barra",
+  "muscle": "pull",
+  "defaultSets": 3,
+  "defaultRepsMin": 10,
+  "defaultRepsMax": 15,
+  "restSeconds": 90,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 2.5
+}

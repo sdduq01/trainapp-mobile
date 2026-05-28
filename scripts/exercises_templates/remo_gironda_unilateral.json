@@ -1,0 +1,11 @@
+  {
+    "id": "remo_gironda_unilateral",
+    "name": "Remo en Gironda Unilateral",
+    "muscle": "pull",
+    "defaultSets": 3,
+    "defaultRepsMin": 6,
+    "defaultRepsMax": 10,
+    "restSeconds": 180,
+    "defaultWeightUnit": "kg",
+    "defaultProgressionStep": 2.5
+  }

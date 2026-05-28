@@ -1,0 +1,11 @@
+{
+  "id": "press_hombro_mancuerna_unilateral",
+  "name": "Press de Hombro Unilateral con Mancuerna",
+  "muscle": "push",
+  "defaultSets": 3,
+  "defaultRepsMin": 8,
+  "defaultRepsMax": 12,
+  "restSeconds": 120,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 2.5
+}

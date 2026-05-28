@@ -1,0 +1,11 @@
+{
+  "id": "curl_femoral_unilateral_maquina",
+  "name": "Curl Femoral Unilateral en Máquina",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 10,
+  "defaultRepsMax": 15,
+  "restSeconds": 90,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 2.5
+}

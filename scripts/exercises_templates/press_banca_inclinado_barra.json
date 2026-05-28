@@ -1,0 +1,11 @@
+{
+  "id": "press_banca_inclinado_barra",
+  "name": "Press de Banca Inclinado con Barra",
+  "muscle": "push",
+  "defaultSets": 3,
+  "defaultRepsMin": 6,
+  "defaultRepsMax": 10,
+  "restSeconds": 180,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 2.5
+}

@@ -1,0 +1,11 @@
+  {
+    "id": "abducciones",
+    "name": "Abducciones de Pierna",
+    "muscle": "legs",
+    "defaultSets": 3,
+    "defaultRepsMin": 10,
+    "defaultRepsMax": 15,
+    "restSeconds": 180,
+    "defaultWeightUnit": "kg",
+    "defaultProgressionStep": 5
+  }

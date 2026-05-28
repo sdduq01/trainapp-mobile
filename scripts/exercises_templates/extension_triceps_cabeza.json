@@ -1,0 +1,11 @@
+{
+  "id": "extension_triceps_cabeza",
+  "name": "Extensión de Tríceps sobre la Cabeza",
+  "muscle": "pull",
+  "defaultSets": 3,
+  "defaultRepsMin": 10,
+  "defaultRepsMax": 15,
+  "restSeconds": 90,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 2.5
+}

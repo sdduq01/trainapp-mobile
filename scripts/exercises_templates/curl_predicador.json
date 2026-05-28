@@ -1,0 +1,11 @@
+  {
+    "id": "curl_predicador",
+    "name": "Curl Predicador",
+    "muscle": "push",
+    "defaultSets": 3,
+    "defaultRepsMin": 8,
+    "defaultRepsMax": 10,
+    "restSeconds": 180,
+    "defaultWeightUnit": "kg",
+    "defaultProgressionStep": 2.5
+  }

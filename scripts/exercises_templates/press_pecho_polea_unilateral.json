@@ -1,0 +1,11 @@
+{
+  "id": "press_pecho_polea_unilateral",
+  "name": "Press de Pecho en Polea Unilateral",
+  "muscle": "push",
+  "defaultSets": 3,
+  "defaultRepsMin": 8,
+  "defaultRepsMax": 12,
+  "restSeconds": 120,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 2.5
+}

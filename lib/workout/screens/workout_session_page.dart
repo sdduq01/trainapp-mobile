@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -25,7 +27,8 @@ class WorkoutSessionPage extends StatefulWidget {
   State<WorkoutSessionPage> createState() => _WorkoutSessionPageState();
 }
 
-class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
+class _WorkoutSessionPageState extends State<WorkoutSessionPage>
+    with WidgetsBindingObserver {
   final _userId = FirebaseAuth.instance.currentUser!.uid;
   final _audioPlayer = AudioPlayer();
 
@@ -54,6 +57,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
   bool _restExpired = false;
   int _restRemaining = 0;
   Timer? _timer;
+  DateTime? _restEndTime;
   VoidCallback? _afterRest;
 
   bool _saving = false;
@@ -78,12 +82,12 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
 
   // ── Audio ────────────────────────────────────────────────
 
-  // Genera un WAV con 3 pitidos (150ms·80ms·150ms·80ms·300ms) a 880 Hz
+  // Genera un WAV con 6 pitidos a 880 Hz
   static Uint8List _generateBeepWav() {
     const sampleRate = 22050;
     const hz = 880.0;
-    const durations = [0.15, 0.08, 0.15, 0.08, 0.30];
-    const isTone   = [true, false, true, false, true];
+    const durations = [0.15, 0.08, 0.15, 0.08, 0.15, 0.08, 0.15, 0.08, 0.15, 0.08, 0.30];
+    const isTone   = [true, false, true, false, true, false, true, false, true, false, true];
 
     final samples = <int>[];
     for (int seg = 0; seg < durations.length; seg++) {
@@ -138,17 +142,167 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
 
   Future<void> _stopAlarm() => _audioPlayer.stop();
 
+  // ── Draft de sesión (persistencia ante kill del proceso) ──
+
+  static const _kDraftKey = 'session_draft';
+
+  Future<void> _saveDraft() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final loggedJson = _logged
+          .map((ex) => ex.map((s) => s == null ? null : [s.$1, s.$2]).toList())
+          .toList();
+      await prefs.setString(
+        _kDraftKey,
+        jsonEncode({
+          'dayNumber': widget.day.dayNumber,
+          'exerciseIndex': _exerciseIndex,
+          'setIndex': _setIndex,
+          'logged': loggedJson,
+        }),
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _clearDraft() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_kDraftKey);
+    } catch (_) {}
+  }
+
+  Future<void> _tryRestoreDraft() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_kDraftKey);
+      if (raw == null || !mounted) return;
+
+      final map = jsonDecode(raw) as Map<String, dynamic>;
+      if (map['dayNumber'] != widget.day.dayNumber) {
+        await prefs.remove(_kDraftKey);
+        return;
+      }
+
+      final rawLogged = map['logged'] as List;
+      // Valida que la estructura coincida con los ejercicios actuales del día
+      if (rawLogged.length != widget.day.exercises.length) {
+        await prefs.remove(_kDraftKey);
+        return;
+      }
+      for (int i = 0; i < widget.day.exercises.length; i++) {
+        if ((rawLogged[i] as List).length != widget.day.exercises[i].sets) {
+          await prefs.remove(_kDraftKey);
+          return;
+        }
+      }
+
+      final hasProgress =
+          rawLogged.any((ex) => (ex as List).any((s) => s != null));
+      if (!hasProgress) return;
+
+      if (!mounted) return;
+      final shouldRestore = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => AlertDialog(
+          title: const Text('Sesión en progreso'),
+          content: Text(
+            'Tenías una sesión del Día ${widget.day.dayNumber} sin terminar. ¿Continuarla?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Empezar de nuevo'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Continuar'),
+            ),
+          ],
+        ),
+      );
+
+      if (!mounted) return;
+      if (shouldRestore != true) {
+        await prefs.remove(_kDraftKey);
+        return;
+      }
+
+      // Deserializa los sets guardados
+      final restored = rawLogged.map((exJson) {
+        return (exJson as List).map<(int, double)?>((s) {
+          if (s == null) return null;
+          return ((s[0] as int), (s[1] as num).toDouble());
+        }).toList();
+      }).toList();
+
+      int exIdx = map['exerciseIndex'] as int;
+      int setIdx = map['setIndex'] as int;
+
+      // Si el set guardado ya estaba completado (la app murió durante el descanso),
+      // avanza silenciosamente al siguiente set/ejercicio sin timer
+      if (exIdx < widget.day.exercises.length &&
+          setIdx < widget.day.exercises[exIdx].sets &&
+          restored[exIdx][setIdx] != null) {
+        final ex = widget.day.exercises[exIdx];
+        if (setIdx < ex.sets - 1) {
+          setIdx++;
+        } else if (exIdx < widget.day.exercises.length - 1) {
+          exIdx++;
+          setIdx = 0;
+        } else {
+          // Murió en el descanso del último set del último ejercicio
+          setState(() { _logged = restored; _exerciseIndex = exIdx; _setIndex = setIdx; });
+          _finishSession();
+          return;
+        }
+      }
+
+      setState(() {
+        _logged = restored;
+        _exerciseIndex = exIdx;
+        _setIndex = setIdx;
+      });
+      _disposeControllers();
+      _initControllers();
+    } catch (_) {
+      // Draft corrupto — ignora
+    }
+  }
+
   // ── Ciclo de vida ─────────────────────────────────────────
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _logged = widget.day.exercises
         .map((e) => List<(int, double)?>.filled(e.sets, null))
         .toList();
     _initControllers();
     _loadNotes();
     _loadIntensityConfig();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _resting && !_restExpired) {
+      _syncRestFromWallClock();
+    }
+  }
+
+  void _syncRestFromWallClock() {
+    if (_restEndTime == null) return;
+    final remaining = _restEndTime!.difference(DateTime.now()).inSeconds;
+    if (remaining <= 0) {
+      _timer?.cancel();
+      if (!mounted) return;
+      setState(() { _restExpired = true; _restRemaining = 0; });
+      _playAlarm();
+    } else {
+      if (!mounted) return;
+      setState(() => _restRemaining = remaining);
+    }
   }
 
   Future<void> _loadIntensityConfig() async {
@@ -171,6 +325,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
       // cambiado tras conocer cadencia/semana).
       _refillControllers();
     });
+    await _tryRestoreDraft();
   }
 
   SetTarget _currentTarget() {
@@ -296,6 +451,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _audioPlayer.dispose();
     _weightCtrl.dispose();
@@ -307,15 +463,17 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
 
   void _startCountdown(int seconds) {
     _timer?.cancel();
+    _restEndTime = DateTime.now().add(Duration(seconds: seconds));
     setState(() { _restRemaining = seconds; _restExpired = false; });
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) { t.cancel(); return; }
-      if (_restRemaining <= 1) {
+      final remaining = _restEndTime!.difference(DateTime.now()).inSeconds;
+      if (remaining <= 0) {
         t.cancel();
         setState(() { _restExpired = true; _restRemaining = 0; });
         _playAlarm();
       } else {
-        setState(() => _restRemaining--);
+        setState(() => _restRemaining = remaining);
       }
     });
   }
@@ -357,6 +515,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
     final weight   = double.tryParse(_weightCtrl.text) ?? ex.currentWeight;
 
     setState(() => _logged[_exerciseIndex][_setIndex] = (repsDone, weight));
+    _saveDraft(); // fire-and-forget — persiste ante kill del proceso
 
     if (_isLastSet && _isLastExercise) {
       _startRest(ex.restSeconds, onDone: _finishSession);
@@ -415,13 +574,23 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
       completed: true,
     );
 
-    await SessionService().saveSession(session);
-    final progressed = await _applyProgression();
-
-    if (progressed.isNotEmpty) {
-      await ProgressionService().saveProgressionEvent(_userId, progressed.length);
+    List<(String, double, double, String)> progressed = [];
+    try {
+      await SessionService().saveSession(session)
+          .timeout(const Duration(seconds: 20));
+      progressed = await _applyProgression()
+          .timeout(const Duration(seconds: 20));
+      if (progressed.isNotEmpty) {
+        await ProgressionService()
+            .saveProgressionEvent(_userId, progressed.length)
+            .timeout(const Duration(seconds: 10));
+      }
+    } catch (_) {
+      // Error de red o timeout: la sesión puede no haberse persistido,
+      // pero no colgamos la app — siempre navegamos de vuelta.
     }
 
+    await _clearDraft();
     if (!mounted) return;
     setState(() => _saving = false);
     if (progressed.isNotEmpty) {
@@ -694,6 +863,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
         ],
       ),
     );
+    if (result == true) await _clearDraft();
     return result ?? false;
   }
 

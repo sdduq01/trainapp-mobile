@@ -1,0 +1,11 @@
+{
+  "id": "jalon_agarre_neutro",
+  "name": "Jalón con Agarre Neutro",
+  "muscle": "pull",
+  "defaultSets": 3,
+  "defaultRepsMin": 8,
+  "defaultRepsMax": 12,
+  "restSeconds": 120,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 2.5
+}

@@ -1,0 +1,11 @@
+  {
+    "id": "curl_biceps_maquina",
+    "name": "Curl de Bíceps en Máquina",
+    "muscle": "push",
+    "defaultSets": 3,
+    "defaultRepsMin": 8,
+    "defaultRepsMax": 10,
+    "restSeconds": 180,
+    "defaultWeightUnit": "kg",
+    "defaultProgressionStep": 2.5
+  }

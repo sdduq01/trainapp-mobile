@@ -2,14 +2,16 @@
  * Sube ejercicios (.json) a Firestore desde una carpeta externa.
  *
  * Carpeta por defecto:
- *   /mnt/c/Users/sdduq/OneDrive/Documentos/TrainApp/Ejercicios
+ *   ./scripts/exercises_templates
  * (override con la variable de entorno EXERCISES_DIR)
  *
  * Comportamiento:
  *   - Lee todos los .json del directorio (ignora los que empiezan con "_").
  *   - Valida estructura mínima.
  *   - Compara contra Firestore por ID y por NOMBRE (case-insensitive).
- *   - Sube solo los ejercicios cuyo id Y nombre no existan todavía.
+ *   - Si el ID ya existe → reemplaza el documento en Firestore con el JSON local.
+ *   - Si el nombre ya existe con distinto ID → advierte y escribe con el nuevo ID.
+ *   - Si es nuevo → inserta.
  *
  * Uso (desde el directorio del proyecto):
  *   node scripts/upload_exercises_from_json.js            → dry-run
@@ -28,7 +30,7 @@ const PROJECT_ID  = 'trainapp-prod';
 const DATABASE_ID = 'trainapp';
 const COLLECTION  = 'exercises';
 
-const DEFAULT_DIR  = '/mnt/c/Users/sdduq/OneDrive/Documentos/TrainApp/Ejercicios';
+const DEFAULT_DIR  = './scripts/exercises_templates';
 const EXERCISES_DIR = process.env.EXERCISES_DIR || DEFAULT_DIR;
 
 const VALID_MUSCLES = ['push', 'pull', 'legs'];
@@ -174,38 +176,41 @@ async function main() {
   const existingNames = new Set(snap.docs.map(d => (d.data().name || '').toLowerCase().trim()));
   console.log(`    ${existingIds.size} ejercicios en Firestore\n`);
 
-  const toInsert   = [];
-  const skipById   = [];
-  const skipByName = [];
+  const toInsert       = [];
+  const toUpdate       = [];
+  const nameConflict   = [];
   for (const it of items) {
     if (existingIds.has(it.docId)) {
-      skipById.push(it);
+      toUpdate.push(it);
     } else if (existingNames.has(it.data.name.toLowerCase().trim())) {
-      skipByName.push(it);
+      nameConflict.push(it);
     } else {
       toInsert.push(it);
     }
   }
 
-  if (skipById.length) {
-    console.log(`⚠️  Omitidos por ID ya existente (${skipById.length}):`);
-    skipById.forEach(s => console.log(`   [${s.file}] id="${s.docId}"`));
+  if (nameConflict.length) {
+    console.log(`⚠️  Nombre ya existe con distinto ID — se escribirá con el nuevo ID (${nameConflict.length}):`);
+    nameConflict.forEach(s => console.log(`   [${s.file}] id="${s.docId}" name="${s.data.name}"`));
     console.log();
   }
-  if (skipByName.length) {
-    console.log(`⚠️  Omitidos por NAME ya existente (${skipByName.length}):`);
-    skipByName.forEach(s => console.log(`   [${s.file}] name="${s.data.name}"`));
+  if (toUpdate.length) {
+    console.log(`🔄 Ejercicios a reemplazar (${toUpdate.length}):`);
+    toUpdate.forEach(t => console.log(`   [${t.docId}] "${t.data.name}" · ${t.data.muscle}`));
+    console.log();
+  }
+  if (toInsert.length) {
+    console.log(`📋 Ejercicios nuevos a subir (${toInsert.length}):`);
+    toInsert.forEach(t => console.log(`   [${t.docId}] "${t.data.name}" · ${t.data.muscle}`));
     console.log();
   }
 
-  if (!toInsert.length) {
-    console.log('✅ No hay ejercicios nuevos para subir.');
+  const toWrite = [...toInsert, ...toUpdate, ...nameConflict];
+
+  if (!toWrite.length) {
+    console.log('✅ No hay ejercicios para subir.');
     process.exit(0);
   }
-
-  console.log(`📋 Ejercicios a subir (${toInsert.length}):`);
-  toInsert.forEach(t => console.log(`   [${t.docId}] "${t.data.name}" · ${t.data.muscle}`));
-  console.log();
 
   if (!commit) {
     console.log('ℹ️  Dry-run finalizado. Ejecuta con --commit para escribir en Firestore.');
@@ -213,12 +218,12 @@ async function main() {
   }
 
   const batch = db.batch();
-  for (const t of toInsert) {
+  for (const t of toWrite) {
     batch.set(db.collection(COLLECTION).doc(t.docId), t.data);
   }
   await batch.commit();
 
-  console.log(`\n✅ ${toInsert.length} ejercicio(s) subidos a Firestore.`);
+  console.log(`\n✅ ${toInsert.length} nuevo(s), ${toUpdate.length} reemplazado(s), ${nameConflict.length} con ID nuevo — total ${toWrite.length} ejercicio(s) escritos en Firestore.`);
 }
 
 main().catch(err => {

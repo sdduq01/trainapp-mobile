@@ -41,15 +41,23 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
     super.dispose();
   }
 
-  // Semana del año basada en días transcurridos desde el 1 de enero
+  // ISO 8601: semanas de lunes a domingo.
+  // El jueves de la semana determina el año ISO (evita edge cases en ene/dic).
   static int _weekNumber(DateTime date) {
-    final startOfYear = DateTime(date.year, 1, 1);
-    return (date.difference(startOfYear).inDays / 7).floor() + 1;
+    final thursday = date.add(Duration(days: DateTime.thursday - date.weekday));
+    final startOfYear = DateTime(thursday.year, 1, 1);
+    return ((thursday.difference(startOfYear).inDays) / 7).floor() + 1;
+  }
+
+  static int _isoYear(DateTime date) {
+    return date
+        .add(Duration(days: DateTime.thursday - date.weekday))
+        .year;
   }
 
   Future<void> _load() async {
     final now = DateTime.now();
-    final currentYear = now.year;
+    final currentYear = _isoYear(now);
     final currentWeek = _weekNumber(now);
     final planned = widget.plannedDaysPerWeek;
 
@@ -65,7 +73,7 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
     // Agrupar sesiones por semana (solo año actual)
     final Map<int, int> byWeek = {};
     for (final s in sessions) {
-      if (s.date.year == currentYear) {
+      if (_isoYear(s.date) == currentYear) {
         final w = _weekNumber(s.date);
         byWeek[w] = (byWeek[w] ?? 0) + 1;
       }

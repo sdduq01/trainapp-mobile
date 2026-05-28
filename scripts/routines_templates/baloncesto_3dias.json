@@ -1,0 +1,49 @@
+{
+  "id": "sport_baloncesto_3dias",
+  "category": "sport",
+  "name": "Baloncesto",
+  "description": "Rutina de 3 días diseñada para jugadores de baloncesto. El objetivo es saltar más alto, mantener los brazos arriba más tiempo y cambiar de dirección sin romperse. El día 1 construye la potencia de salto desde la base. El día 2 trabaja los hombros y la espalda que sostienen el tiro, el pase y la defensa de brazos durante 40 minutos. El día 3 cuida las rodillas, los tobillos y la musculatura que absorbe cada aterrizaje y cada corte lateral.",
+  "type": "Deporte",
+  "sport": "baloncesto",
+  "days": [
+    {
+      "dayNumber": 1,
+      "name": "Piernas — Salto Vertical y Explosividad",
+      "focus": "legs",
+      "exercises": [
+        { "exerciseId": "sentadilla_hack", "name": "Sentadilla Hack", "sets": 4, "repsMin": 5, "repsMax": 8, "currentWeight": 0, "restSeconds": 180, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "hip_thrust", "name": "Hip Thrust", "sets": 4, "repsMin": 6, "repsMax": 10, "currentWeight": 0, "restSeconds": 150, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "prensa", "name": "Prensa de Piernas", "sets": 3, "repsMin": 8, "repsMax": 12, "currentWeight": 0, "restSeconds": 150, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "sentadilla_bulgara", "name": "Sentadilla Búlgara", "sets": 3, "repsMin": 8, "repsMax": 10, "currentWeight": 0, "restSeconds": 150, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "extension_cuadriceps", "name": "Extensión de Cuádriceps", "sets": 3, "repsMin": 10, "repsMax": 15, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "extension_pantorrilla_sentado", "name": "Extensión de Pantorrilla Sentado", "sets": 4, "repsMin": 15, "repsMax": 20, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 }
+      ]
+    },
+    {
+      "dayNumber": 2,
+      "name": "Tren Superior — Aro, Rebotes y Defensa de Brazos",
+      "focus": "push",
+      "exercises": [
+        { "exerciseId": "press_militar", "name": "Press Militar", "sets": 4, "repsMin": 6, "repsMax": 10, "currentWeight": 0, "restSeconds": 150, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "remo_barra", "name": "Remo con Barra", "sets": 4, "repsMin": 6, "repsMax": 10, "currentWeight": 0, "restSeconds": 150, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "press_banca", "name": "Press de Banca", "sets": 3, "repsMin": 8, "repsMax": 12, "currentWeight": 0, "restSeconds": 150, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "jalones_pecho", "name": "Jalones al Pecho", "sets": 3, "repsMin": 8, "repsMax": 12, "currentWeight": 0, "restSeconds": 120, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "face_pull", "name": "Face Pull", "sets": 3, "repsMin": 12, "repsMax": 15, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "elevacion_lateral_mancuerna", "name": "Elevación Lateral con Mancuerna", "sets": 3, "repsMin": 12, "repsMax": 15, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 }
+      ]
+    },
+    {
+      "dayNumber": 3,
+      "name": "Lateralidad y Prevención — Rodillas · Tobillos · Cortes",
+      "focus": "legs",
+      "exercises": [
+        { "exerciseId": "rdl_unilateral", "name": "Peso Muerto Rumano Unilateral", "sets": 3, "repsMin": 10, "repsMax": 12, "currentWeight": 0, "restSeconds": 150, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "zancada_mancuernas", "name": "Zancada con Mancuernas", "sets": 3, "repsMin": 10, "repsMax": 12, "currentWeight": 0, "restSeconds": 120, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "abduccion_cadera_polea", "name": "Abducción de Cadera en Polea", "sets": 3, "repsMin": 12, "repsMax": 15, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "aduccion_cadera_polea", "name": "Aducción de Cadera en Polea", "sets": 3, "repsMin": 12, "repsMax": 15, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "curl_femoral_tumbado", "name": "Curl Femoral Tumbado en Máquina", "sets": 3, "repsMin": 10, "repsMax": 15, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "extension_pantorrilla_unilateral", "name": "Extensión de Pantorrilla Unilateral", "sets": 4, "repsMin": 15, "repsMax": 20, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 }
+      ]
+    }
+  ]
+}

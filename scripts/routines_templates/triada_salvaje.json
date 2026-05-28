@@ -1,0 +1,48 @@
+{
+  "id": "rec_triada_salvaje",
+  "category": "recommended",
+  "name": "Tríada Salvaje",
+  "description": "Push / Pull / Legs en 3 días. Un músculo, una sesión, cero excusas. Cada grupo recibe una dosis de alta intensidad por semana. Ideal si tienes 3 días disponibles y quieres resultados reales sin complicarte la vida.",
+  "type": "PPL",
+  "sport": null,
+  "days": [
+    {
+      "dayNumber": 1,
+      "name": "Push — Pecho · Hombros · Tríceps",
+      "focus": "push",
+      "exercises": [
+        { "exerciseId": "press_banca", "name": "Press de Banca", "sets": 4, "repsMin": 6, "repsMax": 10, "currentWeight": 0, "restSeconds": 180, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "press_inclinado_mancuernas", "name": "Press Inclinado con Mancuernas", "sets": 3, "repsMin": 8, "repsMax": 12, "currentWeight": 0, "restSeconds": 120, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "press_militar", "name": "Press Militar", "sets": 3, "repsMin": 8, "repsMax": 10, "currentWeight": 0, "restSeconds": 150, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "elevacion_lateral_mancuerna", "name": "Elevación Lateral con Mancuerna", "sets": 3, "repsMin": 12, "repsMax": 15, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "aperturas_pec_dec", "name": "Aperturas en Pec Dec", "sets": 3, "repsMin": 10, "repsMax": 15, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "extension_triceps", "name": "Extensión de Tríceps", "sets": 3, "repsMin": 10, "repsMax": 15, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 }
+      ]
+    },
+    {
+      "dayNumber": 2,
+      "name": "Pull — Espalda · Bíceps",
+      "focus": "pull",
+      "exercises": [
+        { "exerciseId": "dominadas_lastradas", "name": "Dominadas Lastradas", "sets": 4, "repsMin": 6, "repsMax": 10, "currentWeight": 0, "restSeconds": 180, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "remo_barra", "name": "Remo con Barra", "sets": 4, "repsMin": 6, "repsMax": 10, "currentWeight": 0, "restSeconds": 180, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "jalones_pecho", "name": "Jalones al Pecho", "sets": 3, "repsMin": 8, "repsMax": 12, "currentWeight": 0, "restSeconds": 120, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "face_pull", "name": "Face Pull", "sets": 3, "repsMin": 12, "repsMax": 15, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "curl_barra", "name": "Curl con Barra", "sets": 3, "repsMin": 10, "repsMax": 12, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 }
+      ]
+    },
+    {
+      "dayNumber": 3,
+      "name": "Legs — Cuádriceps · Isquios · Glúteos",
+      "focus": "legs",
+      "exercises": [
+        { "exerciseId": "sentadilla_peso_libre", "name": "Sentadilla con Peso Libre", "sets": 4, "repsMin": 6, "repsMax": 10, "currentWeight": 0, "restSeconds": 180, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "peso_muerto_rumano", "name": "Peso Muerto Rumano", "sets": 3, "repsMin": 8, "repsMax": 12, "currentWeight": 0, "restSeconds": 180, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "prensa", "name": "Prensa de Piernas", "sets": 3, "repsMin": 8, "repsMax": 12, "currentWeight": 0, "restSeconds": 150, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "extension_cuadriceps", "name": "Extensión de Cuádriceps", "sets": 3, "repsMin": 10, "repsMax": 15, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "curl_femoral_tumbado", "name": "Curl Femoral Tumbado en Máquina", "sets": 3, "repsMin": 10, "repsMax": 15, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "extension_pantorrilla_sentado", "name": "Extensión de Pantorrilla Sentado", "sets": 3, "repsMin": 12, "repsMax": 15, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 }
+      ]
+    }
+  ]
+}

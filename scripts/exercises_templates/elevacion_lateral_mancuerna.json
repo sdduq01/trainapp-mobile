@@ -1,0 +1,11 @@
+{
+  "id": "elevacion_lateral_mancuerna",
+  "name": "Elevación Lateral con Mancuerna",
+  "muscle": "push",
+  "defaultSets": 3,
+  "defaultRepsMin": 10,
+  "defaultRepsMax": 15,
+  "restSeconds": 90,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 2.5
+}

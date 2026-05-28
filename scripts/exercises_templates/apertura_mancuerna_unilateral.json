@@ -1,0 +1,11 @@
+{
+  "id": "apertura_mancuerna_unilateral",
+  "name": "Apertura con Mancuerna Unilateral",
+  "muscle": "push",
+  "defaultSets": 3,
+  "defaultRepsMin": 10,
+  "defaultRepsMax": 15,
+  "restSeconds": 90,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 2.5
+}

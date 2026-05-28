@@ -1,0 +1,11 @@
+  {
+    "id": "elevaiones_unilaterales_polea",
+    "name": "Elevaciones Unilaterales en Polea",
+    "muscle": "pull",
+    "defaultSets": 3,
+    "defaultRepsMin": 8,
+    "defaultRepsMax": 10,
+    "restSeconds": 180,
+    "defaultWeightUnit": "kg",
+    "defaultProgressionStep": 2.5
+  }

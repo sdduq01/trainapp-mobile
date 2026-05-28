@@ -1,0 +1,11 @@
+  {
+    "id": "fondos_lastrados",
+    "name": "Fondos Lastrados",
+    "muscle": "push",
+    "defaultSets": 3,
+    "defaultRepsMin": 6,
+    "defaultRepsMax": 10,
+    "restSeconds": 180,
+    "defaultWeightUnit": "kg",
+    "defaultProgressionStep": 2.5
+  }

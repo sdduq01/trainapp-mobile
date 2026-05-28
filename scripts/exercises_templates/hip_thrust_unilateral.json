@@ -1,0 +1,11 @@
+{
+  "id": "hip_thrust_unilateral",
+  "name": "Hip Thrust Unilateral",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 8,
+  "defaultRepsMax": 12,
+  "restSeconds": 150,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 2.5
+}

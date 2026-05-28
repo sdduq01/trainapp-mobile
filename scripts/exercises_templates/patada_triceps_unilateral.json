@@ -1,0 +1,11 @@
+{
+  "id": "patada_triceps_unilateral",
+  "name": "Patada de Tríceps Unilateral",
+  "muscle": "pull",
+  "defaultSets": 3,
+  "defaultRepsMin": 10,
+  "defaultRepsMax": 15,
+  "restSeconds": 90,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 2.5
+}

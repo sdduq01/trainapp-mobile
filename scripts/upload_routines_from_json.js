@@ -2,14 +2,15 @@
  * Sube plantillas de rutina (.json) a Firestore desde una carpeta externa.
  *
  * Carpeta por defecto:
- *   /mnt/c/Users/sdduq/OneDrive/Documentos/TrainApp/Rutinas
+ *   ./scripts/routines_templates
  * (se puede override con la variable de entorno ROUTINES_DIR)
  *
  * Comportamiento:
  *   - Lee todos los .json del directorio (ignora los que empiezan con "_").
  *   - Valida estructura mínima.
- *   - Compara contra Firestore por NOMBRE (case-insensitive).
- *   - Sube solo las rutinas cuyo `name` no exista todavía.
+ *   - Compara contra Firestore por ID (derivado del nombre o campo `id`).
+ *   - Si ya existe → reemplaza el documento en Firestore con el JSON local.
+ *   - Si es nuevo → inserta.
  *
  * Uso (desde el directorio del proyecto):
  *   node scripts/upload_routines_from_json.js            → dry-run
@@ -203,39 +204,43 @@ async function main() {
 
   console.log('─── Leyendo colección existente en Firestore...');
   const snap = await db.collection(COLLECTION).get();
-  const existingNames = new Set(
-    snap.docs.map(d => (d.data().name || '').toLowerCase().trim())
-  );
-  console.log(`    ${existingNames.size} rutina(s) en Firestore\n`);
+  const existingIds = new Set(snap.docs.map(d => d.id));
+  console.log(`    ${existingIds.size} rutina(s) en Firestore\n`);
 
   // 4. Clasificar
   const toInsert = [];
-  const skipped  = [];
+  const toUpdate = [];
   for (const it of items) {
-    if (existingNames.has(it.data.name.toLowerCase().trim())) {
-      skipped.push(it);
+    if (existingIds.has(it.docId)) {
+      toUpdate.push(it);
     } else {
       toInsert.push(it);
     }
   }
 
-  if (skipped.length) {
-    console.log(`⚠️  Omitidas porque el nombre ya existe en Firestore (${skipped.length}):`);
-    skipped.forEach(s => console.log(`   [${s.file}] "${s.data.name}"`));
+  if (toUpdate.length) {
+    console.log(`🔄 Rutinas a reemplazar (${toUpdate.length}):`);
+    toUpdate.forEach(t => {
+      const tag = t.data.category === 'sport' ? `sport:${t.data.sport}` : t.data.category;
+      console.log(`   [${t.docId}] "${t.data.name}" · ${tag} · ${t.data.days.length} días`);
+    });
+    console.log();
+  }
+  if (toInsert.length) {
+    console.log(`📋 Rutinas nuevas a subir (${toInsert.length}):`);
+    toInsert.forEach(t => {
+      const tag = t.data.category === 'sport' ? `sport:${t.data.sport}` : t.data.category;
+      console.log(`   [${t.docId}] "${t.data.name}" · ${tag} · ${t.data.days.length} días`);
+    });
     console.log();
   }
 
-  if (!toInsert.length) {
-    console.log('✅ No hay rutinas nuevas para subir.');
+  const toWrite = [...toInsert, ...toUpdate];
+
+  if (!toWrite.length) {
+    console.log('✅ No hay rutinas para subir.');
     process.exit(0);
   }
-
-  console.log(`📋 Rutinas a subir (${toInsert.length}):`);
-  toInsert.forEach(t => {
-    const tag = t.data.category === 'sport' ? `sport:${t.data.sport}` : t.data.category;
-    console.log(`   [${t.docId}] "${t.data.name}" · ${tag} · ${t.data.days.length} días`);
-  });
-  console.log();
 
   if (!commit) {
     console.log('ℹ️  Dry-run finalizado. Ejecuta con --commit para escribir en Firestore.');
@@ -244,12 +249,12 @@ async function main() {
 
   // 5. Escribir en batch
   const batch = db.batch();
-  for (const t of toInsert) {
+  for (const t of toWrite) {
     batch.set(db.collection(COLLECTION).doc(t.docId), t.data);
   }
   await batch.commit();
 
-  console.log(`\n✅ ${toInsert.length} rutina(s) subidas a Firestore.`);
+  console.log(`\n✅ ${toInsert.length} nueva(s), ${toUpdate.length} reemplazada(s) — total ${toWrite.length} rutina(s) escritas en Firestore.`);
 }
 
 main().catch(err => {

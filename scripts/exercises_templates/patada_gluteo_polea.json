@@ -1,0 +1,11 @@
+{
+  "id": "patada_gluteo_polea",
+  "name": "Patada de Glúteo en Polea",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 12,
+  "defaultRepsMax": 15,
+  "restSeconds": 90,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 2.5
+}

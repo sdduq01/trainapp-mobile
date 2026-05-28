@@ -1,0 +1,11 @@
+  {
+    "id": "press_pectoral_hammer",
+    "name": "Press Pectoral en Hammer",
+    "muscle": "push",
+    "defaultSets": 3,
+    "defaultRepsMin": 6,
+    "defaultRepsMax": 10,
+    "restSeconds": 180,
+    "defaultWeightUnit": "kg",
+    "defaultProgressionStep": 2.5
+  }

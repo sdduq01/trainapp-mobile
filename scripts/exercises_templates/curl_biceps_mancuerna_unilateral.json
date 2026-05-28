@@ -1,0 +1,11 @@
+{
+  "id": "curl_biceps_mancuerna_unilateral",
+  "name": "Curl de Bíceps Unilateral con Mancuerna",
+  "muscle": "push",
+  "defaultSets": 3,
+  "defaultRepsMin": 8,
+  "defaultRepsMax": 12,
+  "restSeconds": 90,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 2.5
+}

@@ -1,0 +1,11 @@
+{
+  "id": "crossover_polea_unilateral",
+  "name": "Crossover Unilateral en Polea",
+  "muscle": "push",
+  "defaultSets": 3,
+  "defaultRepsMin": 10,
+  "defaultRepsMax": 15,
+  "restSeconds": 90,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 2.5
+}

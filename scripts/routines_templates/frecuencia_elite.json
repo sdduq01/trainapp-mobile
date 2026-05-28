@@ -1,0 +1,72 @@
+{
+  "id": "rec_frecuencia_elite",
+  "category": "recommended",
+  "name": "Frecuencia Élite",
+  "description": "Cinco días de PPL extendido con frecuencia 2 en todos los grupos musculares. Dos sesiones de push, dos de pull y una de piernas con doble enfoque (cuádriceps un día, glúteo e isquios el otro). Diseñada para intermedios y avanzados que se recuperan bien y quieren maximizar el volumen semanal.",
+  "type": "PPL+",
+  "sport": null,
+  "days": [
+    {
+      "dayNumber": 1,
+      "name": "Push A — Pecho · Hombros",
+      "focus": "push",
+      "exercises": [
+        { "exerciseId": "press_banca", "name": "Press de Banca", "sets": 4, "repsMin": 6, "repsMax": 10, "currentWeight": 0, "restSeconds": 180, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "press_inclinado_mancuernas", "name": "Press Inclinado con Mancuernas", "sets": 3, "repsMin": 8, "repsMax": 12, "currentWeight": 0, "restSeconds": 120, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "press_militar", "name": "Press Militar", "sets": 3, "repsMin": 8, "repsMax": 10, "currentWeight": 0, "restSeconds": 150, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "elevacion_lateral_mancuerna", "name": "Elevación Lateral con Mancuerna", "sets": 3, "repsMin": 12, "repsMax": 15, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "aperturas_pec_dec", "name": "Aperturas en Pec Dec", "sets": 3, "repsMin": 10, "repsMax": 15, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 }
+      ]
+    },
+    {
+      "dayNumber": 2,
+      "name": "Pull A — Espalda Pesada",
+      "focus": "pull",
+      "exercises": [
+        { "exerciseId": "dominadas_lastradas", "name": "Dominadas Lastradas", "sets": 4, "repsMin": 6, "repsMax": 10, "currentWeight": 0, "restSeconds": 180, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "remo_barra", "name": "Remo con Barra", "sets": 4, "repsMin": 6, "repsMax": 10, "currentWeight": 0, "restSeconds": 180, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "jalones_pecho", "name": "Jalones al Pecho", "sets": 3, "repsMin": 8, "repsMax": 12, "currentWeight": 0, "restSeconds": 120, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "face_pull", "name": "Face Pull", "sets": 3, "repsMin": 12, "repsMax": 15, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "curl_barra", "name": "Curl con Barra", "sets": 3, "repsMin": 10, "repsMax": 12, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 }
+      ]
+    },
+    {
+      "dayNumber": 3,
+      "name": "Legs A — Cuádriceps · Pantorrillas",
+      "focus": "legs",
+      "exercises": [
+        { "exerciseId": "sentadilla_peso_libre", "name": "Sentadilla con Peso Libre", "sets": 4, "repsMin": 5, "repsMax": 8, "currentWeight": 0, "restSeconds": 180, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "sentadilla_hack", "name": "Sentadilla Hack", "sets": 3, "repsMin": 8, "repsMax": 12, "currentWeight": 0, "restSeconds": 180, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "extension_cuadriceps", "name": "Extensión de Cuádriceps", "sets": 3, "repsMin": 10, "repsMax": 15, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "zancada_mancuernas", "name": "Zancada con Mancuernas", "sets": 3, "repsMin": 10, "repsMax": 12, "currentWeight": 0, "restSeconds": 120, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "extension_pantorrilla_sentado", "name": "Extensión de Pantorrilla Sentado", "sets": 4, "repsMin": 12, "repsMax": 15, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 }
+      ]
+    },
+    {
+      "dayNumber": 4,
+      "name": "Push B — Pecho Accesorio · Tríceps",
+      "focus": "push",
+      "exercises": [
+        { "exerciseId": "press_pectoral_hammer", "name": "Press Pectoral en Hammer", "sets": 3, "repsMin": 8, "repsMax": 12, "currentWeight": 0, "restSeconds": 120, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "press_banca_declinado", "name": "Press de Banca Declinado", "sets": 3, "repsMin": 8, "repsMax": 12, "currentWeight": 0, "restSeconds": 150, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "crossover_polea_unilateral", "name": "Crossover Unilateral en Polea", "sets": 3, "repsMin": 12, "repsMax": 15, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "press_hombro_mancuerna_unilateral", "name": "Press de Hombro Unilateral con Mancuerna", "sets": 3, "repsMin": 10, "repsMax": 12, "currentWeight": 0, "restSeconds": 120, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "skullcrusher", "name": "Skullcrusher", "sets": 3, "repsMin": 10, "repsMax": 12, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "patada_triceps_unilateral", "name": "Patada de Tríceps Unilateral", "sets": 3, "repsMin": 12, "repsMax": 15, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 }
+      ]
+    },
+    {
+      "dayNumber": 5,
+      "name": "Pull B — Espalda Volumen · Bíceps",
+      "focus": "pull",
+      "exercises": [
+        { "exerciseId": "remo_en_t", "name": "Remo en T", "sets": 3, "repsMin": 8, "repsMax": 12, "currentWeight": 0, "restSeconds": 180, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "remo_mancuerna_unilateral", "name": "Remo con Mancuerna Unilateral", "sets": 3, "repsMin": 8, "repsMax": 12, "currentWeight": 0, "restSeconds": 120, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "jalon_agarre_neutro", "name": "Jalón con Agarre Neutro", "sets": 3, "repsMin": 10, "repsMax": 12, "currentWeight": 0, "restSeconds": 120, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "elevacion_posterior_mancuerna", "name": "Elevación Posterior con Mancuerna", "sets": 3, "repsMin": 12, "repsMax": 15, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "curl_biceps_mancuerna_unilateral", "name": "Curl de Bíceps Unilateral con Mancuerna", "sets": 3, "repsMin": 10, "repsMax": 12, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "curl_martillo_unilateral", "name": "Curl Martillo Unilateral", "sets": 3, "repsMin": 10, "repsMax": 12, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "id": "rec_full_metal_body",
+  "category": "recommended",
+  "name": "Full Metal Body",
+  "description": "Cuerpo completo en 3 sesiones por semana. Estimulas cada músculo 3 veces en 7 días — la frecuencia más alta posible sin volverse loco. Cada sesión gira en torno a un patrón de movimiento diferente, así que nunca haces lo mismo dos veces seguidas. Perfecta para principiantes que quieren aprender los fundamentales y para intermedios que buscan un reinicio.",
+  "type": "Full Body",
+  "sport": null,
+  "days": [
+    {
+      "dayNumber": 1,
+      "name": "Full Body A — Sentadilla · Press · Remo",
+      "focus": "push",
+      "exercises": [
+        { "exerciseId": "sentadilla_hack", "name": "Sentadilla Hack", "sets": 4, "repsMin": 6, "repsMax": 10, "currentWeight": 0, "restSeconds": 180, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "press_banca", "name": "Press de Banca", "sets": 4, "repsMin": 6, "repsMax": 10, "currentWeight": 0, "restSeconds": 180, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "remo_maquina", "name": "Remo en Máquina", "sets": 3, "repsMin": 8, "repsMax": 12, "currentWeight": 0, "restSeconds": 120, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "press_militar", "name": "Press Militar", "sets": 3, "repsMin": 8, "repsMax": 10, "currentWeight": 0, "restSeconds": 120, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "curl_barra", "name": "Curl con Barra", "sets": 3, "repsMin": 10, "repsMax": 12, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "extension_triceps", "name": "Extensión de Tríceps", "sets": 3, "repsMin": 10, "repsMax": 15, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 }
+      ]
+    },
+    {
+      "dayNumber": 2,
+      "name": "Full Body B — Peso Muerto · Jalón · Press Inclinado",
+      "focus": "pull",
+      "exercises": [
+        { "exerciseId": "peso_muerto", "name": "Peso Muerto", "sets": 4, "repsMin": 5, "repsMax": 8, "currentWeight": 0, "restSeconds": 180, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "jalones_pecho", "name": "Jalones al Pecho", "sets": 4, "repsMin": 8, "repsMax": 12, "currentWeight": 0, "restSeconds": 120, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "press_inclinado_mancuernas", "name": "Press Inclinado con Mancuernas", "sets": 3, "repsMin": 8, "repsMax": 12, "currentWeight": 0, "restSeconds": 120, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "hip_thrust", "name": "Hip Thrust", "sets": 3, "repsMin": 8, "repsMax": 12, "currentWeight": 0, "restSeconds": 150, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "press_hombro_mancuerna", "name": "Press de Hombro con Mancuernas", "sets": 3, "repsMin": 10, "repsMax": 12, "currentWeight": 0, "restSeconds": 120, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "curl_martillo_unilateral", "name": "Curl Martillo Unilateral", "sets": 3, "repsMin": 10, "repsMax": 12, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 }
+      ]
+    },
+    {
+      "dayNumber": 3,
+      "name": "Full Body C — Búlgara · Dominadas · Hammer",
+      "focus": "legs",
+      "exercises": [
+        { "exerciseId": "sentadilla_bulgara", "name": "Sentadilla Búlgara", "sets": 3, "repsMin": 8, "repsMax": 12, "currentWeight": 0, "restSeconds": 180, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "dominadas_lastradas", "name": "Dominadas Lastradas", "sets": 3, "repsMin": 6, "repsMax": 10, "currentWeight": 0, "restSeconds": 180, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "press_pectoral_hammer", "name": "Press Pectoral en Hammer", "sets": 3, "repsMin": 8, "repsMax": 12, "currentWeight": 0, "restSeconds": 120, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "face_pull", "name": "Face Pull", "sets": 3, "repsMin": 12, "repsMax": 15, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "extension_cuadriceps", "name": "Extensión de Cuádriceps", "sets": 3, "repsMin": 10, "repsMax": 15, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 },
+        { "exerciseId": "extension_pantorrilla_sentado", "name": "Extensión de Pantorrilla Sentado", "sets": 3, "repsMin": 12, "repsMax": 15, "currentWeight": 0, "restSeconds": 90, "weightUnit": "kg", "progressionStep": 2.5 }
+      ]
+    }
+  ]
+}

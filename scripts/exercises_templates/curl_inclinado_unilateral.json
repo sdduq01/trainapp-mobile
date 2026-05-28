@@ -1,0 +1,11 @@
+{
+  "id": "curl_inclinado_unilateral",
+  "name": "Curl Inclinado Unilateral",
+  "muscle": "push",
+  "defaultSets": 3,
+  "defaultRepsMin": 8,
+  "defaultRepsMax": 12,
+  "restSeconds": 90,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 2.5
+}
