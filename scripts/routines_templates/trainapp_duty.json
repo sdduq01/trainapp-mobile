@@ -1,247 +1,258 @@
 {
-    "id": "",
-    "category": "recommended",
-    "name": "TrainApp Duty",
-    "description": "Recomendada para quien está iniciando su camino, general, balanceada, frecuencia 2, media intensidad.",
-    "type": "PPL",
-    "sport": null,
-    "days": [
-      {
-        "dayNumber": 1,
-        "name": "Pecho Espalda",
-        "focus": "push",
-        "exercises": [
-          {
-            "exerciseId": "press_banca",
-            "name": "Press de Banca",
-            "sets": 3,
-            "repsMin": 6,
-            "repsMax": 10,
-            "currentWeight": 0,
-            "restSeconds": 180,
-            "weightUnit": "kg",
-            "progressionStep": 5
-          },
-          {
-            "exerciseId": "press_inclinado_mancuernas",
-            "name": "Press Inclinado con Mancuernas",
-            "sets": 3,
-            "repsMin": 6,
-            "repsMax": 10,
-            "currentWeight": 0,
-            "restSeconds": 180,
-            "weightUnit": "kg",
-            "progressionStep": 2.5
-          },
-          {
-            "exerciseId": "aperturas_pec_dec",
-            "name": "Aperturas en Pec Dec",
-            "sets": 3,
-            "repsMin": 6,
-            "repsMax": 10,
-            "currentWeight": 0,
-            "restSeconds": 180,
-            "weightUnit": "kg",
-            "progressionStep": 2.5
-          },
-          {
-            "exerciseId": "dominadas_lastradas",
-            "name": "Dominadas Lastradas",
-            "sets": 3,
-            "repsMin": 6,
-            "repsMax": 10,
-            "currentWeight": 0,
-            "restSeconds": 180,
-            "weightUnit": "kg",
-            "progressionStep": 2.5
-          },
-          {
-            "exerciseId": "pull_over",
-            "name": "Pull Over",
-            "sets": 3,
-            "repsMin": 6,
-            "repsMax": 10,
-            "currentWeight": 0,
-            "restSeconds": 180,
-            "weightUnit": "kg",
-            "progressionStep": 2.5
-          }
-        ]
-      },
-      {
-        "dayNumber": 2,
-        "name": "Pierna 1",
-        "focus": "legs",
-        "exercises": [
-          {
-            "exerciseId": "sentadilla_hack",
-            "name": "Sentadilla Hack",
-            "sets": 3,
-            "repsMin": 6,
-            "repsMax": 10,
-            "currentWeight": 0,
-            "restSeconds": 240,
-            "weightUnit": "kg",
-            "progressionStep": 10
-          },
-          {
-            "exerciseId": "hip_thrust",
-            "name": "Hip Thrust",
-            "sets": 3,
-            "repsMin": 6,
-            "repsMax": 10,
-            "currentWeight": 0,
-            "restSeconds": 180,
-            "weightUnit": "kg",
-            "progressionStep": 10
-          },
-          {
-            "exerciseId": "extension_cuadriceps",
-            "name": "Extensión de Cuádriceps",
-            "sets": 3,
-            "repsMin": 6,
-            "repsMax": 10,
-            "currentWeight": 0,
-            "restSeconds": 180,
-            "weightUnit": "kg",
-            "progressionStep": 10
-          },
-          {
-            "exerciseId": "peso_muerto",
-            "name": "Peso Muerto",
-            "sets": 3,
-            "repsMin": 6,
-            "repsMax": 10,
-            "currentWeight": 0,
-            "restSeconds": 180,
-            "weightUnit": "kg",
-            "progressionStep": 10
-          }
-        ]
-      },
-      {
-        "dayNumber": 3,
-        "name": "Espalda Pecho",
-        "focus": "pull",
-        "exercises": [
-          {
-            "exerciseId": "jalones_pecho",
-            "name": "Jalones al Pecho",
-            "sets": 3,
-            "repsMin": 6,
-            "repsMax": 10,
-            "currentWeight": 0,
-            "restSeconds": 180,
-            "weightUnit": "kg",
-            "progressionStep": 2.5
-          },
-          {
-            "exerciseId": "remo_maquina",
-            "name": "Remo en Máquina",
-            "sets": 3,
-            "repsMin": 6,
-            "repsMax": 10,
-            "currentWeight": 0,
-            "restSeconds": 180,
-            "weightUnit": "kg",
-            "progressionStep": 2.5
-          },
-          {
-            "exerciseId": "remo_gironda_unilateral",
-            "name": "Remo en Gironda Unilateral",
-            "sets": 3,
-            "repsMin": 6,
-            "repsMax": 10,
-            "currentWeight": 0,
-            "restSeconds": 180,
-            "weightUnit": "kg",
-            "progressionStep": 2.5
-          },
-          {
-            "exerciseId": "press_pectoral_hammer",
-            "name": "Press Pectoral en Hammer",
-            "sets": 3,
-            "repsMin": 6,
-            "repsMax": 10,
-            "currentWeight": 0,
-            "restSeconds": 180,
-            "weightUnit": "kg",
-            "progressionStep": 2.5
-          },
-          {
-            "exerciseId": "fondos_lastrados",
-            "name": "Fondos Lastrados",
-            "sets": 3,
-            "repsMin": 6,
-            "repsMax": 10,
-            "currentWeight": 0,
-            "restSeconds": 180,
-            "weightUnit": "kg",
-            "progressionStep": 2.5
-          }
-        ]
-      },
-      {
-        "dayNumber": 4,
-        "name": "Pierna 2",
-        "focus": "legs",
-        "exercises": [
-          {
-            "exerciseId": "sentadilla_peso_libre",
-            "name": "Sentadilla con Peso Libre",
-            "sets": 3,
-            "repsMin": 6,
-            "repsMax": 10,
-            "currentWeight": 0,
-            "restSeconds": 240,
-            "weightUnit": "kg",
-            "progressionStep": 5
-          },
-          {
-            "exerciseId": "extension_pantorrila",
-            "name": "Extensión de pantorrilla",
-            "sets": 3,
-            "repsMin": 6,
-            "repsMax": 10,
-            "currentWeight": 0,
-            "restSeconds": 180,
-            "weightUnit": "kg",
-            "progressionStep": 2.5
-          },
-          {
-            "exerciseId": "prensa",
-            "name": "Prensa de Piernas",
-            "sets": 3,
-            "repsMin": 6,
-            "repsMax": 10,
-            "currentWeight": 0,
-            "restSeconds": 180,
-            "weightUnit": "kg",
-            "progressionStep": 10
-          },
-          {
-            "exerciseId": "abducciones",
-            "name": "Abducciones de Pierna",
-            "sets": 3,
-            "repsMin": 6,
-            "repsMax": 10,
-            "currentWeight": 0,
-            "restSeconds": 180,
-            "weightUnit": "kg",
-            "progressionStep": 2.5
-          },
-          {
-            "exerciseId": "aducciones",
-            "name": "Aducciones de Pierna",
-            "sets": 3,
-            "repsMin": 6,
-            "repsMax": 10,
-            "currentWeight": 0,
-            "restSeconds": 180,
-            "weightUnit": "kg",
-            "progressionStep": 2.5
-          }
-        ]
-      }
-    ]
-  }
+  "id": "trainapp_duty",
+  "category": "recommended",
+  "name": "TrainApp Duty",
+  "description": "Recomendada para quien está iniciando su camino, general, balanceada, frecuencia 2, media intensidad.",
+  "type": "PPL",
+  "sport": null,
+  "days": [
+    {
+      "dayNumber": 1,
+      "name": "Pecho Espalda",
+      "focus": "push",
+      "exercises": [
+        {
+          "exerciseId": "press_banca",
+          "name": "Press de Banca",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 5
+        },
+        {
+          "exerciseId": "press_inclinado_hammer",
+          "name": "Press Inclinado en Hammer",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "aperturas_pec_dec",
+          "name": "Aperturas en Pec Dec",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "dominadas_lastradas",
+          "name": "Dominadas Lastradas",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "pull_over",
+          "name": "Pull Over",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        }
+      ]
+    },
+    {
+      "dayNumber": 2,
+      "name": "Pierna 1",
+      "focus": "legs",
+      "exercises": [
+        {
+          "exerciseId": "sentadilla_smith",
+          "name": "Sentadilla en Smith",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 240,
+          "weightUnit": "kg",
+          "progressionStep": 10
+        },
+        {
+          "exerciseId": "prensa",
+          "name": "Prensa de Piernas",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 10
+        },
+        {
+          "exerciseId": "curl_femoral_sentado",
+          "name": "Curl Femoral Sentado en Máquina",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "peso_muerto_rumano",
+          "name": "Peso Muerto Rumano",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 10
+        },
+        {
+          "exerciseId": "extension_pantorrila",
+          "name": "Extensión de Pantorrilla",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        }
+      ]
+    },
+    {
+      "dayNumber": 3,
+      "name": "Espalda Pecho",
+      "focus": "pull",
+      "exercises": [
+        {
+          "exerciseId": "jalones_pecho",
+          "name": "Jalones al Pecho",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "remo_en_t",
+          "name": "Remo en T",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "remo_gironda",
+          "name": "Remo en Gironda",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "cruces_poleas",
+          "name": "Cruces en Poleas",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "fondos_lastrados",
+          "name": "Fondos Lastrados",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        }
+      ]
+    },
+    {
+      "dayNumber": 4,
+      "name": "Pierna 2",
+      "focus": "legs",
+      "exercises": [
+        {
+          "exerciseId": "sentadilla_hack",
+          "name": "Sentadilla Hack",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 240,
+          "weightUnit": "kg",
+          "progressionStep": 10
+        },
+        {
+          "exerciseId": "extension_cuadriceps",
+          "name": "Extensión de Cuádriceps",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 10
+        },
+        {
+          "exerciseId": "curl_femoral_sentado",
+          "name": "Curl Femoral Sentado en Máquina",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "hip_thrust",
+          "name": "Hip Thrust",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 10
+        },
+        {
+          "exerciseId": "extension_pantorrila",
+          "name": "Extensión de Pantorrilla",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        }
+      ]
+    }
+  ]
+}

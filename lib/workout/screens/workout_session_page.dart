@@ -60,6 +60,12 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
   DateTime? _restEndTime;
   VoidCallback? _afterRest;
 
+  // Cronómetro para ejercicios isométricos (plancha y similares).
+  bool _isoRunning = false;
+  int _isoElapsed = 0;
+  DateTime? _isoStartTime;
+  Timer? _isoTimer;
+
   bool _saving = false;
 
   RoutineExercise get _currentExercise =>
@@ -289,6 +295,9 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
     if (state == AppLifecycleState.resumed && _resting && !_restExpired) {
       _syncRestFromWallClock();
     }
+    if (state == AppLifecycleState.resumed && _isoRunning) {
+      _syncIsoFromWallClock();
+    }
   }
 
   void _syncRestFromWallClock() {
@@ -441,6 +450,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
   void _initControllers() {
     _weightCtrl = TextEditingController();
     _repsCtrl = TextEditingController();
+    _resetIsoTimer();
     _refillControllers();
   }
 
@@ -453,6 +463,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
+    _isoTimer?.cancel();
     _audioPlayer.dispose();
     _weightCtrl.dispose();
     _repsCtrl.dispose();
@@ -507,10 +518,52 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
     cb?.call();
   }
 
+  // ── Cronómetro de ejercicio isométrico ────────────────────
+  //
+  // El campo de "reps" representa segundos sostenidos para estos ejercicios.
+  // Usa DateTime absoluto (igual que el descanso) para sobrevivir a que la
+  // app pase a segundo plano mientras el usuario sostiene la posición.
+
+  void _startIsoTimer() {
+    _isoTimer?.cancel();
+    _isoStartTime = DateTime.now();
+    setState(() { _isoRunning = true; _isoElapsed = 0; });
+    _isoTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) { t.cancel(); return; }
+      setState(() =>
+          _isoElapsed = DateTime.now().difference(_isoStartTime!).inSeconds);
+    });
+  }
+
+  void _stopIsoTimer() {
+    _isoTimer?.cancel();
+    if (!mounted) return;
+    setState(() {
+      _isoRunning = false;
+      _repsCtrl.text = _isoElapsed.toString();
+    });
+  }
+
+  void _syncIsoFromWallClock() {
+    if (_isoStartTime == null || !mounted) return;
+    setState(() =>
+        _isoElapsed = DateTime.now().difference(_isoStartTime!).inSeconds);
+  }
+
+  void _resetIsoTimer() {
+    _isoTimer?.cancel();
+    _isoRunning = false;
+    _isoElapsed = 0;
+  }
+
   // ── Avance de ejercicio ───────────────────────────────────
 
   void _completeSet() {
     final ex = _currentExercise;
+    // Si el cronómetro isométrico sigue corriendo, lo detiene y usa el
+    // tiempo transcurrido como valor de la serie.
+    if (ex.isIsometric && _isoRunning) _stopIsoTimer();
+
     final repsDone = int.tryParse(_repsCtrl.text) ?? ex.repsMax;
     final weight   = double.tryParse(_weightCtrl.text) ?? ex.currentWeight;
 
@@ -527,12 +580,14 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
   }
 
   void _advanceSet() {
+    _resetIsoTimer();
     setState(() => _setIndex++);
     _refillControllers();
   }
 
   void _advanceExercise() {
     _disposeControllers();
+    _resetIsoTimer();
     setState(() { _exerciseIndex++; _setIndex = 0; });
     _initControllers();
   }
@@ -1034,7 +1089,9 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${ex.sets} series · ${ex.repsMin}–${ex.repsMax} reps · ${ex.restSeconds}s descanso',
+                  ex.isIsometric
+                      ? '${ex.sets} series · ${ex.repsMin}–${ex.repsMax} s · ${ex.restSeconds}s descanso'
+                      : '${ex.sets} series · ${ex.repsMin}–${ex.repsMax} reps · ${ex.restSeconds}s descanso',
                   style: TextStyle(color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 16),
@@ -1052,6 +1109,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
                     repsDone: _logged[_exerciseIndex][s]!.$1,
                     weight: _logged[_exerciseIndex][s]!.$2,
                     weightUnit: ex.weightUnit,
+                    isIsometric: ex.isIsometric,
                   ),
                   const SizedBox(height: 8),
                 ],
@@ -1064,6 +1122,11 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
                   repsCtrl: _repsCtrl,
                   rir: _currentTarget().rir,
                   isFailure: _currentTarget().isFailure,
+                  isIsometric: ex.isIsometric,
+                  isoRunning: _isoRunning,
+                  isoElapsed: _isoElapsed,
+                  onStartIsoTimer: _startIsoTimer,
+                  onStopIsoTimer: _stopIsoTimer,
                 ),
 
                 const SizedBox(height: 28),
@@ -1220,12 +1283,14 @@ class _CompletedSetTile extends StatelessWidget {
   final int repsDone;
   final double weight;
   final String weightUnit;
+  final bool isIsometric;
 
   const _CompletedSetTile({
     required this.setNumber,
     required this.repsDone,
     required this.weight,
     required this.weightUnit,
+    this.isIsometric = false,
   });
 
   @override
@@ -1249,7 +1314,9 @@ class _CompletedSetTile extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Text(
-            '$repsDone reps · $weight $weightUnit',
+            isIsometric
+                ? (weight > 0 ? '$repsDone s · $weight $weightUnit' : '$repsDone s')
+                : '$repsDone reps · $weight $weightUnit',
             style: const TextStyle(fontWeight: FontWeight.w500),
           ),
           const Spacer(),
@@ -1268,6 +1335,11 @@ class _ActiveSetCard extends StatelessWidget {
   final TextEditingController repsCtrl;
   final int? rir;
   final bool isFailure;
+  final bool isIsometric;
+  final bool isoRunning;
+  final int isoElapsed;
+  final VoidCallback? onStartIsoTimer;
+  final VoidCallback? onStopIsoTimer;
 
   const _ActiveSetCard({
     required this.setNumber,
@@ -1277,6 +1349,11 @@ class _ActiveSetCard extends StatelessWidget {
     required this.repsCtrl,
     this.rir,
     this.isFailure = false,
+    this.isIsometric = false,
+    this.isoRunning = false,
+    this.isoElapsed = 0,
+    this.onStartIsoTimer,
+    this.onStopIsoTimer,
   });
 
   @override
@@ -1349,21 +1426,30 @@ class _ActiveSetCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Reps',
+                      isIsometric ? 'Tiempo (s)' : 'Reps',
                       style: TextStyle(color: Colors.grey[600], fontSize: 12),
                     ),
                     const SizedBox(height: 4),
-                    TextField(
-                      controller: repsCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 10),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
+                    if (isIsometric)
+                      _IsoTimerField(
+                        controller: repsCtrl,
+                        running: isoRunning,
+                        elapsed: isoElapsed,
+                        onStart: onStartIsoTimer,
+                        onStop: onStopIsoTimer,
+                      )
+                    else
+                      TextField(
+                        controller: repsCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -1371,6 +1457,90 @@ class _ActiveSetCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Campo de "reps" para ejercicios isométricos: cronómetro con play/stop.
+/// En reposo permite edición manual (fallback); corriendo, muestra el
+/// conteo en vivo y al detenerlo escribe el tiempo transcurrido en [controller].
+class _IsoTimerField extends StatelessWidget {
+  final TextEditingController controller;
+  final bool running;
+  final int elapsed;
+  final VoidCallback? onStart;
+  final VoidCallback? onStop;
+
+  const _IsoTimerField({
+    required this.controller,
+    required this.running,
+    required this.elapsed,
+    required this.onStart,
+    required this.onStop,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    if (running) {
+      return Container(
+        height: 42,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: colorScheme.primary.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: colorScheme.primary),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '${elapsed}s',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: colorScheme.primary,
+              ),
+            ),
+            InkWell(
+              onTap: onStop,
+              borderRadius: BorderRadius.circular(20),
+              child: const Padding(
+                padding: EdgeInsets.all(2),
+                child: Icon(Icons.stop_circle, color: Colors.red, size: 28),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12, vertical: 10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 6),
+        InkWell(
+          onTap: onStart,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(2),
+            child: Icon(Icons.play_circle_fill, color: colorScheme.primary, size: 32),
+          ),
+        ),
+      ],
     );
   }
 }

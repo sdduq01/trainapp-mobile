@@ -1,0 +1,12 @@
+{
+  "id": "press_triceps_maquina",
+  "name": "Press de Tríceps en Máquina",
+  "muscle": "pull",
+  "defaultSets": 3,
+  "defaultRepsMin": 10,
+  "defaultRepsMax": 12,
+  "restSeconds": 90,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 2.5,
+  "muscleGroup": "triceps"
+}

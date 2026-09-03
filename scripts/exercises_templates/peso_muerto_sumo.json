@@ -1,0 +1,12 @@
+{
+  "id": "peso_muerto_sumo",
+  "name": "Peso Muerto Sumo",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 6,
+  "defaultRepsMax": 10,
+  "restSeconds": 180,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 10,
+  "muscleGroup": "gluteos"
+}

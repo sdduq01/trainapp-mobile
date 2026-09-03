@@ -1,11 +1,12 @@
-  {
-    "id": "abducciones",
-    "name": "Abducciones de Pierna",
-    "muscle": "legs",
-    "defaultSets": 3,
-    "defaultRepsMin": 10,
-    "defaultRepsMax": 15,
-    "restSeconds": 180,
-    "defaultWeightUnit": "kg",
-    "defaultProgressionStep": 5
-  }
+{
+  "id": "abducciones",
+  "name": "Abducción de Cadera en Máquina",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 10,
+  "defaultRepsMax": 15,
+  "restSeconds": 180,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 5,
+  "muscleGroup": "abductores"
+}

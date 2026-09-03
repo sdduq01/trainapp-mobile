@@ -1,0 +1,12 @@
+{
+  "id": "encogimiento_mancuerna",
+  "name": "Encogimiento de Hombros con Mancuernas",
+  "muscle": "pull",
+  "defaultSets": 3,
+  "defaultRepsMin": 10,
+  "defaultRepsMax": 15,
+  "restSeconds": 90,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 2.5,
+  "muscleGroup": "trapecios"
+}

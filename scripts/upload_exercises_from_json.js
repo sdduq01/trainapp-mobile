@@ -34,7 +34,13 @@ const DEFAULT_DIR  = './scripts/exercises_templates';
 const EXERCISES_DIR = process.env.EXERCISES_DIR || DEFAULT_DIR;
 
 const VALID_MUSCLES = ['push', 'pull', 'legs'];
-const VALID_UNITS   = ['kg', 'lbs'];
+const VALID_MUSCLE_GROUPS = [
+  'pecho', 'espalda', 'hombros', 'trapecios',
+  'biceps', 'triceps', 'antebrazo',
+  'cuadriceps', 'femorales', 'gluteos', 'gemelos', 'abductores', 'aductores',
+  'abdominales', 'otros',
+];
+const VALID_UNITS   = ['kg', 'lbs', 'unidades'];
 const VALID_STEPS   = [1.0, 1.25, 2.5, 5.0, 10.0];
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -80,6 +86,9 @@ function validateExercise(file, e) {
   if (!e.muscle || !VALID_MUSCLES.includes(e.muscle)) {
     errs.push(`muscle debe ser uno de: ${VALID_MUSCLES.join(', ')}`);
   }
+  if (!e.muscleGroup || !VALID_MUSCLE_GROUPS.includes(e.muscleGroup)) {
+    errs.push(`muscleGroup debe ser uno de: ${VALID_MUSCLE_GROUPS.join(', ')}`);
+  }
   for (const k of ['defaultSets', 'defaultRepsMin', 'defaultRepsMax', 'restSeconds']) {
     if (typeof e[k] !== 'number' || e[k] <= 0) {
       errs.push(`${k} debe ser número > 0`);
@@ -90,7 +99,7 @@ function validateExercise(file, e) {
     errs.push(`defaultRepsMax (${e.defaultRepsMax}) < defaultRepsMin (${e.defaultRepsMin})`);
   }
   if (e.defaultWeightUnit !== undefined && !VALID_UNITS.includes(e.defaultWeightUnit)) {
-    errs.push(`defaultWeightUnit debe ser "kg" o "lbs"`);
+    errs.push(`defaultWeightUnit debe ser uno de: ${VALID_UNITS.join(', ')}`);
   }
   if (e.defaultProgressionStep !== undefined &&
       !VALID_STEPS.includes(Number(e.defaultProgressionStep))) {
@@ -98,6 +107,9 @@ function validateExercise(file, e) {
   }
   if (e.id !== undefined && e.id !== null && e.id !== '' && !/^[a-z0-9_]+$/.test(e.id)) {
     errs.push(`id "${e.id}" debe ser snake_case (solo a-z, 0-9, _)`);
+  }
+  if (e.isIsometric !== undefined && typeof e.isIsometric !== 'boolean') {
+    errs.push(`isIsometric debe ser boolean`);
   }
 
   if (errs.length) {
@@ -114,12 +126,14 @@ function normalize(e) {
     data: {
       name:                   e.name.trim(),
       muscle:                 e.muscle,
+      muscleGroup:            e.muscleGroup,
       defaultSets:            e.defaultSets,
       defaultRepsMin:         e.defaultRepsMin,
       defaultRepsMax:         e.defaultRepsMax,
       restSeconds:            e.restSeconds,
       defaultWeightUnit:      e.defaultWeightUnit ?? 'kg',
       defaultProgressionStep: e.defaultProgressionStep ?? 2.5,
+      isIsometric:            e.isIsometric ?? false,
     },
   };
 }
@@ -196,12 +210,12 @@ async function main() {
   }
   if (toUpdate.length) {
     console.log(`🔄 Ejercicios a reemplazar (${toUpdate.length}):`);
-    toUpdate.forEach(t => console.log(`   [${t.docId}] "${t.data.name}" · ${t.data.muscle}`));
+    toUpdate.forEach(t => console.log(`   [${t.docId}] "${t.data.name}" · ${t.data.muscle} · ${t.data.muscleGroup}`));
     console.log();
   }
   if (toInsert.length) {
     console.log(`📋 Ejercicios nuevos a subir (${toInsert.length}):`);
-    toInsert.forEach(t => console.log(`   [${t.docId}] "${t.data.name}" · ${t.data.muscle}`));
+    toInsert.forEach(t => console.log(`   [${t.docId}] "${t.data.name}" · ${t.data.muscle} · ${t.data.muscleGroup}`));
     console.log();
   }
 

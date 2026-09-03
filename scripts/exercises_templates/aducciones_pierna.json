@@ -1,11 +1,12 @@
-  {
-    "id": "aducciones",
-    "name": "Aducciones de Pierna",
-    "muscle": "legs",
-    "defaultSets": 3,
-    "defaultRepsMin": 8,
-    "defaultRepsMax": 10,
-    "restSeconds": 180,
-    "defaultWeightUnit": "kg",
-    "defaultProgressionStep": 5
-  }
+{
+  "id": "aducciones",
+  "name": "Aducciones de Pierna",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 8,
+  "defaultRepsMax": 10,
+  "restSeconds": 180,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 5,
+  "muscleGroup": "aductores"
+}

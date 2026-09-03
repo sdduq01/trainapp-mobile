@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../data/muscle_groups.dart';
 import '../models/exercise.dart';
 import '../models/routine.dart';
 import '../services/exercise_service.dart';
@@ -106,6 +107,7 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
       restSeconds: ex.restSeconds,
       weightUnit: ex.defaultWeightUnit,
       progressionStep: ex.defaultProgressionStep,
+      isIsometric: ex.isIsometric,
     ));
     _updateDay(dayIdx, exercises: current);
   }
@@ -125,16 +127,18 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
       return;
     }
     final existing = _days[dayIdx].exercises.map((e) => e.exerciseId).toSet();
-    final byMuscleMap = <String, List<Exercise>>{};
+    final byGroupMap = <String, List<Exercise>>{};
     for (final e in _catalog!) {
-      byMuscleMap.putIfAbsent(e.muscle, () => []).add(e);
+      byGroupMap.putIfAbsent(e.muscleGroup, () => []).add(e);
     }
-    final muscleOrder = ['push', 'pull', 'legs'];
-    final muscleLabel = {
-      'push': 'Empuje (pecho · hombro · tríceps)',
-      'pull': 'Tracción (espalda · bíceps)',
-      'legs': 'Piernas',
-    };
+    final groups = [
+      for (final g in muscleGroupOrder)
+        if ((byGroupMap[g] ?? []).isNotEmpty) g,
+    ];
+
+    // Grupo seleccionado dentro del sheet (null = mostrando la lista de grupos).
+    // Vive fuera de los builders para persistir entre setSheetState.
+    String? selectedGroup;
 
     await showModalBottomSheet(
       context: context,
@@ -156,9 +160,16 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                   child: Row(
                     children: [
+                      if (selectedGroup != null)
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back),
+                          onPressed: () => setSheetState(() => selectedGroup = null),
+                        ),
                       Expanded(
                         child: Text(
-                          'Agregar ejercicios — ${_days[dayIdx].name}',
+                          selectedGroup == null
+                              ? 'Grupo muscular — ${_days[dayIdx].name}'
+                              : '${muscleGroupLabels[selectedGroup] ?? selectedGroup!} — ${_days[dayIdx].name}',
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -171,39 +182,41 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
                 ),
                 const Divider(height: 1),
                 Expanded(
-                  child: ListView(
-                    controller: controller,
-                    children: [
-                      for (final m in muscleOrder)
-                        if ((byMuscleMap[m] ?? []).isNotEmpty)
-                          ExpansionTile(
-                            initiallyExpanded: true,
-                            title: Text(
-                              muscleLabel[m]!,
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            children: [
-                              for (final ex in byMuscleMap[m]!)
-                                ListTile(
-                                  dense: true,
-                                  title: Text(ex.name),
-                                  subtitle: Text(
-                                    '${ex.defaultSets}×${ex.defaultRepsMin}-${ex.defaultRepsMax} · ${ex.restSeconds}s',
-                                  ),
-                                  trailing: existing.contains(ex.id)
-                                      ? const Icon(Icons.check, color: Colors.green)
-                                      : const Icon(Icons.add_circle_outline),
-                                  onTap: existing.contains(ex.id)
-                                      ? null
-                                      : () {
-                                          existing.add(ex.id);
-                                          addAndRefresh(ex);
-                                        },
+                  child: selectedGroup == null
+                      ? ListView(
+                          controller: controller,
+                          children: [
+                            for (final g in groups)
+                              ListTile(
+                                title: Text(muscleGroupLabels[g] ?? g),
+                                subtitle: Text('${byGroupMap[g]!.length} ejercicio(s)'),
+                                trailing: const Icon(Icons.chevron_right),
+                                onTap: () => setSheetState(() => selectedGroup = g),
+                              ),
+                          ],
+                        )
+                      : ListView(
+                          controller: controller,
+                          children: [
+                            for (final ex in byGroupMap[selectedGroup]!)
+                              ListTile(
+                                dense: true,
+                                title: Text(ex.name),
+                                subtitle: Text(
+                                  '${ex.defaultSets}×${ex.defaultRepsMin}-${ex.defaultRepsMax} · ${ex.restSeconds}s',
                                 ),
-                            ],
-                          ),
-                    ],
-                  ),
+                                trailing: existing.contains(ex.id)
+                                    ? const Icon(Icons.check, color: Colors.green)
+                                    : const Icon(Icons.add_circle_outline),
+                                onTap: existing.contains(ex.id)
+                                    ? null
+                                    : () {
+                                        existing.add(ex.id);
+                                        addAndRefresh(ex);
+                                      },
+                              ),
+                          ],
+                        ),
                 ),
               ],
             );

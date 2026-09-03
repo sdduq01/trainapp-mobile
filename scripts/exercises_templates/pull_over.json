@@ -1,11 +1,12 @@
-  {
-    "id": "pull_over",
-    "name": "Pull Over",
-    "muscle": "pull",
-    "defaultSets": 3,
-    "defaultRepsMin": 6,
-    "defaultRepsMax": 10,
-    "restSeconds": 180,
-    "defaultWeightUnit": "kg",
-    "defaultProgressionStep": 2.5
-  }
+{
+  "id": "pull_over",
+  "name": "Pull Over",
+  "muscle": "pull",
+  "defaultSets": 3,
+  "defaultRepsMin": 6,
+  "defaultRepsMax": 10,
+  "restSeconds": 180,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 2.5,
+  "muscleGroup": "espalda"
+}

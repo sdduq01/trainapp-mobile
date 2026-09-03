@@ -8,9 +8,11 @@ class RoutineExercise {
   final int repsMax;
   final double currentWeight;
   final int restSeconds;
-  final String weightUnit;       // 'kg' | 'lbs'
+  final String weightUnit;       // 'kg' | 'lbs' | 'unidades'
   final double progressionStep;  // e.g. 1.25, 2.5, 5.0, 10.0
   final ProgressionType progressionType;
+  final bool isIsometric; // true para plancha y similares: se ejecuta con cronómetro,
+                           // repsMin/repsMax representan segundos objetivo, no repeticiones.
 
   const RoutineExercise({
     required this.exerciseId,
@@ -23,6 +25,7 @@ class RoutineExercise {
     this.weightUnit = 'kg',
     this.progressionStep = 2.5,
     this.progressionType = ProgressionType.doubleLinear,
+    this.isIsometric = false,
   });
 
   Map<String, dynamic> toMap() => {
@@ -36,6 +39,7 @@ class RoutineExercise {
         'weightUnit': weightUnit,
         'progressionStep': progressionStep,
         'progressionType': progressionType.id,
+        'isIsometric': isIsometric,
       };
 
   factory RoutineExercise.fromMap(Map<String, dynamic> m) => RoutineExercise(
@@ -50,6 +54,7 @@ class RoutineExercise {
         progressionStep: (m['progressionStep'] as num?)?.toDouble() ?? 2.5,
         progressionType:
             ProgressionTypeX.fromId(m['progressionType'] as String?),
+        isIsometric: m['isIsometric'] as bool? ?? false,
       );
 
   RoutineExercise copyWith({
@@ -63,6 +68,7 @@ class RoutineExercise {
     String? weightUnit,
     double? progressionStep,
     ProgressionType? progressionType,
+    bool? isIsometric,
   }) =>
       RoutineExercise(
         exerciseId: exerciseId ?? this.exerciseId,
@@ -75,6 +81,7 @@ class RoutineExercise {
         weightUnit: weightUnit ?? this.weightUnit,
         progressionStep: progressionStep ?? this.progressionStep,
         progressionType: progressionType ?? this.progressionType,
+        isIsometric: isIsometric ?? this.isIsometric,
       );
 }
 

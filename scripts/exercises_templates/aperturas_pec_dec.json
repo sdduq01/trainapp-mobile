@@ -1,11 +1,12 @@
-  {
-    "id": "aperturas_pec_dec",
-    "name": "Aperturas en Pec Dec",
-    "muscle": "push",
-    "defaultSets": 3,
-    "defaultRepsMin": 6,
-    "defaultRepsMax": 10,
-    "restSeconds": 180,
-    "defaultWeightUnit": "kg",
-    "defaultProgressionStep": 2.5
-  }
+{
+  "id": "aperturas_pec_dec",
+  "name": "Aperturas en Pec Dec",
+  "muscle": "push",
+  "defaultSets": 3,
+  "defaultRepsMin": 6,
+  "defaultRepsMax": 10,
+  "restSeconds": 180,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 2.5,
+  "muscleGroup": "pecho"
+}

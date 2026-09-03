@@ -1,11 +1,12 @@
-  {
-    "id": "extension_cuadriceps",
-    "name": "Extensión de Cuádriceps",
-    "muscle": "legs",
-    "defaultSets": 3,
-    "defaultRepsMin": 6,
-    "defaultRepsMax": 10,
-    "restSeconds": 180,
-    "defaultWeightUnit": "kg",
-    "defaultProgressionStep": 10
-  }
+{
+  "id": "extension_cuadriceps",
+  "name": "Extensión de Cuádriceps",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 6,
+  "defaultRepsMax": 10,
+  "restSeconds": 180,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 10,
+  "muscleGroup": "cuadriceps"
+}

@@ -7,5 +7,6 @@
   "defaultRepsMax": 15,
   "restSeconds": 90,
   "defaultWeightUnit": "kg",
-  "defaultProgressionStep": 2.5
+  "defaultProgressionStep": 2.5,
+  "muscleGroup": "pecho"
 }

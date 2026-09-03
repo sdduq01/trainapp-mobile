@@ -7,5 +7,6 @@
   "defaultRepsMax": 12,
   "restSeconds": 150,
   "defaultWeightUnit": "kg",
-  "defaultProgressionStep": 2.5
+  "defaultProgressionStep": 2.5,
+  "muscleGroup": "femorales"
 }

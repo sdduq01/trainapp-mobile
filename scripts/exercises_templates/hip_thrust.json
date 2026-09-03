@@ -1,11 +1,12 @@
-  {
-    "id": "hip_thrust",
-    "name": "Hip Thrust",
-    "muscle": "legs",
-    "defaultSets": 3,
-    "defaultRepsMin": 6,
-    "defaultRepsMax": 10,
-    "restSeconds": 180,
-    "defaultWeightUnit": "kg",
-    "defaultProgressionStep": 10
-  }
+{
+  "id": "hip_thrust",
+  "name": "Hip Thrust",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 6,
+  "defaultRepsMax": 10,
+  "restSeconds": 180,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 10,
+  "muscleGroup": "gluteos"
+}

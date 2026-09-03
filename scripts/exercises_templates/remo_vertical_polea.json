@@ -1,0 +1,12 @@
+{
+  "id": "remo_vertical_polea",
+  "name": "Remo Vertical en Polea",
+  "muscle": "pull",
+  "defaultSets": 3,
+  "defaultRepsMin": 10,
+  "defaultRepsMax": 12,
+  "restSeconds": 90,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 2.5,
+  "muscleGroup": "trapecios"
+}

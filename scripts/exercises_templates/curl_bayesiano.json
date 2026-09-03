@@ -1,0 +1,12 @@
+{
+  "id": "curl_bayesiano",
+  "name": "Curl Bayesiano",
+  "muscle": "push",
+  "defaultSets": 3,
+  "defaultRepsMin": 10,
+  "defaultRepsMax": 15,
+  "restSeconds": 90,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 2.5,
+  "muscleGroup": "biceps"
+}

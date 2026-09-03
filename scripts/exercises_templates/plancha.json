@@ -1,0 +1,13 @@
+{
+  "id": "plancha",
+  "name": "Plancha",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 30,
+  "defaultRepsMax": 60,
+  "restSeconds": 45,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "abdominales",
+  "isIsometric": true
+}

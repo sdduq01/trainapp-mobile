@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../data/muscle_groups.dart';
 import '../models/exercise.dart';
 import '../models/progression_type.dart';
 import '../models/routine.dart';
@@ -168,11 +169,19 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
                   segments: const [
                     ButtonSegment(value: 'kg', label: Text('kg')),
                     ButtonSegment(value: 'lbs', label: Text('lbs')),
+                    ButtonSegment(value: 'unidades', label: Text('Unidades')),
                   ],
                   selected: {weightUnit},
                   onSelectionChanged: (s) =>
                       setDialogState(() => weightUnit = s.first),
                 ),
+                if (weightUnit == 'unidades') ...[
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Para máquinas con placas sin marcar: cada unidad equivale a una placa.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 const Text('Incremento de progresión', style: TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
@@ -181,7 +190,7 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
                   children: steps.map((s) {
                     final label = s % 1 == 0 ? '${s.toInt()}' : '$s';
                     return ChoiceChip(
-                      label: Text('$label ${weightUnit == 'lbs' ? 'lb' : 'kg'}'),
+                      label: Text('$label ${_unitAbbrev(weightUnit)}'),
                       selected: progressionStep == s,
                       onSelected: (_) => setDialogState(() => progressionStep = s),
                     );
@@ -226,6 +235,7 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
                     weightUnit: weightUnit,
                     progressionStep: progressionStep,
                     progressionType: progressionType,
+                    isIsometric: ex.isIsometric,
                   ),
                 );
                 Navigator.pop(ctx);
@@ -298,13 +308,18 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
     final day = _routine.days[dayIdx];
     final existing = day.exercises.map((e) => e.exerciseId).toSet();
 
-    // Prioriza ejercicios del mismo grupo muscular del día
-    final primary = catalog!.where((e) =>
-        e.muscle == day.focus ||
-        (day.focus == 'upper' && (e.muscle == 'push' || e.muscle == 'pull')) ||
-        (day.focus == 'lower' && e.muscle == 'legs')).toList();
-    final others = catalog.where((e) => !primary.contains(e)).toList();
-    final sorted = [...primary, ...others];
+    final byGroupMap = <String, List<Exercise>>{};
+    for (final e in catalog!) {
+      byGroupMap.putIfAbsent(e.muscleGroup, () => []).add(e);
+    }
+    final groups = [
+      for (final g in muscleGroupOrder)
+        if ((byGroupMap[g] ?? []).isNotEmpty) g,
+    ];
+
+    // Grupo seleccionado dentro del sheet (null = mostrando la lista de grupos).
+    // Vive fuera de los builders para persistir entre setSheetState.
+    String? selectedGroup;
 
     await showModalBottomSheet(
       context: context,
@@ -313,50 +328,82 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
         expand: false,
         initialChildSize: 0.6,
         maxChildSize: 0.9,
-        builder: (_, controller) => Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'Agregar ejercicio — ${day.name}',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        builder: (_, controller) => StatefulBuilder(
+          builder: (sheetCtx, setSheetState) => Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Row(
+                  children: [
+                    if (selectedGroup != null)
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back),
+                        onPressed: () => setSheetState(() => selectedGroup = null),
+                      ),
+                    Expanded(
+                      child: Text(
+                        selectedGroup == null
+                            ? 'Grupo muscular — ${day.name}'
+                            : '${muscleGroupLabels[selectedGroup] ?? selectedGroup!} — ${day.name}',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                controller: controller,
-                itemCount: sorted.length,
-                itemBuilder: (_, i) {
-                  final ex = sorted[i];
-                  final alreadyAdded = existing.contains(ex.id);
-                  return ListTile(
-                    title: Text(ex.name),
-                    subtitle: Text(ex.muscle),
-                    trailing: alreadyAdded
-                        ? const Icon(Icons.check, color: Colors.green)
-                        : const Icon(Icons.add),
-                    enabled: !alreadyAdded,
-                    onTap: alreadyAdded ? null : () {
-                      _addExercise(
-                        dayIdx,
-                        RoutineExercise(
-                          exerciseId: ex.id,
-                          name: ex.name,
-                          sets: ex.defaultSets,
-                          repsMin: ex.defaultRepsMin,
-                          repsMax: ex.defaultRepsMax,
-                          restSeconds: ex.restSeconds,
-                          weightUnit: ex.defaultWeightUnit,
-                          progressionStep: ex.defaultProgressionStep,
-                        ),
-                      );
-                      Navigator.pop(context);
-                    },
-                  );
-                },
+              const Divider(height: 1),
+              Expanded(
+                child: selectedGroup == null
+                    ? ListView(
+                        controller: controller,
+                        children: [
+                          for (final g in groups)
+                            ListTile(
+                              title: Text(muscleGroupLabels[g] ?? g),
+                              subtitle: Text('${byGroupMap[g]!.length} ejercicio(s)'),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () => setSheetState(() => selectedGroup = g),
+                            ),
+                        ],
+                      )
+                    : ListView.builder(
+                        controller: controller,
+                        itemCount: byGroupMap[selectedGroup]!.length,
+                        itemBuilder: (_, i) {
+                          final ex = byGroupMap[selectedGroup]![i];
+                          final alreadyAdded = existing.contains(ex.id);
+                          return ListTile(
+                            title: Text(ex.name),
+                            subtitle: Text(
+                              '${ex.defaultSets}×${ex.defaultRepsMin}-${ex.defaultRepsMax} · ${ex.restSeconds}s',
+                            ),
+                            trailing: alreadyAdded
+                                ? const Icon(Icons.check, color: Colors.green)
+                                : const Icon(Icons.add),
+                            enabled: !alreadyAdded,
+                            onTap: alreadyAdded ? null : () {
+                              _addExercise(
+                                dayIdx,
+                                RoutineExercise(
+                                  exerciseId: ex.id,
+                                  name: ex.name,
+                                  sets: ex.defaultSets,
+                                  repsMin: ex.defaultRepsMin,
+                                  repsMax: ex.defaultRepsMax,
+                                  restSeconds: ex.restSeconds,
+                                  weightUnit: ex.defaultWeightUnit,
+                                  progressionStep: ex.defaultProgressionStep,
+                                  isIsometric: ex.isIsometric,
+                                ),
+                              );
+                              Navigator.pop(context);
+                            },
+                          );
+                        },
+                      ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -487,6 +534,12 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
 
   String _stepLabel(double step) =>
       step % 1 == 0 ? '${step.toInt()}' : '$step';
+
+  String _unitAbbrev(String unit) => switch (unit) {
+        'lbs' => 'lb',
+        'unidades' => 'u',
+        _ => 'kg',
+      };
 }
 
 // ── Widget contador ──────────────────────────────────────────

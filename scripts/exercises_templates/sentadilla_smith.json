@@ -1,0 +1,12 @@
+{
+  "id": "sentadilla_smith",
+  "name": "Sentadilla en Smith",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 6,
+  "defaultRepsMax": 10,
+  "restSeconds": 180,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 10,
+  "muscleGroup": "cuadriceps"
+}

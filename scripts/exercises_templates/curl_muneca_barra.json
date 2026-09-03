@@ -1,0 +1,12 @@
+{
+  "id": "curl_muneca_barra",
+  "name": "Curl de Muñeca con Barra",
+  "muscle": "pull",
+  "defaultSets": 3,
+  "defaultRepsMin": 15,
+  "defaultRepsMax": 20,
+  "restSeconds": 60,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1.25,
+  "muscleGroup": "antebrazo"
+}

@@ -1,0 +1,12 @@
+{
+  "id": "rueda_abdominal",
+  "name": "Rueda Abdominal",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 8,
+  "defaultRepsMax": 12,
+  "restSeconds": 60,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "abdominales"
+}

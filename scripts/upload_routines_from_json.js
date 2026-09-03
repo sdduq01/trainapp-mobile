@@ -111,6 +111,9 @@ function validateRoutine(file, r) {
               !VALID_PROGRESSION_TYPES.includes(e.progressionType)) {
             errs.push(`days[${i}].exercises[${j}]: progressionType debe ser uno de: ${VALID_PROGRESSION_TYPES.join(', ')}`);
           }
+          if (e.isIsometric !== undefined && typeof e.isIsometric !== 'boolean') {
+            errs.push(`days[${i}].exercises[${j}]: isIsometric debe ser boolean`);
+          }
         });
       }
     });
@@ -140,6 +143,7 @@ function normalize(r) {
       weightUnit:      e.weightUnit ?? 'kg',
       progressionStep: e.progressionStep ?? 2.5,
       progressionType: e.progressionType ?? 'doubleLinear',
+      isIsometric:     e.isIsometric ?? false,
     })),
   }));
 

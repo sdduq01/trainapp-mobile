@@ -1,0 +1,12 @@
+{
+  "id": "giro_oblicuo_polea",
+  "name": "Giro Oblicuo en Polea",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 12,
+  "defaultRepsMax": 15,
+  "restSeconds": 60,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 2.5,
+  "muscleGroup": "abdominales"
+}
