@@ -6,6 +6,7 @@ import '../profile_service.dart';
 import '../../onboarding/config/body_fat_options.dart';
 import '../../workout/services/routine_generator.dart';
 import '../../workout/services/routine_service.dart';
+import '../../workout/services/training_reset_service.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -34,6 +35,7 @@ class _ProfilePageState extends State<ProfilePage> {
   UserProfile? _initial;
   bool _loading = true;
   bool _saving = false;
+  bool _resettingData = false;
 
   static const _goalLabels = {
     TrainingGoal.fatLoss: 'Perder grasa',
@@ -143,6 +145,95 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
     return result ?? false;
+  }
+
+  // ── Zona de peligro: reiniciar datos de entrenamiento ─────
+
+  Future<bool> _confirmResetData() async {
+    const confirmWord = 'REINICIAR';
+    final ctrl = TextEditingController();
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('¿Reiniciar todos los datos?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Esta acción no se puede deshacer. Se borrará para siempre:',
+              ),
+              const SizedBox(height: 8),
+              const Padding(
+                padding: EdgeInsets.only(left: 4),
+                child: Text(
+                  '• Todo el historial de sesiones\n'
+                  '• Los PRs y pesos actuales (vuelven a 0)\n'
+                  '• Los eventos de progresión y hitos\n'
+                  '• Los apuntes guardados por ejercicio\n'
+                  '• El contador de semana de la rutina (vuelve a la semana 1)',
+                  style: TextStyle(fontSize: 13),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Escribe $confirmWord para confirmar:',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: ctrl,
+                autofocus: true,
+                textCapitalization: TextCapitalization.characters,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                onChanged: (_) => setDialogState(() {}),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: ctrl.text.trim().toUpperCase() == confirmWord
+                  ? () => Navigator.pop(ctx, true)
+                  : null,
+              child: const Text('Borrar todo'),
+            ),
+          ],
+        ),
+      ),
+    );
+    ctrl.dispose();
+    return result ?? false;
+  }
+
+  Future<void> _resetTrainingData() async {
+    final confirmed = await _confirmResetData();
+    if (!confirmed) return;
+
+    setState(() => _resettingData = true);
+    try {
+      await TrainingResetService().resetAll(_userId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Datos de entrenamiento reiniciados')),
+      );
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _resettingData = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al reiniciar datos: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _save() async {
@@ -472,6 +563,41 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                         )
                       : const Text('Guardar cambios'),
+                ),
+
+                const SizedBox(height: 40),
+                const Divider(),
+                const SizedBox(height: 12),
+                Text(
+                  'Zona de peligro',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.red.shade700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Borra tu historial de sesiones, PRs, pesos y progresión '
+                  'guardados, y deja la rutina lista para empezar de cero.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: _resettingData ? null : _resetTrainingData,
+                  icon: _resettingData
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.delete_forever_outlined),
+                  label: const Text('Reiniciar datos de entrenamiento'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
+                    minimumSize: const Size.fromHeight(48),
+                  ),
                 ),
                 const SizedBox(height: 24),
               ],

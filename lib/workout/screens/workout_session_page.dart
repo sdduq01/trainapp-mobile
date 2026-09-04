@@ -17,6 +17,7 @@ import '../services/progression_logic.dart';
 import '../services/progression_service.dart';
 import '../services/routine_service.dart';
 import '../services/session_service.dart';
+import 'edit_session_exercises_page.dart';
 
 class WorkoutSessionPage extends StatefulWidget {
   final RoutineDay day;
@@ -78,23 +79,27 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
 
   bool _saving = false;
 
+  // Día en curso — mutable para permitir editar sets/reps/descanso o
+  // agregar/quitar ejercicios restantes sin salir de la sesión activa.
+  late RoutineDay _day;
+
   RoutineExercise get _currentExercise =>
-      widget.day.exercises[_exerciseIndex];
+      _day.exercises[_exerciseIndex];
 
   int get _totalSets =>
-      widget.day.exercises.fold(0, (sum, e) => sum + e.sets);
+      _day.exercises.fold(0, (sum, e) => sum + e.sets);
 
   int get _completedSets {
     int count = 0;
     for (int i = 0; i < _exerciseIndex; i++) {
-      count += widget.day.exercises[i].sets;
+      count += _day.exercises[i].sets;
     }
     return count + _setIndex;
   }
 
   bool get _isLastSet => _setIndex == _currentExercise.sets - 1;
   bool get _isLastExercise =>
-      _exerciseIndex == widget.day.exercises.length - 1;
+      _exerciseIndex == _day.exercises.length - 1;
 
   // El calentamiento solo va antes del primer ejercicio del día (con el
   // mismo ejercicio pero liviano), no antes de cada ejercicio.
@@ -179,7 +184,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
       await prefs.setString(
         _kDraftKey,
         jsonEncode({
-          'dayNumber': widget.day.dayNumber,
+          'dayNumber': _day.dayNumber,
           'exerciseIndex': _exerciseIndex,
           'setIndex': _setIndex,
           'logged': loggedJson,
@@ -202,19 +207,19 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
       if (raw == null || !mounted) return;
 
       final map = jsonDecode(raw) as Map<String, dynamic>;
-      if (map['dayNumber'] != widget.day.dayNumber) {
+      if (map['dayNumber'] != _day.dayNumber) {
         await prefs.remove(_kDraftKey);
         return;
       }
 
       final rawLogged = map['logged'] as List;
       // Valida que la estructura coincida con los ejercicios actuales del día
-      if (rawLogged.length != widget.day.exercises.length) {
+      if (rawLogged.length != _day.exercises.length) {
         await prefs.remove(_kDraftKey);
         return;
       }
-      for (int i = 0; i < widget.day.exercises.length; i++) {
-        if ((rawLogged[i] as List).length != widget.day.exercises[i].sets) {
+      for (int i = 0; i < _day.exercises.length; i++) {
+        if ((rawLogged[i] as List).length != _day.exercises[i].sets) {
           await prefs.remove(_kDraftKey);
           return;
         }
@@ -231,7 +236,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
         builder: (_) => AlertDialog(
           title: const Text('Sesión en progreso'),
           content: Text(
-            'Tenías una sesión del Día ${widget.day.dayNumber} sin terminar. ¿Continuarla?',
+            'Tenías una sesión del Día ${_day.dayNumber} sin terminar. ¿Continuarla?',
           ),
           actions: [
             TextButton(
@@ -265,13 +270,13 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
 
       // Si el set guardado ya estaba completado (la app murió durante el descanso),
       // avanza silenciosamente al siguiente set/ejercicio sin timer
-      if (exIdx < widget.day.exercises.length &&
-          setIdx < widget.day.exercises[exIdx].sets &&
+      if (exIdx < _day.exercises.length &&
+          setIdx < _day.exercises[exIdx].sets &&
           restored[exIdx][setIdx] != null) {
-        final ex = widget.day.exercises[exIdx];
+        final ex = _day.exercises[exIdx];
         if (setIdx < ex.sets - 1) {
           setIdx++;
-        } else if (exIdx < widget.day.exercises.length - 1) {
+        } else if (exIdx < _day.exercises.length - 1) {
           exIdx++;
           setIdx = 0;
         } else {
@@ -300,7 +305,8 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _logged = widget.day.exercises
+    _day = widget.day;
+    _logged = _day.exercises
         .map((e) => List<(int, double)?>.filled(e.sets, null))
         .toList();
     _initControllers();
@@ -442,7 +448,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
       v % 1 == 0 ? v.toStringAsFixed(0) : v.toString();
 
   Future<void> _loadNotes() async {
-    final ids = widget.day.exercises.map((e) => e.exerciseId).toList();
+    final ids = _day.exercises.map((e) => e.exerciseId).toList();
     final notes = await ExerciseNotesService().getForExercises(_userId, ids);
     if (!mounted) return;
     setState(() {
@@ -644,8 +650,8 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
     setState(() => _saving = true);
 
     final exercises = <SessionExercise>[];
-    for (int i = 0; i < widget.day.exercises.length; i++) {
-      final ex = widget.day.exercises[i];
+    for (int i = 0; i < _day.exercises.length; i++) {
+      final ex = _day.exercises[i];
       final sets = <SessionSet>[];
       for (int s = 0; s < ex.sets; s++) {
         final log = _logged[i][s];
@@ -668,9 +674,9 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       userId: _userId,
       date: DateTime.now(),
-      dayNumber: widget.day.dayNumber,
-      dayName: widget.day.name,
-      focus: widget.day.focus,
+      dayNumber: _day.dayNumber,
+      dayName: _day.name,
+      focus: _day.focus,
       exercises: exercises,
       completed: true,
     );
@@ -771,10 +777,10 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
 
     bool changed = false;
     final updatedDays = routine.days.map((day) {
-      if (day.dayNumber != widget.day.dayNumber) return day;
+      if (day.dayNumber != _day.dayNumber) return day;
 
       final updatedExercises = day.exercises.map((routineEx) {
-        final logIdx = widget.day.exercises
+        final logIdx = _day.exercises
             .indexWhere((e) => e.exerciseId == routineEx.exerciseId);
         if (logIdx == -1) return routineEx;
 
@@ -827,7 +833,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
       barrierDismissible: false,
       builder: (_) => AlertDialog(
         title: const Text('¡Sesión completada!'),
-        content: Text('${widget.day.name} registrada correctamente.'),
+        content: Text('${_day.name} registrada correctamente.'),
         actions: [
           TextButton(
             onPressed: () {
@@ -968,11 +974,108 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
     return result ?? false;
   }
 
+  // ── Edición en vivo de ejercicios ─────────────────────────
+  //
+  // Permite ajustar (o agregar/quitar) los ejercicios que faltan por hacer
+  // hoy — incluido el actual — sin salir de la sesión. Los ya completados
+  // quedan fuera de la edición para no romper el progreso registrado.
+
+  Future<void> _showEditRemainingExercisesSheet() async {
+    final startIdx = _exerciseIndex;
+    final remaining = _day.exercises.sublist(startIdx);
+    // Durante el descanso posterior a una serie, _setIndex todavía apunta a
+    // la serie recién completada — hay que revisar lo realmente logueado,
+    // no solo el índice, para no permitir quitar un ejercicio con progreso.
+    final canRemoveCurrent = _warmupSetIndex == null &&
+        !_isoRunning &&
+        !_logged[_exerciseIndex].any((s) => s != null);
+
+    final result = await Navigator.of(context).push<List<RoutineExercise>>(
+      MaterialPageRoute(
+        builder: (_) => EditSessionExercisesPage(
+          dayName: _day.name,
+          exercises: remaining,
+          canRemoveCurrent: canRemoveCurrent,
+        ),
+      ),
+    );
+    if (result == null || !mounted) return;
+
+    // Conserva el progreso ya logueado emparejando por exerciseId (la
+    // identidad es estable aunque cambien sets/reps/orden).
+    final oldLogsById = <String, List<(int, double)?>>{
+      for (int i = startIdx; i < _day.exercises.length; i++)
+        _day.exercises[i].exerciseId: _logged[i],
+    };
+    final newLogs = result.map((ex) {
+      final old = oldLogsById[ex.exerciseId];
+      return List<(int, double)?>.generate(
+        ex.sets,
+        (i) => old != null && i < old.length ? old[i] : null,
+      );
+    }).toList();
+
+    _disposeControllers();
+    _resetIsoTimer();
+    setState(() {
+      _day = RoutineDay(
+        dayNumber: _day.dayNumber,
+        name: _day.name,
+        focus: _day.focus,
+        exercises: [..._day.exercises.sublist(0, startIdx), ...result],
+      );
+      _logged = [..._logged.sublist(0, startIdx), ...newLogs];
+      if (_setIndex >= _currentExercise.sets) {
+        _setIndex = _currentExercise.sets - 1;
+      }
+      // Si se editó el ejercicio actual mientras se descansaba, el destino
+      // programado para cuando termine el descanso (_afterRest) puede haber
+      // quedado desactualizado (p. ej. ya no es la última serie) — se
+      // recalcula con el estado ya actualizado.
+      if (_resting) {
+        _afterRest = _isLastSet && _isLastExercise
+            ? _finishSession
+            : _isLastSet
+                ? _advanceExercise
+                : _advanceSet;
+      }
+    });
+    _initControllers();
+    _saveDraft();
+    await _persistDayEdit();
+  }
+
+  /// Persiste el día editado en la rutina del usuario en Firestore, para
+  /// que los ajustes de hoy también apliquen en semanas futuras.
+  Future<void> _persistDayEdit() async {
+    try {
+      final routine = await RoutineService().getRoutine(_userId);
+      if (routine == null) return;
+      final updatedDays = routine.days
+          .map((d) => d.dayNumber == _day.dayNumber ? _day : d)
+          .toList();
+      await RoutineService().saveRoutine(Routine(
+        userId: routine.userId,
+        type: routine.type,
+        name: routine.name,
+        weekNumber: routine.weekNumber,
+        createdAt: routine.createdAt,
+        days: updatedDays,
+      ));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo guardar el cambio en la rutina: $e')),
+        );
+      }
+    }
+  }
+
   // ── Build ─────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    final day = widget.day;
+    final day = _day;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
@@ -983,6 +1086,13 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
       child: Scaffold(
         appBar: AppBar(
           title: Text('Día ${day.dayNumber} · ${day.name}'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              tooltip: 'Editar ejercicios restantes',
+              onPressed: _saving ? null : _showEditRemainingExercisesSheet,
+            ),
+          ],
         ),
         body: _saving
             ? const Center(child: CircularProgressIndicator())
@@ -1107,7 +1217,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
 
   Widget _buildExerciseView() {
     final ex = _currentExercise;
-    final totalEx = widget.day.exercises.length;
+    final totalEx = _day.exercises.length;
 
     return Column(
       children: [

@@ -40,4 +40,17 @@ class Exercise {
             (m['defaultProgressionStep'] as num?)?.toDouble() ?? 2.5,
         isIsometric: m['isIsometric'] as bool? ?? false,
       );
+
+  Map<String, dynamic> toMap() => {
+        'name': name,
+        'muscle': muscle,
+        'muscleGroup': muscleGroup,
+        'defaultSets': defaultSets,
+        'defaultRepsMin': defaultRepsMin,
+        'defaultRepsMax': defaultRepsMax,
+        'restSeconds': restSeconds,
+        'defaultWeightUnit': defaultWeightUnit,
+        'defaultProgressionStep': defaultProgressionStep,
+        'isIsometric': isIsometric,
+      };
 }

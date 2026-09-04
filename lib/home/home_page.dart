@@ -228,7 +228,7 @@ class _HomePageState extends State<HomePage> {
                 MaterialPageRoute(builder: (_) => const ProfilePage()),
               );
               if (regenerated == true) {
-                setState(() => _loading = true);
+                setState(() { _loading = true; _chartKey++; });
                 await _loadRoutine();
               }
             },

@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../../profile/profile_service.dart';
 import '../data/muscle_groups.dart';
-import '../models/exercise.dart';
-import '../models/progression_type.dart';
 import '../models/routine.dart';
-import '../services/exercise_service.dart';
 import '../services/routine_service.dart';
+import '../widgets/add_exercise_sheet.dart';
+import '../widgets/exercise_edit_dialog.dart';
 
 class EditRoutinePage extends StatefulWidget {
   final Routine routine;
@@ -115,139 +112,8 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
 
   Future<void> _showEditDialog(int dayIdx, int exIdx) async {
     final ex = _routine.days[dayIdx].exercises[exIdx];
-    int sets = ex.sets;
-    int repsMin = ex.repsMin;
-    int repsMax = ex.repsMax;
-    int restSeconds = ex.restSeconds;
-    String weightUnit = ex.weightUnit;
-    double progressionStep = ex.progressionStep;
-    ProgressionType progressionType = ex.progressionType;
-
-    const steps = [1.0, 1.25, 2.5, 5.0, 10.0];
-
-    await showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: Text(ex.name, style: const TextStyle(fontSize: 16)),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _Counter(
-                  label: 'Series',
-                  value: sets,
-                  min: 1, max: 8,
-                  onChanged: (v) => setDialogState(() => sets = v),
-                ),
-                const SizedBox(height: 16),
-                _Counter(
-                  label: 'Reps mínimas',
-                  value: repsMin,
-                  min: 1, max: 30,
-                  onChanged: (v) => setDialogState(() => repsMin = v),
-                ),
-                const SizedBox(height: 16),
-                _Counter(
-                  label: 'Reps máximas',
-                  value: repsMax,
-                  min: 1, max: 30,
-                  onChanged: (v) => setDialogState(() => repsMax = v),
-                ),
-                const SizedBox(height: 16),
-                _Counter(
-                  label: 'Descanso (seg)',
-                  value: restSeconds,
-                  min: 30, max: 300, step: 15,
-                  onChanged: (v) => setDialogState(() => restSeconds = v),
-                ),
-                const SizedBox(height: 20),
-                const Divider(),
-                const SizedBox(height: 8),
-                const Text('Unidad de peso', style: TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'kg', label: Text('kg')),
-                    ButtonSegment(value: 'lbs', label: Text('lbs')),
-                    ButtonSegment(value: 'unidades', label: Text('Unidades')),
-                  ],
-                  selected: {weightUnit},
-                  onSelectionChanged: (s) =>
-                      setDialogState(() => weightUnit = s.first),
-                ),
-                if (weightUnit == 'unidades') ...[
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Para máquinas con placas sin marcar: cada unidad equivale a una placa.',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ],
-                const SizedBox(height: 16),
-                const Text('Incremento de progresión', style: TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  children: steps.map((s) {
-                    final label = s % 1 == 0 ? '${s.toInt()}' : '$s';
-                    return ChoiceChip(
-                      label: Text('$label ${_unitAbbrev(weightUnit)}'),
-                      selected: progressionStep == s,
-                      onSelected: (_) => setDialogState(() => progressionStep = s),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 16),
-                const Text('Tipo de progresión',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: ProgressionType.values
-                      .map((p) => ChoiceChip(
-                            label: Text(p.label),
-                            selected: progressionType == p,
-                            onSelected: (_) =>
-                                setDialogState(() => progressionType = p),
-                          ))
-                      .toList(),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () {
-                _updateExercise(
-                  dayIdx, exIdx,
-                  RoutineExercise(
-                    exerciseId: ex.exerciseId,
-                    name: ex.name,
-                    sets: sets,
-                    repsMin: repsMin,
-                    repsMax: repsMax < repsMin ? repsMin : repsMax,
-                    currentWeight: ex.currentWeight,
-                    restSeconds: restSeconds,
-                    weightUnit: weightUnit,
-                    progressionStep: progressionStep,
-                    progressionType: progressionType,
-                    isIsometric: ex.isIsometric,
-                  ),
-                );
-                Navigator.pop(ctx);
-              },
-              child: const Text('Guardar'),
-            ),
-          ],
-        ),
-      ),
-    );
+    final updated = await showExerciseEditDialog(context, ex);
+    if (updated != null) _updateExercise(dayIdx, exIdx, updated);
   }
 
   // ── Diálogos de día ──────────────────────────────────────
@@ -289,137 +155,15 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
   // ── Sheet de agregar ejercicio (desde Firestore) ─────────
 
   Future<void> _showAddExerciseSheet(int dayIdx) async {
-    // Carga ejercicios de Firestore antes de abrir el sheet
-    List<Exercise>? catalog;
-    String? error;
-    try {
-      final userId = FirebaseAuth.instance.currentUser?.uid;
-      final list = await ExerciseService().getExercises();
-      final profile =
-          userId == null ? null : await ProfileService().getProfile(userId);
-      final showCardio = profile?.cardioEnabled ?? false;
-      final showStretch = profile?.stretchingEnabled ?? false;
-      catalog = list.where((e) {
-        if (e.muscleGroup == 'cardio') return showCardio;
-        if (e.muscleGroup == 'estiramiento') return showStretch;
-        return true;
-      }).toList();
-    } catch (e) {
-      error = e.toString();
-    }
-
-    if (!mounted) return;
-
-    if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudieron cargar ejercicios: $error')),
-      );
-      return;
-    }
-
     final day = _routine.days[dayIdx];
-    final existing = day.exercises.map((e) => e.exerciseId).toSet();
-
-    final byGroupMap = <String, List<Exercise>>{};
-    for (final e in catalog!) {
-      byGroupMap.putIfAbsent(e.muscleGroup, () => []).add(e);
-    }
-    final groups = [
-      for (final g in muscleGroupOrder)
-        if ((byGroupMap[g] ?? []).isNotEmpty) g,
-    ];
-
-    // Grupo seleccionado dentro del sheet (null = mostrando la lista de grupos).
-    // Vive fuera de los builders para persistir entre setSheetState.
-    String? selectedGroup;
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.6,
-        maxChildSize: 0.9,
-        builder: (_, controller) => StatefulBuilder(
-          builder: (sheetCtx, setSheetState) => Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Row(
-                  children: [
-                    if (selectedGroup != null)
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back),
-                        onPressed: () => setSheetState(() => selectedGroup = null),
-                      ),
-                    Expanded(
-                      child: Text(
-                        selectedGroup == null
-                            ? 'Grupo muscular — ${day.name}'
-                            : '${muscleGroupLabels[selectedGroup] ?? selectedGroup!} — ${day.name}',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              Expanded(
-                child: selectedGroup == null
-                    ? ListView(
-                        controller: controller,
-                        children: [
-                          for (final g in groups)
-                            ListTile(
-                              title: Text(muscleGroupLabels[g] ?? g),
-                              subtitle: Text('${byGroupMap[g]!.length} ejercicio(s)'),
-                              trailing: const Icon(Icons.chevron_right),
-                              onTap: () => setSheetState(() => selectedGroup = g),
-                            ),
-                        ],
-                      )
-                    : ListView.builder(
-                        controller: controller,
-                        itemCount: byGroupMap[selectedGroup]!.length,
-                        itemBuilder: (_, i) {
-                          final ex = byGroupMap[selectedGroup]![i];
-                          final alreadyAdded = existing.contains(ex.id);
-                          return ListTile(
-                            title: Text(ex.name),
-                            subtitle: Text(
-                              '${ex.defaultSets}×${ex.defaultRepsMin}-${ex.defaultRepsMax} · ${ex.restSeconds}s',
-                            ),
-                            trailing: alreadyAdded
-                                ? const Icon(Icons.check, color: Colors.green)
-                                : const Icon(Icons.add),
-                            enabled: !alreadyAdded,
-                            onTap: alreadyAdded ? null : () {
-                              _addExercise(
-                                dayIdx,
-                                RoutineExercise(
-                                  exerciseId: ex.id,
-                                  name: ex.name,
-                                  sets: ex.defaultSets,
-                                  repsMin: ex.defaultRepsMin,
-                                  repsMax: ex.defaultRepsMax,
-                                  restSeconds: ex.restSeconds,
-                                  weightUnit: ex.defaultWeightUnit,
-                                  progressionStep: ex.defaultProgressionStep,
-                                  isIsometric: ex.isIsometric,
-                                  progressionType: defaultProgressionTypeFor(ex),
-                                ),
-                              );
-                              Navigator.pop(context);
-                            },
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    final picked = await showAddExerciseSheet(
+      context,
+      dayLabel: day.name,
+      existingExerciseIds: day.exercises.map((e) => e.exerciseId).toSet(),
     );
+    if (picked != null) {
+      _addExercise(dayIdx, routineExerciseFromCatalog(picked));
+    }
   }
 
   // ── UI ───────────────────────────────────────────────────
@@ -547,61 +291,6 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
 
   String _stepLabel(double step) =>
       step % 1 == 0 ? '${step.toInt()}' : '$step';
-
-  String _unitAbbrev(String unit) => switch (unit) {
-        'lbs' => 'lb',
-        'unidades' => 'u',
-        _ => 'kg',
-      };
-}
-
-// ── Widget contador ──────────────────────────────────────────
-
-class _Counter extends StatelessWidget {
-  final String label;
-  final int value;
-  final int min;
-  final int max;
-  final int step;
-  final ValueChanged<int> onChanged;
-
-  const _Counter({
-    required this.label,
-    required this.value,
-    required this.min,
-    required this.max,
-    this.step = 1,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(child: Text(label)),
-        IconButton(
-          icon: const Icon(Icons.remove),
-          onPressed: value > min
-              ? () => onChanged((value - step).clamp(min, max))
-              : null,
-        ),
-        SizedBox(
-          width: 40,
-          child: Text(
-            '$value',
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.add),
-          onPressed: value < max
-              ? () => onChanged((value + step).clamp(min, max))
-              : null,
-        ),
-      ],
-    );
-  }
 }
 
 // ── Dialog: agregar día ─────────────────────────────────────

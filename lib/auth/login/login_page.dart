@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../auth_service.dart';
+import '../forgot_password/forgot_password_page.dart';
 import '../register/register_page.dart';
 
 const _blue = Color(0xFF1565C0);
@@ -119,6 +120,21 @@ class _LoginPageState extends State<LoginPage> {
                       _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
                     ),
                     onPressed: () => setState(() => _obscure = !_obscure),
+                  ),
+                ),
+              ),
+
+              // ── Olvidé mi contraseña ──────────────────────
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ForgotPasswordPage()),
+                  ),
+                  child: const Text(
+                    '¿Olvidaste tu contraseña?',
+                    style: TextStyle(color: _blue, fontSize: 13),
                   ),
                 ),
               ),

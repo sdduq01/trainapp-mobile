@@ -7,6 +7,7 @@ import '../models/exercise.dart';
 import '../models/routine.dart';
 import '../services/exercise_service.dart';
 import '../services/routine_service.dart';
+import '../widgets/create_exercise_dialog.dart';
 
 /// Constructor de rutina personalizada desde cero.
 /// El usuario define nombre, días (1-6), focus de cada día y agrega
@@ -30,9 +31,9 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
   List<Exercise>? _catalog;
 
   static const Map<String, String> _focusLabels = {
-    'push':  'Empuje (pecho/hombro/tríceps)',
-    'pull':  'Tracción (espalda/bíceps)',
-    'legs':  'Piernas',
+    'push': 'Empuje (pecho/hombro/tríceps)',
+    'pull': 'Tracción (espalda/bíceps)',
+    'legs': 'Piernas',
     'upper': 'Tren superior completo',
     'lower': 'Tren inferior completo',
   };
@@ -53,8 +54,9 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
     try {
       final userId = FirebaseAuth.instance.currentUser?.uid;
       final list = await ExerciseService().getExercises();
-      final profile =
-          userId == null ? null : await ProfileService().getProfile(userId);
+      final profile = userId == null
+          ? null
+          : await ProfileService().getProfile(userId);
       final showCardio = profile?.cardioEnabled ?? false;
       final showStretch = profile?.stretchingEnabled ?? false;
       final filtered = list.where((e) {
@@ -77,9 +79,16 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
   void _addDay() {
     if (_days.length >= 6) return;
     final n = _days.length + 1;
-    setState(() => _days.add(
-          RoutineDay(dayNumber: n, name: 'Día $n', focus: 'push', exercises: const []),
-        ));
+    setState(
+      () => _days.add(
+        RoutineDay(
+          dayNumber: n,
+          name: 'Día $n',
+          focus: 'push',
+          exercises: const [],
+        ),
+      ),
+    );
   }
 
   void _removeDay(int idx) {
@@ -92,40 +101,58 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
     });
   }
 
-  void _updateDay(int idx, {String? name, String? focus, List<RoutineExercise>? exercises}) {
+  void _updateDay(
+    int idx, {
+    String? name,
+    String? focus,
+    List<RoutineExercise>? exercises,
+  }) {
     setState(() {
-      _days[idx] = _copyDay(_days[idx], name: name, focus: focus, exercises: exercises);
+      _days[idx] = _copyDay(
+        _days[idx],
+        name: name,
+        focus: focus,
+        exercises: exercises,
+      );
     });
   }
 
-  RoutineDay _copyDay(RoutineDay d, {int? dayNumber, String? name, String? focus, List<RoutineExercise>? exercises}) =>
-      RoutineDay(
-        dayNumber: dayNumber ?? d.dayNumber,
-        name: name ?? d.name,
-        focus: focus ?? d.focus,
-        exercises: exercises ?? d.exercises,
-      );
+  RoutineDay _copyDay(
+    RoutineDay d, {
+    int? dayNumber,
+    String? name,
+    String? focus,
+    List<RoutineExercise>? exercises,
+  }) => RoutineDay(
+    dayNumber: dayNumber ?? d.dayNumber,
+    name: name ?? d.name,
+    focus: focus ?? d.focus,
+    exercises: exercises ?? d.exercises,
+  );
 
   void _addExerciseToDay(int dayIdx, Exercise ex) {
     final current = List<RoutineExercise>.from(_days[dayIdx].exercises);
     if (current.any((e) => e.exerciseId == ex.id)) return;
-    current.add(RoutineExercise(
-      exerciseId: ex.id,
-      name: ex.name,
-      sets: ex.defaultSets,
-      repsMin: ex.defaultRepsMin,
-      repsMax: ex.defaultRepsMax,
-      restSeconds: ex.restSeconds,
-      weightUnit: ex.defaultWeightUnit,
-      progressionStep: ex.defaultProgressionStep,
-      isIsometric: ex.isIsometric,
-      progressionType: defaultProgressionTypeFor(ex),
-    ));
+    current.add(
+      RoutineExercise(
+        exerciseId: ex.id,
+        name: ex.name,
+        sets: ex.defaultSets,
+        repsMin: ex.defaultRepsMin,
+        repsMax: ex.defaultRepsMax,
+        restSeconds: ex.restSeconds,
+        weightUnit: ex.defaultWeightUnit,
+        progressionStep: ex.defaultProgressionStep,
+        isIsometric: ex.isIsometric,
+        progressionType: defaultProgressionTypeFor(ex),
+      ),
+    );
     _updateDay(dayIdx, exercises: current);
   }
 
   void _removeExerciseFromDay(int dayIdx, int exIdx) {
-    final current = List<RoutineExercise>.from(_days[dayIdx].exercises)..removeAt(exIdx);
+    final current = List<RoutineExercise>.from(_days[dayIdx].exercises)
+      ..removeAt(exIdx);
     _updateDay(dayIdx, exercises: current);
   }
 
@@ -133,9 +160,9 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
 
   Future<void> _showExercisePicker(int dayIdx) async {
     if (_catalog == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Catálogo aún no cargado')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Catálogo aún no cargado')));
       return;
     }
     final existing = _days[dayIdx].exercises.map((e) => e.exerciseId).toSet();
@@ -166,6 +193,32 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
               setSheetState(() {}); // refresca el sheet para marcar el check
             }
 
+            Future<void> createAndPick() async {
+              final created = await showCreateExerciseDialog(sheetCtx);
+              if (created == null) return;
+              try {
+                final saved = await ExerciseService().createExercise(created);
+                _catalog = [...?_catalog, saved];
+                byGroupMap.putIfAbsent(saved.muscleGroup, () => []).add(saved);
+                groups
+                  ..clear()
+                  ..addAll([
+                    for (final g in muscleGroupOrder)
+                      if ((byGroupMap[g] ?? []).isNotEmpty) g,
+                  ]);
+                existing.add(saved.id);
+                addAndRefresh(saved);
+              } catch (e) {
+                if (sheetCtx.mounted) {
+                  ScaffoldMessenger.of(sheetCtx).showSnackBar(
+                    SnackBar(
+                      content: Text('No se pudo crear el ejercicio: $e'),
+                    ),
+                  );
+                }
+              }
+            }
+
             return Column(
               children: [
                 Padding(
@@ -175,14 +228,18 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
                       if (selectedGroup != null)
                         IconButton(
                           icon: const Icon(Icons.arrow_back),
-                          onPressed: () => setSheetState(() => selectedGroup = null),
+                          onPressed: () =>
+                              setSheetState(() => selectedGroup = null),
                         ),
                       Expanded(
                         child: Text(
                           selectedGroup == null
                               ? 'Grupo muscular — ${_days[dayIdx].name}'
                               : '${muscleGroupLabels[selectedGroup] ?? selectedGroup!} — ${_days[dayIdx].name}',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                       TextButton(
@@ -198,12 +255,27 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
                       ? ListView(
                           controller: controller,
                           children: [
+                            ListTile(
+                              leading: const Icon(
+                                Icons.add_circle_outline,
+                                color: Colors.blue,
+                              ),
+                              title: const Text('Crear mi propio ejercicio'),
+                              subtitle: const Text(
+                                'Se guarda en "Mis ejercicios"',
+                              ),
+                              onTap: createAndPick,
+                            ),
+                            const Divider(height: 1),
                             for (final g in groups)
                               ListTile(
                                 title: Text(muscleGroupLabels[g] ?? g),
-                                subtitle: Text('${byGroupMap[g]!.length} ejercicio(s)'),
+                                subtitle: Text(
+                                  '${byGroupMap[g]!.length} ejercicio(s)',
+                                ),
                                 trailing: const Icon(Icons.chevron_right),
-                                onTap: () => setSheetState(() => selectedGroup = g),
+                                onTap: () =>
+                                    setSheetState(() => selectedGroup = g),
                               ),
                           ],
                         )
@@ -218,7 +290,10 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
                                   '${ex.defaultSets}×${ex.defaultRepsMin}-${ex.defaultRepsMax} · ${ex.restSeconds}s',
                                 ),
                                 trailing: existing.contains(ex.id)
-                                    ? const Icon(Icons.check, color: Colors.green)
+                                    ? const Icon(
+                                        Icons.check,
+                                        color: Colors.green,
+                                      )
                                     : const Icon(Icons.add_circle_outline),
                                 onTap: existing.contains(ex.id)
                                     ? null
@@ -252,7 +327,10 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
           decoration: const InputDecoration(hintText: 'Ej: Día de pecho'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
             child: const Text('OK'),
@@ -277,7 +355,9 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
     }
     if (_days.any((d) => d.exercises.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cada día debe tener al menos 1 ejercicio')),
+        const SnackBar(
+          content: Text('Cada día debe tener al menos 1 ejercicio'),
+        ),
       );
       return;
     }
@@ -299,9 +379,9 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al guardar: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
       }
     }
 
@@ -320,7 +400,8 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
               ? const Padding(
                   padding: EdgeInsets.all(16),
                   child: SizedBox(
-                    width: 20, height: 20,
+                    width: 20,
+                    height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                 )
@@ -343,7 +424,10 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
               Expanded(
                 child: Text(
                   'Días (${_days.length})',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               TextButton.icon(
@@ -357,7 +441,9 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
 
           for (var i = 0; i < _days.length; i++)
             _DayBuilderCard(
-              key: ValueKey('day_${_days[i].dayNumber}_${_days[i].exercises.length}'),
+              key: ValueKey(
+                'day_${_days[i].dayNumber}_${_days[i].exercises.length}',
+              ),
               day: _days[i],
               focusOptions: _focusLabels,
               onEditName: () => _editDayName(i),
@@ -415,7 +501,10 @@ class _DayBuilderCard extends StatelessWidget {
                       children: [
                         Text(
                           'Día ${day.dayNumber} · ${day.name}',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(width: 6),
                         const Icon(Icons.edit, size: 14, color: Colors.grey),
@@ -425,7 +514,11 @@ class _DayBuilderCard extends StatelessWidget {
                 ),
                 if (onRemoveDay != null)
                   IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      color: Colors.red,
+                      size: 20,
+                    ),
                     onPressed: onRemoveDay,
                   ),
               ],
@@ -444,7 +537,9 @@ class _DayBuilderCard extends StatelessWidget {
                 for (final entry in focusOptions.entries)
                   DropdownMenuItem(value: entry.key, child: Text(entry.value)),
               ],
-              onChanged: (v) { if (v != null) onChangeFocus(v); },
+              onChanged: (v) {
+                if (v != null) onChangeFocus(v);
+              },
             ),
           ),
           const SizedBox(height: 8),
@@ -453,8 +548,10 @@ class _DayBuilderCard extends StatelessWidget {
           if (day.exercises.isEmpty)
             const Padding(
               padding: EdgeInsets.all(16),
-              child: Text('Sin ejercicios. Toca "Agregar" abajo.',
-                  style: TextStyle(color: Colors.grey)),
+              child: Text(
+                'Sin ejercicios. Toca "Agregar" abajo.',
+                style: TextStyle(color: Colors.grey),
+              ),
             )
           else
             for (var i = 0; i < day.exercises.length; i++)
@@ -466,7 +563,11 @@ class _DayBuilderCard extends StatelessWidget {
                   ' · ${day.exercises[i].restSeconds}s',
                 ),
                 trailing: IconButton(
-                  icon: const Icon(Icons.remove_circle_outline, color: Colors.red, size: 20),
+                  icon: const Icon(
+                    Icons.remove_circle_outline,
+                    color: Colors.red,
+                    size: 20,
+                  ),
                   onPressed: () => onRemoveExercise(i),
                 ),
               ),
