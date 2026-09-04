@@ -96,8 +96,13 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
   bool get _isLastExercise =>
       _exerciseIndex == widget.day.exercises.length - 1;
 
+  // El calentamiento solo va antes del primer ejercicio del día (con el
+  // mismo ejercicio pero liviano), no antes de cada ejercicio.
   bool _shouldWarmup(RoutineExercise ex) =>
-      _warmupEnabled && !ex.isIsometric && ex.currentWeight > 0;
+      _warmupEnabled &&
+      _exerciseIndex == 0 &&
+      !ex.isIsometric &&
+      ex.currentWeight > 0;
 
   // ── Audio ────────────────────────────────────────────────
 
