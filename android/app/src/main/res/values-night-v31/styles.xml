@@ -16,6 +16,10 @@
          
          This Theme is only used starting with V2 of Flutter's Android embedding. -->
     <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
-        <item name="android:windowBackground">?android:colorBackground</item>
+        <!-- La app no tiene tema oscuro propio (siempre es clara): fuerza
+             fondo blanco aquí también para que no haya flash negro entre
+             el splash y el primer frame de Flutter cuando el celular está
+             en modo oscuro. -->
+        <item name="android:windowBackground">#FFFFFF</item>
     </style>
 </resources>
