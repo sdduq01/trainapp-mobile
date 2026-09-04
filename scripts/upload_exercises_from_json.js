@@ -38,7 +38,7 @@ const VALID_MUSCLE_GROUPS = [
   'pecho', 'espalda', 'hombros', 'trapecios',
   'biceps', 'triceps', 'antebrazo',
   'cuadriceps', 'femorales', 'gluteos', 'gemelos', 'abductores', 'aductores',
-  'abdominales', 'otros',
+  'abdominales', 'cardio', 'estiramiento', 'otros',
 ];
 const VALID_UNITS   = ['kg', 'lbs', 'unidades'];
 const VALID_STEPS   = [1.0, 1.25, 2.5, 5.0, 10.0];

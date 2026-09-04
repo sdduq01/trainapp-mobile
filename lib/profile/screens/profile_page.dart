@@ -27,6 +27,9 @@ class _ProfilePageState extends State<ProfilePage> {
   TrainingGoal? _goal;
   bool _intensityEnabled = false;
   int _failureCadence = UserProfile.kFailureCadenceDefault;
+  bool _warmupEnabled = false;
+  bool _stretchingEnabled = false;
+  bool _cardioEnabled = false;
 
   UserProfile? _initial;
   bool _loading = true;
@@ -67,6 +70,9 @@ class _ProfilePageState extends State<ProfilePage> {
       _goal = profile.goal;
       _intensityEnabled = profile.intensityEnabled;
       _failureCadence = profile.failureWeekCadence;
+      _warmupEnabled = profile.warmupEnabled;
+      _stretchingEnabled = profile.stretchingEnabled;
+      _cardioEnabled = profile.cardioEnabled;
       _loading = false;
     });
   }
@@ -154,6 +160,9 @@ class _ProfilePageState extends State<ProfilePage> {
       completedOnboarding: _initial?.completedOnboarding ?? true,
       intensityEnabled: _intensityEnabled,
       failureWeekCadence: _failureCadence,
+      warmupEnabled: _warmupEnabled,
+      stretchingEnabled: _stretchingEnabled,
+      cardioEnabled: _cardioEnabled,
     );
 
     final shouldAskRegenerate = _routineAffectingChanged;
@@ -414,6 +423,41 @@ class _ProfilePageState extends State<ProfilePage> {
                         setState(() => _failureCadence = v.round()),
                   ),
                 ],
+
+                const SizedBox(height: 24),
+                _sectionTitle('Extras de entrenamiento'),
+                const SizedBox(height: 4),
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Calentamiento'),
+                  subtitle: const Text(
+                    'Agrega series de aproximación automáticas (livianas) antes '
+                    'de cada ejercicio con peso registrado.',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  value: _warmupEnabled,
+                  onChanged: (v) => setState(() => _warmupEnabled = v),
+                ),
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Estiramientos'),
+                  subtitle: const Text(
+                    'Muestra el grupo "Estiramiento" al agregar ejercicios a tus rutinas.',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  value: _stretchingEnabled,
+                  onChanged: (v) => setState(() => _stretchingEnabled = v),
+                ),
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Cardio'),
+                  subtitle: const Text(
+                    'Muestra el grupo "Cardio" al agregar ejercicios a tus rutinas.',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  value: _cardioEnabled,
+                  onChanged: (v) => setState(() => _cardioEnabled = v),
+                ),
 
                 const SizedBox(height: 32),
                 FilledButton(

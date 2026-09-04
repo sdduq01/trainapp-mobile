@@ -22,6 +22,9 @@ class UserProfile {
   final bool completedOnboarding;
   final bool intensityEnabled;
   final int failureWeekCadence;
+  final bool warmupEnabled;    // series de aproximación automáticas antes de cada ejercicio
+  final bool stretchingEnabled; // muestra el grupo "Estiramiento" en los selectores de ejercicio
+  final bool cardioEnabled;     // muestra el grupo "Cardio" en los selectores de ejercicio
 
   UserProfile({
     required this.uid,
@@ -35,6 +38,9 @@ class UserProfile {
     required this.completedOnboarding,
     this.intensityEnabled = false,
     this.failureWeekCadence = kFailureCadenceDefault,
+    this.warmupEnabled = false,
+    this.stretchingEnabled = false,
+    this.cardioEnabled = false,
   });
 
   int? get age {
@@ -76,6 +82,9 @@ class UserProfile {
       intensityEnabled: data['intensityEnabled'] as bool? ?? false,
       failureWeekCadence:
           cadence.clamp(kFailureCadenceMin, kFailureCadenceMax),
+      warmupEnabled: data['warmupEnabled'] as bool? ?? false,
+      stretchingEnabled: data['stretchingEnabled'] as bool? ?? false,
+      cardioEnabled: data['cardioEnabled'] as bool? ?? false,
     );
   }
 
@@ -91,6 +100,9 @@ class UserProfile {
       'completedOnboarding': completedOnboarding,
       'intensityEnabled': intensityEnabled,
       'failureWeekCadence': failureWeekCadence,
+      'warmupEnabled': warmupEnabled,
+      'stretchingEnabled': stretchingEnabled,
+      'cardioEnabled': cardioEnabled,
     };
   }
 
@@ -105,6 +117,9 @@ class UserProfile {
     bool? completedOnboarding,
     bool? intensityEnabled,
     int? failureWeekCadence,
+    bool? warmupEnabled,
+    bool? stretchingEnabled,
+    bool? cardioEnabled,
   }) {
     return UserProfile(
       uid: uid,
@@ -119,6 +134,9 @@ class UserProfile {
       completedOnboarding: completedOnboarding ?? this.completedOnboarding,
       intensityEnabled: intensityEnabled ?? this.intensityEnabled,
       failureWeekCadence: failureWeekCadence ?? this.failureWeekCadence,
+      warmupEnabled: warmupEnabled ?? this.warmupEnabled,
+      stretchingEnabled: stretchingEnabled ?? this.stretchingEnabled,
+      cardioEnabled: cardioEnabled ?? this.cardioEnabled,
     );
   }
 }

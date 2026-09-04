@@ -1,0 +1,13 @@
+{
+  "id": "estiramiento_pecho_marco",
+  "name": "Estiramiento de Pecho en Marco de Puerta",
+  "muscle": "legs",
+  "defaultSets": 2,
+  "defaultRepsMin": 20,
+  "defaultRepsMax": 40,
+  "restSeconds": 15,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "estiramiento",
+  "isIsometric": true
+}

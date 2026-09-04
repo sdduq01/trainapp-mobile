@@ -1,0 +1,13 @@
+{
+  "id": "cuerda_saltar",
+  "name": "Cuerda para Saltar",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 60,
+  "defaultRepsMax": 120,
+  "restSeconds": 60,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "cardio",
+  "isIsometric": true
+}

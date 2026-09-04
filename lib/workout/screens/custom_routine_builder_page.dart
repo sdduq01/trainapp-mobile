@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../profile/profile_service.dart';
 import '../data/muscle_groups.dart';
 import '../models/exercise.dart';
 import '../models/routine.dart';
@@ -50,8 +51,18 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
 
   Future<void> _loadCatalog() async {
     try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
       final list = await ExerciseService().getExercises();
-      if (mounted) setState(() => _catalog = list);
+      final profile =
+          userId == null ? null : await ProfileService().getProfile(userId);
+      final showCardio = profile?.cardioEnabled ?? false;
+      final showStretch = profile?.stretchingEnabled ?? false;
+      final filtered = list.where((e) {
+        if (e.muscleGroup == 'cardio') return showCardio;
+        if (e.muscleGroup == 'estiramiento') return showStretch;
+        return true;
+      }).toList();
+      if (mounted) setState(() => _catalog = filtered);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -108,6 +119,7 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
       weightUnit: ex.defaultWeightUnit,
       progressionStep: ex.defaultProgressionStep,
       isIsometric: ex.isIsometric,
+      progressionType: defaultProgressionTypeFor(ex),
     ));
     _updateDay(dayIdx, exercises: current);
   }

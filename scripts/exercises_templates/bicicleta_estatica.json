@@ -1,0 +1,13 @@
+{
+  "id": "bicicleta_estatica",
+  "name": "Bicicleta Estática",
+  "muscle": "legs",
+  "defaultSets": 1,
+  "defaultRepsMin": 600,
+  "defaultRepsMax": 1200,
+  "restSeconds": 60,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "cardio",
+  "isIsometric": true
+}

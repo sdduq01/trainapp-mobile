@@ -1,0 +1,13 @@
+{
+  "id": "estiramiento_gato_camello",
+  "name": "Estiramiento de Espalda (Gato-Camello)",
+  "muscle": "legs",
+  "defaultSets": 2,
+  "defaultRepsMin": 20,
+  "defaultRepsMax": 40,
+  "restSeconds": 15,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "estiramiento",
+  "isIsometric": true
+}

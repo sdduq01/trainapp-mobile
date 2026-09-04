@@ -1,0 +1,13 @@
+{
+  "id": "estiramiento_hombro_cruzado",
+  "name": "Estiramiento de Hombro Cruzado",
+  "muscle": "legs",
+  "defaultSets": 2,
+  "defaultRepsMin": 20,
+  "defaultRepsMax": 40,
+  "restSeconds": 15,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "estiramiento",
+  "isIsometric": true
+}

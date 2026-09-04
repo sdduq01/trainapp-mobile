@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../profile/profile_service.dart';
 import '../data/muscle_groups.dart';
 import '../models/exercise.dart';
 import '../models/progression_type.dart';
@@ -291,7 +293,17 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
     List<Exercise>? catalog;
     String? error;
     try {
-      catalog = await ExerciseService().getExercises();
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      final list = await ExerciseService().getExercises();
+      final profile =
+          userId == null ? null : await ProfileService().getProfile(userId);
+      final showCardio = profile?.cardioEnabled ?? false;
+      final showStretch = profile?.stretchingEnabled ?? false;
+      catalog = list.where((e) {
+        if (e.muscleGroup == 'cardio') return showCardio;
+        if (e.muscleGroup == 'estiramiento') return showStretch;
+        return true;
+      }).toList();
     } catch (e) {
       error = e.toString();
     }
@@ -394,6 +406,7 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
                                   weightUnit: ex.defaultWeightUnit,
                                   progressionStep: ex.defaultProgressionStep,
                                   isIsometric: ex.isIsometric,
+                                  progressionType: defaultProgressionTypeFor(ex),
                                 ),
                               );
                               Navigator.pop(context);

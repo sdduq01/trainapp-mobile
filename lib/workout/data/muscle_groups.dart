@@ -1,3 +1,6 @@
+import '../models/exercise.dart';
+import '../models/progression_type.dart';
+
 /// Grupos musculares específicos usados para catalogar ejercicios y para el
 /// selector en dos pasos (grupo muscular → ejercicio) en los menús de
 /// rutina. Los ejercicios multiarticulares usan la zona principal que
@@ -18,6 +21,8 @@ const Map<String, String> muscleGroupLabels = {
   'abductores': 'Abductores',
   'aductores': 'Aductores',
   'abdominales': 'Abdominales',
+  'cardio': 'Cardio',
+  'estiramiento': 'Estiramiento',
   'otros': 'Otros',
 };
 
@@ -38,5 +43,17 @@ const List<String> muscleGroupOrder = [
   'abductores',
   'aductores',
   'abdominales',
+  'cardio',
+  'estiramiento',
   'otros',
 ];
+
+/// Grupos que no manejan progresión de peso: cardio (duración) y
+/// estiramientos (sostén). El resto arranca en doble progresión lineal.
+const Set<String> nonWeightedMuscleGroups = {'cardio', 'estiramiento'};
+
+/// Tipo de progresión sugerido al agregar [ex] desde el catálogo.
+ProgressionType defaultProgressionTypeFor(Exercise ex) =>
+    nonWeightedMuscleGroups.contains(ex.muscleGroup)
+        ? ProgressionType.none
+        : ProgressionType.doubleLinear;

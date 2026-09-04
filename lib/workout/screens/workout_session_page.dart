@@ -47,6 +47,15 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
   bool _intensityEnabled = false;
   int _failureCadence = UserProfile.kFailureCadenceDefault;
 
+  // Calentamiento: series de aproximación automáticas antes del peso de
+  // trabajo. null = no está calentando (o el calentamiento terminó).
+  bool _warmupEnabled = false;
+  int? _warmupSetIndex;
+  static const int kWarmupSets = 2;
+  static const List<double> kWarmupPercents = [0.5, 0.75];
+  static const List<int> kWarmupReps = [10, 5];
+  static const int kWarmupRestSeconds = 45;
+
   // Semana de la rutina (1-indexada). Calculada a partir de routine.createdAt.
   int _weekIndex = 1;
 
@@ -56,6 +65,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
   bool _resting = false;
   bool _restExpired = false;
   int _restRemaining = 0;
+  int _restTotalSeconds = 0;
   Timer? _timer;
   DateTime? _restEndTime;
   VoidCallback? _afterRest;
@@ -85,6 +95,9 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
   bool get _isLastSet => _setIndex == _currentExercise.sets - 1;
   bool get _isLastExercise =>
       _exerciseIndex == widget.day.exercises.length - 1;
+
+  bool _shouldWarmup(RoutineExercise ex) =>
+      _warmupEnabled && !ex.isIsometric && ex.currentWeight > 0;
 
   // ── Audio ────────────────────────────────────────────────
 
@@ -326,6 +339,8 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
       if (profile != null) {
         _intensityEnabled = profile.intensityEnabled;
         _failureCadence = profile.failureWeekCadence;
+        _warmupEnabled = profile.warmupEnabled;
+        _warmupSetIndex = _shouldWarmup(_currentExercise) ? 0 : null;
       }
       if (routine != null) {
         _weekIndex = ProgressionLogic.weekIndexFor(routine);
@@ -405,6 +420,14 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
   }
 
   void _refillControllers() {
+    if (_warmupSetIndex != null) {
+      final ex = _currentExercise;
+      final idx = _warmupSetIndex!;
+      final w = ex.currentWeight * kWarmupPercents[idx];
+      _weightCtrl.text = w > 0 ? _trimDouble(w) : '';
+      _repsCtrl.text = kWarmupReps[idx].toString();
+      return;
+    }
     final t = _currentTarget();
     _weightCtrl.text = t.weight > 0 ? _trimDouble(t.weight) : '';
     _repsCtrl.text = t.reps.toString();
@@ -451,6 +474,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
     _weightCtrl = TextEditingController();
     _repsCtrl = TextEditingController();
     _resetIsoTimer();
+    _warmupSetIndex = _shouldWarmup(_currentExercise) ? 0 : null;
     _refillControllers();
   }
 
@@ -475,7 +499,11 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
   void _startCountdown(int seconds) {
     _timer?.cancel();
     _restEndTime = DateTime.now().add(Duration(seconds: seconds));
-    setState(() { _restRemaining = seconds; _restExpired = false; });
+    setState(() {
+      _restRemaining = seconds;
+      _restTotalSeconds = seconds;
+      _restExpired = false;
+    });
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) { t.cancel(); return; }
       final remaining = _restEndTime!.difference(DateTime.now()).inSeconds;
@@ -559,6 +587,13 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
   // ── Avance de ejercicio ───────────────────────────────────
 
   void _completeSet() {
+    // Las series de aproximación no se loguean ni cuentan progresión/PR —
+    // solo avanzan el sub-estado de calentamiento con un descanso corto.
+    if (_warmupSetIndex != null) {
+      _completeWarmupSet();
+      return;
+    }
+
     final ex = _currentExercise;
     // Si el cronómetro isométrico sigue corriendo, lo detiene y usa el
     // tiempo transcurrido como valor de la serie.
@@ -577,6 +612,12 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
     } else {
       _startRest(ex.restSeconds, onDone: _advanceSet);
     }
+  }
+
+  void _completeWarmupSet() {
+    final next = _warmupSetIndex! + 1;
+    setState(() => _warmupSetIndex = next >= kWarmupSets ? null : next);
+    _startRest(kWarmupRestSeconds, onDone: _refillControllers);
   }
 
   void _advanceSet() {
@@ -1013,7 +1054,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
     }
 
     // Timer activo
-    final total = _currentExercise.restSeconds.toDouble();
+    final total = _restTotalSeconds.toDouble();
     final progress = total > 0 ? _restRemaining / total : 0.0;
 
     return Center(
@@ -1115,13 +1156,16 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
                 ],
 
                 _ActiveSetCard(
-                  setNumber: _setIndex + 1,
-                  totalSets: ex.sets,
+                  setNumber: _warmupSetIndex != null
+                      ? _warmupSetIndex! + 1
+                      : _setIndex + 1,
+                  totalSets: _warmupSetIndex != null ? kWarmupSets : ex.sets,
+                  isWarmup: _warmupSetIndex != null,
                   weightUnit: ex.weightUnit,
                   weightCtrl: _weightCtrl,
                   repsCtrl: _repsCtrl,
-                  rir: _currentTarget().rir,
-                  isFailure: _currentTarget().isFailure,
+                  rir: _warmupSetIndex != null ? null : _currentTarget().rir,
+                  isFailure: _warmupSetIndex != null ? false : _currentTarget().isFailure,
                   isIsometric: ex.isIsometric,
                   isoRunning: _isoRunning,
                   isoElapsed: _isoElapsed,
@@ -1138,9 +1182,11 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
                     ),
                     onPressed: _completeSet,
                     child: Text(
-                      _isLastSet && _isLastExercise
-                          ? 'Terminar sesión'
-                          : 'Completar serie',
+                      _warmupSetIndex != null
+                          ? 'Completar aproximación'
+                          : (_isLastSet && _isLastExercise
+                              ? 'Terminar sesión'
+                              : 'Completar serie'),
                       style: const TextStyle(fontSize: 16),
                     ),
                   ),
@@ -1336,6 +1382,7 @@ class _ActiveSetCard extends StatelessWidget {
   final int? rir;
   final bool isFailure;
   final bool isIsometric;
+  final bool isWarmup;
   final bool isoRunning;
   final int isoElapsed;
   final VoidCallback? onStartIsoTimer;
@@ -1350,6 +1397,7 @@ class _ActiveSetCard extends StatelessWidget {
     this.rir,
     this.isFailure = false,
     this.isIsometric = false,
+    this.isWarmup = false,
     this.isoRunning = false,
     this.isoElapsed = 0,
     this.onStartIsoTimer,
@@ -1359,17 +1407,24 @@ class _ActiveSetCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final warmupColor = Colors.amber.shade800;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isFailure ? Colors.red.shade700 : colorScheme.primary,
+          color: isFailure
+              ? Colors.red.shade700
+              : isWarmup
+                  ? warmupColor
+                  : colorScheme.primary,
           width: 2,
         ),
         color: isFailure
             ? Colors.red.withValues(alpha: 0.06)
-            : colorScheme.primaryContainer.withValues(alpha: 0.25),
+            : isWarmup
+                ? Colors.amber.withValues(alpha: 0.08)
+                : colorScheme.primaryContainer.withValues(alpha: 0.25),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1378,9 +1433,15 @@ class _ActiveSetCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Serie $setNumber de $totalSets',
+                  isWarmup
+                      ? 'Aproximación $setNumber de $totalSets'
+                      : 'Serie $setNumber de $totalSets',
                   style: TextStyle(
-                    color: isFailure ? Colors.red.shade700 : colorScheme.primary,
+                    color: isFailure
+                        ? Colors.red.shade700
+                        : isWarmup
+                            ? warmupColor
+                            : colorScheme.primary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
