@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../auth/auth_service.dart';
 import '../auth/auth_gate.dart';
+import '../workout/data/macrocycle_forjado.dart';
+import '../workout/models/macrocycle_progress.dart';
 import '../workout/models/routine.dart';
+import '../workout/services/macrocycle_service.dart';
 import '../workout/services/progression_service.dart';
 import '../workout/services/routine_service.dart';
 import '../workout/services/session_service.dart';
@@ -22,6 +25,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   Routine? _routine;
+  MacrocycleProgress? _macro;
   bool _loading = true;
   int _chartKey = 0;
   final _user = FirebaseAuth.instance.currentUser;
@@ -34,7 +38,15 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadRoutine() async {
     final routine = await RoutineService().getRoutine(_user!.uid);
-    if (mounted) setState(() { _routine = routine; _loading = false; });
+    MacrocycleProgress? macro;
+    try {
+      macro = await MacrocycleService().get(_user.uid);
+    } catch (_) {
+      macro = null;
+    }
+    if (mounted) {
+      setState(() { _routine = routine; _macro = macro; _loading = false; });
+    }
   }
 
   Future<void> _openEdit() async {
@@ -53,30 +65,36 @@ class _HomePageState extends State<HomePage> {
     setState(() => _chartKey++);
     await _loadRoutine(); // refresca pesos actualizados por progresión
 
-    final now = DateTime.now();
-    final currentWeek = _weekOfYear(now);
+    // Los hitos (Séneca / Yeah Buddy) no deben romper el flujo si Firestore
+    // falla puntualmente: se reintentan al terminar la próxima sesión.
+    try {
+      final now = DateTime.now();
+      final currentWeek = _weekOfYear(now);
 
-    final totalExercises = _routine?.days
-            .fold(0, (sum, d) => sum + d.exercises.length) ??
-        0;
-    final showSeneca = await ProgressionService().checkAndMarkSenecaMilestone(
-      _user!.uid, now.year, currentWeek, totalExercises,
-    );
-    if (mounted && showSeneca) {
-      _showSenecaDialog();
-      return;
-    }
+      final totalExercises = _routine?.days
+              .fold(0, (sum, d) => sum + d.exercises.length) ??
+          0;
+      final showSeneca = await ProgressionService().checkAndMarkSenecaMilestone(
+        _user!.uid, now.year, currentWeek, totalExercises,
+      );
+      if (mounted && showSeneca) {
+        _showSenecaDialog();
+        return;
+      }
 
-    if (_routine == null) return;
-    final sessions = await SessionService().getSessionsForUser(_user.uid);
-    final sessionsThisWeek = sessions
-        .where((s) => s.date.year == now.year && _weekOfYear(s.date) == currentWeek)
-        .length;
+      if (_routine == null) return;
+      final sessions = await SessionService().getSessionsForUser(_user.uid);
+      final sessionsThisWeek = sessions
+          .where((s) => s.date.year == now.year && _weekOfYear(s.date) == currentWeek)
+          .length;
 
-    if (sessionsThisWeek >= _routine!.days.length) {
-      final showYeahBuddy = await ProgressionService()
-          .checkAndMarkYeahBuddyMilestone(_user.uid, currentWeek);
-      if (mounted && showYeahBuddy) _showYeahBuddyDialog(currentWeek);
+      if (sessionsThisWeek >= _routine!.days.length) {
+        final showYeahBuddy = await ProgressionService()
+            .checkAndMarkYeahBuddyMilestone(_user.uid, currentWeek);
+        if (mounted && showYeahBuddy) _showYeahBuddyDialog(currentWeek);
+      }
+    } catch (_) {
+      // silencioso: los hitos se recalculan la próxima vez
     }
   }
 
@@ -281,6 +299,7 @@ class _HomePageState extends State<HomePage> {
               ? const Center(child: Text('No tienes una rutina asignada aún.'))
               : _RoutineView(
                   routine: _routine!,
+                  macro: _macro,
                   chartKey: _chartKey,
                   onSessionCompleted: _onSessionCompleted,
                 ),
@@ -290,11 +309,13 @@ class _HomePageState extends State<HomePage> {
 
 class _RoutineView extends StatelessWidget {
   final Routine routine;
+  final MacrocycleProgress? macro;
   final int chartKey;
   final VoidCallback onSessionCompleted;
 
   const _RoutineView({
     required this.routine,
+    required this.macro,
     required this.chartKey,
     required this.onSessionCompleted,
   });
@@ -326,6 +347,11 @@ class _RoutineView extends StatelessWidget {
         ),
         const SizedBox(height: 20),
 
+        if (macro != null && !macro!.completed) ...[
+          _MacrocycleBanner(macro: macro!),
+          const SizedBox(height: 16),
+        ],
+
         for (final day in routine.days) ...[
           _DayCard(day: day, onSessionCompleted: onSessionCompleted),
           const SizedBox(height: 12),
@@ -344,6 +370,91 @@ class _RoutineView extends StatelessWidget {
   }
 }
 
+/// Banner del macro ciclo activo: fase, énfasis y progreso por día.
+class _MacrocycleBanner extends StatelessWidget {
+  final MacrocycleProgress macro;
+  const _MacrocycleBanner({required this.macro});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.local_fire_department,
+                  color: Color(0xFFC41E3A), size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  macro.name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              Text(
+                'Fase ${macro.currentPhaseNumber}/${macro.totalPhases}',
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Día 4 · Énfasis ${macro.currentEmphasis}',
+            style: const TextStyle(color: Colors.white54, fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              for (final d in ForjadoPorElHierro.trackedDays)
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                        right: d == ForjadoPorElHierro.trackedDays.last ? 0 : 6),
+                    child: Column(
+                      children: [
+                        Text('D$d',
+                            style: const TextStyle(
+                                color: Colors.white38, fontSize: 10)),
+                        const SizedBox(height: 3),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(3),
+                          child: LinearProgressIndicator(
+                            value: macro.countFor(d) /
+                                ForjadoPorElHierro.sessionsPerDay,
+                            minHeight: 5,
+                            backgroundColor: Colors.white12,
+                            valueColor: const AlwaysStoppedAnimation(
+                                Color(0xFFC41E3A)),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${macro.countFor(d)}/${ForjadoPorElHierro.sessionsPerDay}',
+                          style: const TextStyle(
+                              color: Colors.white54, fontSize: 10),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _DayCard extends StatelessWidget {
   final RoutineDay day;
   final VoidCallback onSessionCompleted;
@@ -357,6 +468,7 @@ class _DayCard extends StatelessWidget {
       'legs'  => Icons.directions_run,
       'upper' => Icons.accessibility_new,
       'lower' => Icons.directions_walk,
+      'core'  => Icons.self_improvement,
       _       => Icons.fitness_center,
     };
   }
@@ -400,6 +512,19 @@ class _DayCard extends StatelessWidget {
                 icon: const Icon(Icons.play_arrow),
                 label: const Text('Iniciar sesión'),
                 onPressed: () async {
+                  final uid = FirebaseAuth.instance.currentUser?.uid;
+                  if (uid != null) {
+                    int today = 0;
+                    try {
+                      today = await SessionService()
+                          .countSessionsOnDay(uid, DateTime.now());
+                    } catch (_) {}
+                    if (today >= 1 && context.mounted) {
+                      final proceed = await _showRestAdvisory(context);
+                      if (proceed != true) return;
+                    }
+                  }
+                  if (!context.mounted) return;
                   final completed = await Navigator.push<bool>(
                     context,
                     MaterialPageRoute(
@@ -415,4 +540,54 @@ class _DayCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Aviso al iniciar una 2ª (o más) sesión el mismo día. No bloquea: el usuario
+/// puede entrenar igual, pero se le recuerda que el descanso es progreso.
+/// Devuelve `true` si decide entrenar de todas formas.
+Future<bool?> _showRestAdvisory(BuildContext context) {
+  return showDialog<bool>(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: const Text('El descanso también forja'),
+      content: const SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Se recomienda una sola sesión por día. El descanso no es una '
+              'pausa del progreso: es cuando el músculo se reconstruye más '
+              'fuerte.',
+            ),
+            SizedBox(height: 16),
+            Text(
+              '"Ninguna cosa grande se crea de repente, como tampoco un '
+              'racimo de uvas o un higo."',
+              style: TextStyle(fontStyle: FontStyle.italic, fontSize: 13),
+            ),
+            SizedBox(height: 4),
+            Text(
+              '— Epicteto',
+              style: TextStyle(
+                fontStyle: FontStyle.italic,
+                fontSize: 12,
+                color: Color(0xFFC41E3A),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Mejor descanso'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('Entrenar igual'),
+        ),
+      ],
+    ),
+  );
 }

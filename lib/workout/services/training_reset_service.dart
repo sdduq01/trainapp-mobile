@@ -15,6 +15,8 @@ import 'routine_service.dart';
 /// - Eventos de progresión semanal (`progressions/{uid}/logs`)
 /// - Apuntes personales por ejercicio (`exercise_notes/{uid}/items`)
 /// - Hitos desbloqueados (yeahBuddyWeeks / senecaWeeks en el perfil)
+/// - Avance del macro ciclo (`macrocycles/{uid}`) y el desbloqueo de Top
+///   Secret (`forjadoHierroCompletado` en el perfil)
 /// - El draft de sesión activa guardado en el dispositivo
 ///
 /// Se reinicia (sin borrar):
@@ -33,8 +35,13 @@ class TrainingResetService {
           db.collection('exercise_notes').doc(userId).collection('items')),
       _resetRoutineProgress(userId),
       _clearMilestones(userId),
+      _clearMacrocycle(userId),
       _clearLocalDraft(),
     ]);
+  }
+
+  Future<void> _clearMacrocycle(String userId) async {
+    await db.collection('macrocycles').doc(userId).delete();
   }
 
   Future<void> _deleteCollection(
@@ -80,6 +87,7 @@ class TrainingResetService {
     await db.collection('profiles').doc(userId).set({
       'yeahBuddyWeeks': [],
       'senecaWeeks': [],
+      'forjadoHierroCompletado': false,
     }, SetOptions(merge: true));
   }
 

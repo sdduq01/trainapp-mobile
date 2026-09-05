@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../workout/models/workout_session.dart';
 import '../workout/services/progression_service.dart';
 import '../workout/services/session_service.dart';
 
@@ -61,7 +62,13 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
     final currentWeek = _weekNumber(now);
     final planned = widget.plannedDaysPerWeek;
 
-    final sessions = await SessionService().getSessionsForUser(_userId);
+    List<WorkoutSession> sessions = const [];
+    try {
+      sessions = await SessionService().getSessionsForUser(_userId);
+    } catch (_) {
+      // Sin permisos o sin red: el chart carga igual (vacío) en vez de
+      // quedarse girando para siempre.
+    }
     Map<int, int> progressionsByWeek = {};
     try {
       progressionsByWeek =

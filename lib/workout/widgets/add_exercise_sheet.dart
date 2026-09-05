@@ -19,11 +19,11 @@ Future<Exercise?> showAddExerciseSheet(
   required String dayLabel,
   required Set<String> existingExerciseIds,
 }) async {
+  final userId = FirebaseAuth.instance.currentUser?.uid;
   List<Exercise>? catalog;
   String? error;
   try {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    final list = await ExerciseService().getExercises();
+    final list = await ExerciseService().getExercisesWithCustom(userId);
     final profile = userId == null
         ? null
         : await ProfileService().getProfile(userId);
@@ -51,7 +51,7 @@ Future<Exercise?> showAddExerciseSheet(
   for (final e in catalog!) {
     byGroupMap.putIfAbsent(e.muscleGroup, () => []).add(e);
   }
-  final groups = [
+  List<String> groups = [
     for (final g in muscleGroupOrder)
       if ((byGroupMap[g] ?? []).isNotEmpty) g,
   ];
@@ -69,11 +69,69 @@ Future<Exercise?> showAddExerciseSheet(
       maxChildSize: 0.9,
       builder: (_, controller) => StatefulBuilder(
         builder: (sheetCtx, setSheetState) {
+          Future<void> confirmDelete(Exercise ex) async {
+            if (userId == null) return;
+            final ok = await showDialog<bool>(
+              context: sheetCtx,
+              builder: (dctx) => AlertDialog(
+                title: const Text('¿Eliminar ejercicio?'),
+                content: Text(
+                  '"${ex.name}" se borrará de Mis ejercicios. Las rutinas que '
+                  'ya lo usan no se ven afectadas.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(dctx, false),
+                    child: const Text('Cancelar'),
+                  ),
+                  FilledButton(
+                    style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                    onPressed: () => Navigator.pop(dctx, true),
+                    child: const Text('Eliminar'),
+                  ),
+                ],
+              ),
+            );
+            if (ok != true) return;
+            try {
+              await ExerciseService().deleteCustomExercise(userId, ex.id);
+              byGroupMap[kCustomExerciseGroup]?.removeWhere((e) => e.id == ex.id);
+              catalog?.removeWhere((e) => e.id == ex.id);
+              final stillHas =
+                  (byGroupMap[kCustomExerciseGroup] ?? []).isNotEmpty;
+              setSheetState(() {
+                if (!stillHas) {
+                  byGroupMap.remove(kCustomExerciseGroup);
+                  groups = [
+                    for (final g in muscleGroupOrder)
+                      if ((byGroupMap[g] ?? []).isNotEmpty) g,
+                  ];
+                  selectedGroup = null;
+                }
+              });
+            } catch (e) {
+              if (sheetCtx.mounted) {
+                ScaffoldMessenger.of(sheetCtx).showSnackBar(
+                  SnackBar(content: Text('No se pudo eliminar: $e')),
+                );
+              }
+            }
+          }
+
           Future<void> createAndPick() async {
+            if (userId == null) {
+              ScaffoldMessenger.of(sheetCtx).showSnackBar(
+                const SnackBar(
+                  content: Text('Inicia sesión para crear ejercicios propios'),
+                ),
+              );
+              return;
+            }
             final created = await showCreateExerciseDialog(sheetCtx);
             if (created == null) return;
             try {
-              final saved = await ExerciseService().createExercise(created);
+              final saved =
+                  await ExerciseService().createCustomExercise(userId, created);
               if (sheetCtx.mounted) Navigator.pop(sheetCtx, saved);
             } catch (e) {
               if (sheetCtx.mounted) {
@@ -148,14 +206,31 @@ Future<Exercise?> showAddExerciseSheet(
                           final alreadyAdded = existingExerciseIds.contains(
                             ex.id,
                           );
+                          final isCustom =
+                              selectedGroup == kCustomExerciseGroup;
                           return ListTile(
                             title: Text(ex.name),
                             subtitle: Text(
                               '${ex.defaultSets}×${ex.defaultRepsMin}-${ex.defaultRepsMax} · ${ex.restSeconds}s',
                             ),
-                            trailing: alreadyAdded
-                                ? const Icon(Icons.check, color: Colors.green)
-                                : const Icon(Icons.add),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isCustom && userId != null)
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.delete_outline,
+                                      color: Colors.red,
+                                    ),
+                                    tooltip: 'Eliminar',
+                                    onPressed: () => confirmDelete(ex),
+                                  ),
+                                alreadyAdded
+                                    ? const Icon(Icons.check,
+                                        color: Colors.green)
+                                    : const Icon(Icons.add),
+                              ],
+                            ),
                             enabled: !alreadyAdded,
                             onTap: alreadyAdded
                                 ? null

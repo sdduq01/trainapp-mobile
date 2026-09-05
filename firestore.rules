@@ -1,0 +1,66 @@
+rules_version = '2';
+
+// Reglas de la base de datos Firestore `trainapp` (no la default).
+// Desplegar con:  firebase deploy --only firestore:rules
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Perfil: solo el propio usuario
+    match /profiles/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Rutina activa: solo el propio usuario
+    match /routines/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Macro ciclo activo del usuario ("Forjado por el Hierro")
+    match /macrocycles/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Catálogo de ejercicios: lectura autenticada; nadie escribe desde la app
+    // (lo poblan los scripts admin).
+    match /exercises/{exerciseId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Ejercicios propios del usuario ("Mis ejercicios")
+    match /custom_exercises/{userId}/items/{exerciseId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Rutinas personalizadas guardadas del usuario ("Mis rutinas")
+    match /custom_routines/{userId}/items/{routineId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Sesiones completadas: sessions/{uid}/logs/{sessionId}
+    match /sessions/{uid}/logs/{sessionId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Eventos de progresión semanal
+    match /progressions/{userId}/logs/{logId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Plantillas de rutinas (catálogo): lectura autenticada; nadie escribe.
+    match /routine_templates/{id} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Pesos de referencia (PRs) por ejercicio
+    match /exercise_prs/{userId}/items/{exerciseId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Notas personales por ejercicio
+    match /exercise_notes/{userId}/items/{exerciseId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

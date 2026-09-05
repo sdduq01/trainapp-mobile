@@ -5,6 +5,7 @@ import '../../profile/profile_service.dart';
 import '../data/muscle_groups.dart';
 import '../models/exercise.dart';
 import '../models/routine.dart';
+import '../services/custom_routine_service.dart';
 import '../services/exercise_service.dart';
 import '../services/routine_service.dart';
 import '../widgets/create_exercise_dialog.dart';
@@ -53,7 +54,7 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
   Future<void> _loadCatalog() async {
     try {
       final userId = FirebaseAuth.instance.currentUser?.uid;
-      final list = await ExerciseService().getExercises();
+      final list = await ExerciseService().getExercisesWithCustom(userId);
       final profile = userId == null
           ? null
           : await ProfileService().getProfile(userId);
@@ -194,10 +195,20 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
             }
 
             Future<void> createAndPick() async {
+              final userId = FirebaseAuth.instance.currentUser?.uid;
+              if (userId == null) {
+                ScaffoldMessenger.of(sheetCtx).showSnackBar(
+                  const SnackBar(
+                    content: Text('Inicia sesión para crear ejercicios propios'),
+                  ),
+                );
+                return;
+              }
               final created = await showCreateExerciseDialog(sheetCtx);
               if (created == null) return;
               try {
-                final saved = await ExerciseService().createExercise(created);
+                final saved = await ExerciseService()
+                    .createCustomExercise(userId, created);
                 _catalog = [...?_catalog, saved];
                 byGroupMap.putIfAbsent(saved.muscleGroup, () => []).add(saved);
                 groups
@@ -365,16 +376,20 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
     setState(() => _saving = true);
     bool saved = false;
     try {
+      final name = _nameCtrl.text.trim();
       final routine = Routine(
         userId: user.uid,
         type: 'Custom',
-        name: _nameCtrl.text.trim(),
+        name: name,
         weekNumber: 1,
         createdAt: DateTime.now(),
         days: _days,
       );
       final hydrated = await RoutineService().hydrateWithPRs(routine);
       await RoutineService().saveRoutine(hydrated);
+      // También queda guardada en "Mis rutinas" para reactivarla o borrarla luego.
+      await CustomRoutineService()
+          .save(user.uid, name: name, type: 'Custom', days: _days);
       saved = true;
     } catch (e) {
       if (mounted) {

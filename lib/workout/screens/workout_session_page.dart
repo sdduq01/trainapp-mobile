@@ -8,11 +8,13 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../profile/models/user_profile.dart';
 import '../../profile/profile_service.dart';
+import '../data/macrocycle_forjado.dart';
 import '../models/progression_type.dart';
 import '../models/routine.dart';
 import '../models/workout_session.dart';
 import '../services/exercise_notes_service.dart';
 import '../services/exercise_pr_service.dart';
+import '../services/macrocycle_service.dart';
 import '../services/progression_logic.dart';
 import '../services/progression_service.dart';
 import '../services/routine_service.dart';
@@ -697,14 +699,231 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
       // pero no colgamos la app — siempre navegamos de vuelta.
     }
 
+    // Avance del macro ciclo "Forjado por el Hierro" (si hay uno activo).
+    MacrocycleAdvance? macroAdvance;
+    try {
+      macroAdvance = await MacrocycleService()
+          .registerCompletedSession(_userId, _day.dayNumber)
+          .timeout(const Duration(seconds: 15));
+      if (macroAdvance?.kind == MacroAdvanceKind.phaseAdvanced &&
+          macroAdvance?.newDay4 != null) {
+        await _swapMacrocycleDay4(macroAdvance!.newDay4!)
+            .timeout(const Duration(seconds: 15));
+      } else if (macroAdvance?.kind == MacroAdvanceKind.macrocycleComplete) {
+        await ProfileService()
+            .markForjadoHierroCompleted(_userId)
+            .timeout(const Duration(seconds: 10));
+      }
+    } catch (_) {
+      // Un fallo del macro ciclo no debe bloquear el cierre de la sesión.
+    }
+
     await _clearDraft();
     if (!mounted) return;
     setState(() => _saving = false);
-    if (progressed.isNotEmpty) {
+    if (macroAdvance?.kind == MacroAdvanceKind.macrocycleComplete) {
+      _showForgedScreen();
+    } else if (macroAdvance?.kind == MacroAdvanceKind.phaseAdvanced) {
+      _showPhaseAdvancedDialog(macroAdvance!);
+    } else if (macroAdvance?.kind == MacroAdvanceKind.dailyCapReached) {
+      _showMacroCapDialog();
+    } else if (progressed.isNotEmpty) {
       _showProgressionDialog(progressed);
     } else {
       _showCompletionDialog();
     }
+  }
+
+  /// Sustituye el Día 4 de la rutina activa por el de la nueva fase del macro
+  /// ciclo, heredando los PRs del usuario para los ejercicios que los tengan.
+  Future<void> _swapMacrocycleDay4(RoutineDay newDay4) async {
+    final routine = await RoutineService().getRoutine(_userId);
+    if (routine == null) return;
+    final days = routine.days
+        .map((d) => d.dayNumber == newDay4.dayNumber ? newDay4 : d)
+        .toList();
+    final swapped = await RoutineService().hydrateWithPRs(Routine(
+      userId: routine.userId,
+      type: routine.type,
+      name: routine.name,
+      weekNumber: routine.weekNumber,
+      createdAt: routine.createdAt,
+      days: days,
+    ));
+    await RoutineService().saveRoutine(swapped);
+  }
+
+  /// Aviso al cerrar una sesión del macro ciclo que superó el tope diario
+  /// ([ForjadoPorElHierro.maxCountedSessionsPerDay]): la sesión no sumó a la forja.
+  void _showMacroCapDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: const Text('El descanso también forja'),
+        content: Text(
+          'Para Forjado por el Hierro solo cuentan '
+          '${ForjadoPorElHierro.maxCountedSessionsPerDay} sesiones por día — '
+          'esta no sumó a la forja. El músculo se reconstruye en el descanso.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).pop(true);
+            },
+            child: const Text('Entendido'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPhaseAdvancedDialog(MacrocycleAdvance adv) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black87,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.black,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(28, 36, 28, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('🔥', style: TextStyle(fontSize: 64)),
+              const SizedBox(height: 16),
+              const Text(
+                'NUEVA FASE',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 30,
+                  fontWeight: FontWeight.w900,
+                  height: 1.1,
+                  letterSpacing: 3,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Fase ${adv.phaseIndex + 1} de ${ForjadoPorElHierro.totalPhases}.\n'
+                'El Día 4 cambia su énfasis a ${adv.emphasis.toUpperCase()}.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  height: 1.6,
+                ),
+              ),
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).pop(true);
+                },
+                child: const Text('Seguir forjando'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Pantalla de pago del macro ciclo: se completó "Forjado por el Hierro".
+  void _showForgedScreen() {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierLabel: 'forjado',
+      barrierColor: Colors.black,
+      transitionDuration: const Duration(milliseconds: 600),
+      transitionBuilder: (_, anim, _, child) => FadeTransition(
+        opacity: CurvedAnimation(parent: anim, curve: Curves.easeIn),
+        child: child,
+      ),
+      pageBuilder: (_, _, _) => Scaffold(
+        backgroundColor: Colors.black,
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Spacer(),
+                const Text('⚒️', style: TextStyle(fontSize: 88)),
+                const SizedBox(height: 32),
+                const Text(
+                  'HAS SIDO\nFORJADO\nPOR EL HIERRO',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 40,
+                    fontWeight: FontWeight.w900,
+                    height: 1.15,
+                    letterSpacing: 4,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                Container(width: 72, height: 2, color: const Color(0xFFC41E3A)),
+                const SizedBox(height: 28),
+                const Text(
+                  '"El fuego prueba el oro;\n'
+                  'la adversidad, a los hombres fuertes."',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    height: 1.7,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  '— Séneca',
+                  style: TextStyle(
+                    color: Color(0xFFC41E3A),
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Un año de disciplina bajo la carga.\n'
+                  'La puerta de Top Secret está abierta.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 13,
+                    height: 1.6,
+                    letterSpacing: 1,
+                  ),
+                ),
+                const Spacer(),
+                FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFC41E3A),
+                    minimumSize: const Size.fromHeight(52),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).pop(); // cierra la pantalla de pago
+                    Navigator.of(context).pop(true); // vuelve al inicio
+                  },
+                  child: const Text(
+                    'ENTRAR',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   // Evalúa el resultado de la sesión para un ejercicio según su tipo de

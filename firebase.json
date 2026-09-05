@@ -1,1 +1,28 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"trainapp-prod","appId":"1:168253128406:android:3490e4ff7dde9b1851d377","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"trainapp-prod","configurations":{"android":"1:168253128406:android:3490e4ff7dde9b1851d377","ios":"1:168253128406:ios:cb2d9cc82ef1398051d377","web":"1:168253128406:web:a735af303fb9663751d377"}}}}}}
+{
+  "firestore": {
+    "database": "trainapp",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "trainapp-prod",
+          "appId": "1:168253128406:android:3490e4ff7dde9b1851d377",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "trainapp-prod",
+          "configurations": {
+            "android": "1:168253128406:android:3490e4ff7dde9b1851d377",
+            "ios": "1:168253128406:ios:cb2d9cc82ef1398051d377",
+            "web": "1:168253128406:web:a735af303fb9663751d377"
+          }
+        }
+      }
+    }
+  }
+}

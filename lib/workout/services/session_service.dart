@@ -24,4 +24,19 @@ class SessionService {
         .map((d) => WorkoutSession.fromMap(d.id, d.data()))
         .toList();
   }
+
+  /// Nº de sesiones registradas en el día del calendario de [day] (fechas
+  /// guardadas como ISO 8601, así que el rango es comparación de strings).
+  Future<int> countSessionsOnDay(String userId, DateTime day) async {
+    final start = DateTime(day.year, day.month, day.day);
+    final end = start.add(const Duration(days: 1));
+    final snap = await db
+        .collection('sessions')
+        .doc(userId)
+        .collection('logs')
+        .where('date', isGreaterThanOrEqualTo: start.toIso8601String())
+        .where('date', isLessThan: end.toIso8601String())
+        .get();
+    return snap.docs.length;
+  }
 }

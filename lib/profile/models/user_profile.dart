@@ -25,6 +25,7 @@ class UserProfile {
   final bool warmupEnabled;    // series de aproximación automáticas antes de cada ejercicio
   final bool stretchingEnabled; // muestra el grupo "Estiramiento" en los selectores de ejercicio
   final bool cardioEnabled;     // muestra el grupo "Cardio" en los selectores de ejercicio
+  final bool forjadoHierroCompletado; // completó el macro ciclo → desbloquea Top Secret
 
   UserProfile({
     required this.uid,
@@ -41,6 +42,7 @@ class UserProfile {
     this.warmupEnabled = false,
     this.stretchingEnabled = false,
     this.cardioEnabled = false,
+    this.forjadoHierroCompletado = false,
   });
 
   int? get age {
@@ -85,6 +87,8 @@ class UserProfile {
       warmupEnabled: data['warmupEnabled'] as bool? ?? false,
       stretchingEnabled: data['stretchingEnabled'] as bool? ?? false,
       cardioEnabled: data['cardioEnabled'] as bool? ?? false,
+      forjadoHierroCompletado:
+          data['forjadoHierroCompletado'] as bool? ?? false,
     );
   }
 
@@ -103,6 +107,7 @@ class UserProfile {
       'warmupEnabled': warmupEnabled,
       'stretchingEnabled': stretchingEnabled,
       'cardioEnabled': cardioEnabled,
+      'forjadoHierroCompletado': forjadoHierroCompletado,
     };
   }
 
@@ -120,6 +125,7 @@ class UserProfile {
     bool? warmupEnabled,
     bool? stretchingEnabled,
     bool? cardioEnabled,
+    bool? forjadoHierroCompletado,
   }) {
     return UserProfile(
       uid: uid,
@@ -137,6 +143,8 @@ class UserProfile {
       warmupEnabled: warmupEnabled ?? this.warmupEnabled,
       stretchingEnabled: stretchingEnabled ?? this.stretchingEnabled,
       cardioEnabled: cardioEnabled ?? this.cardioEnabled,
+      forjadoHierroCompletado:
+          forjadoHierroCompletado ?? this.forjadoHierroCompletado,
     );
   }
 }

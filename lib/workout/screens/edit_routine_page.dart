@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../data/macrocycle_forjado.dart';
 import '../data/muscle_groups.dart';
 import '../models/routine.dart';
 import '../services/routine_service.dart';
@@ -17,6 +18,12 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
   late Routine _routine;
   bool _saving = false;
 
+  /// El macro ciclo bloquea la estructura: siempre 4 días, mínimo
+  /// [ForjadoPorElHierro.minExercisesPerDay] ejercicios por día. El contenido
+  /// de cada día sí es editable sin salir del macro ciclo.
+  bool get _structureLocked =>
+      widget.routine.type == ForjadoPorElHierro.routineType;
+
   @override
   void initState() {
     super.initState();
@@ -26,6 +33,19 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
   // ── Mutaciones de rutina ─────────────────────────────────
 
   void _removeExercise(int dayIdx, int exIdx) {
+    if (_structureLocked &&
+        _routine.days[dayIdx].exercises.length <=
+            ForjadoPorElHierro.minExercisesPerDay) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'El macro ciclo exige mínimo '
+            '${ForjadoPorElHierro.minExercisesPerDay} ejercicios por día.',
+          ),
+        ),
+      );
+      return;
+    }
     final days = _copyDays();
     final exercises = List<RoutineExercise>.from(days[dayIdx].exercises)
       ..removeAt(exIdx);
@@ -190,9 +210,13 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(12),
-        itemCount: _routine.days.length + 1,
-        itemBuilder: (_, dayIdx) {
-          if (dayIdx == _routine.days.length) {
+        itemCount: (_structureLocked ? 1 : 0) +
+            _routine.days.length +
+            (_structureLocked ? 0 : 1),
+        itemBuilder: (_, i) {
+          if (_structureLocked && i == 0) return _macrocycleNotice();
+          final dayIdx = _structureLocked ? i - 1 : i;
+          if (!_structureLocked && dayIdx == _routine.days.length) {
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: OutlinedButton.icon(
@@ -229,14 +253,15 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
                         icon: const Icon(Icons.add, size: 18),
                         label: const Text('Agregar'),
                       ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.delete_outline,
-                          color: Colors.red,
+                      if (!_structureLocked)
+                        IconButton(
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.red,
+                          ),
+                          tooltip: 'Eliminar día',
+                          onPressed: () => _confirmAndRemoveDay(dayIdx),
                         ),
-                        tooltip: 'Eliminar día',
-                        onPressed: () => _confirmAndRemoveDay(dayIdx),
-                      ),
                     ],
                   ),
                 ),
@@ -291,6 +316,21 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
 
   String _stepLabel(double step) =>
       step % 1 == 0 ? '${step.toInt()}' : '$step';
+
+  Widget _macrocycleNotice() => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(
+          '🔥 Macro ciclo · 4 días fijos, mínimo '
+          '${ForjadoPorElHierro.minExercisesPerDay} ejercicios por día. '
+          'El Día 4 se regenera al cambiar de fase.',
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
+        ),
+      );
 }
 
 // ── Dialog: agregar día ─────────────────────────────────────

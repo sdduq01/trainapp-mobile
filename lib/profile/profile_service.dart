@@ -18,4 +18,13 @@ class ProfileService {
         .doc(profile.uid)
         .set(profile.toMap(), SetOptions(merge: true));
   }
+
+  /// Marca el macro ciclo "Forjado por el Hierro" como completado, lo que
+  /// desbloquea la pestaña Top Secret.
+  Future<void> markForjadoHierroCompleted(String uid) async {
+    await db
+        .collection('profiles')
+        .doc(uid)
+        .set({'forjadoHierroCompletado': true}, SetOptions(merge: true));
+  }
 }
