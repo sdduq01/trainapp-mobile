@@ -10,9 +10,13 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
-    // Rutina activa: solo el propio usuario
+    // Rutina activa: el propio usuario, o su entrenador activo (accepted)
     match /routines/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if request.auth != null &&
+        exists(/databases/$(database)/documents/trainer_links/$(uid)) &&
+        get(/databases/$(database)/documents/trainer_links/$(uid)).data.trainerUid == request.auth.uid &&
+        get(/databases/$(database)/documents/trainer_links/$(uid)).data.status == 'accepted';
     }
 
     // Macro ciclo activo del usuario ("Forjado por el Hierro")
@@ -40,6 +44,11 @@ service cloud.firestore {
     // Sesiones completadas: sessions/{uid}/logs/{sessionId}
     match /sessions/{uid}/logs/{sessionId} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
+      // El entrenador activo solo lee, nunca escribe el historial del atleta.
+      allow read: if request.auth != null &&
+        exists(/databases/$(database)/documents/trainer_links/$(uid)) &&
+        get(/databases/$(database)/documents/trainer_links/$(uid)).data.trainerUid == request.auth.uid &&
+        get(/databases/$(database)/documents/trainer_links/$(uid)).data.status == 'accepted';
     }
 
     // Eventos de progresión semanal
@@ -61,6 +70,43 @@ service cloud.firestore {
     // Notas personales por ejercicio
     match /exercise_notes/{userId}/items/{exerciseId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Directorio liviano email->uid para que un entrenador pueda ubicar a un
+    // atleta por email. Lectura abierta a cualquier autenticado (necesaria
+    // para el where('email','==', x)); el doc solo guarda el email para
+    // minimizar la exposición de datos.
+    match /user_directory/{uid} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Relación entrenador-atleta: un doc por atleta (doc id = athleteUid).
+    // "Un solo entrenador activo" surge de que `create` solo es posible si
+    // el doc no existe; si ya hay un link, cualquier intento de otro
+    // entrenador cae en `update`, permitido solo al propio atleta.
+    match /trainer_links/{athleteUid} {
+      allow read: if request.auth != null &&
+        (request.auth.uid == athleteUid ||
+         resource.data.trainerUid == request.auth.uid);
+
+      allow create: if request.auth != null &&
+        request.resource.data.trainerUid == request.auth.uid &&
+        request.resource.data.athleteUid == athleteUid &&
+        request.resource.data.trainerUid != athleteUid &&
+        request.resource.data.status == 'pending';
+
+      // El atleta acepta: pending -> accepted, sin cambiar quién es el trainer.
+      allow update: if request.auth != null &&
+        request.auth.uid == athleteUid &&
+        resource.data.status == 'pending' &&
+        request.resource.data.status == 'accepted' &&
+        request.resource.data.trainerUid == resource.data.trainerUid;
+
+      // Rechazar/revocar (atleta) o cancelar (entrenador): siempre un delete.
+      allow delete: if request.auth != null &&
+        (request.auth.uid == athleteUid ||
+         request.auth.uid == resource.data.trainerUid);
     }
   }
 }

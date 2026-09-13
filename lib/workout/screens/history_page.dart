@@ -3,14 +3,22 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/session_service.dart';
 
 class HistoryPage extends StatefulWidget {
-  const HistoryPage({super.key});
+  /// uid del atleta cuyo historial se quiere ver. Si es null, se muestra el
+  /// del usuario actual (uso normal, no entrenador).
+  final String? athleteUid;
+  /// Texto para identificar de quién es el historial (ej. su email),
+  /// mostrado en el título cuando lo abre un entrenador.
+  final String? athleteLabel;
+
+  const HistoryPage({this.athleteUid, this.athleteLabel, super.key});
 
   @override
   State<HistoryPage> createState() => _HistoryPageState();
 }
 
 class _HistoryPageState extends State<HistoryPage> {
-  final _userId = FirebaseAuth.instance.currentUser!.uid;
+  late final _userId =
+      widget.athleteUid ?? FirebaseAuth.instance.currentUser!.uid;
   List<_HistoryRow>? _rows;
 
   @override
@@ -51,7 +59,13 @@ class _HistoryPageState extends State<HistoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Historial')),
+      appBar: AppBar(
+        title: Text(
+          widget.athleteLabel != null
+              ? 'Historial de ${widget.athleteLabel}'
+              : 'Historial',
+        ),
+      ),
       body: switch (_rows) {
         null => const Center(child: CircularProgressIndicator()),
         [] => const Center(

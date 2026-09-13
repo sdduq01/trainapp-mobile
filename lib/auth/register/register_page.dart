@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../auth_service.dart';
+import '../../trainer/services/user_directory_service.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -37,10 +38,17 @@ class _RegisterPageState extends State<RegisterPage> {
     });
 
     try {
+      final email = _emailController.text.trim();
       await _authService.signUpWithEmail(
-        email: _emailController.text.trim(),
+        email: email,
         password: _passwordController.text.trim(),
       );
+      // Registra el email en el directorio para que un entrenador pueda
+      // encontrar esta cuenta más adelante. No debe bloquear el registro.
+      final uid = _authService.currentUser?.uid;
+      if (uid != null) {
+        UserDirectoryService().ensureDirectoryEntry(uid, email).catchError((_) {});
+      }
       if (!mounted) return;
       // Volvemos al root para que AuthGate detecte el nuevo usuario y muestre onboarding
       Navigator.of(context).popUntil((route) => route.isFirst);

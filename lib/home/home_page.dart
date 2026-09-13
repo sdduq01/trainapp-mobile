@@ -9,7 +9,10 @@ import '../workout/services/macrocycle_service.dart';
 import '../workout/services/progression_service.dart';
 import '../workout/services/routine_service.dart';
 import '../workout/services/session_service.dart';
+import '../profile/profile_service.dart';
 import '../profile/screens/profile_page.dart';
+import '../trainer/screens/my_athletes_page.dart';
+import '../trainer/services/user_directory_service.dart';
 import '../workout/screens/edit_routine_page.dart';
 import '../workout/screens/workout_session_page.dart';
 import '../workout/screens/history_page.dart';
@@ -27,6 +30,7 @@ class _HomePageState extends State<HomePage> {
   Routine? _routine;
   MacrocycleProgress? _macro;
   bool _loading = true;
+  bool _isTrainer = false;
   int _chartKey = 0;
   final _user = FirebaseAuth.instance.currentUser;
 
@@ -34,6 +38,14 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _loadRoutine();
+    _loadIsTrainer();
+    // Backfill del directorio email->uid para cuentas que se registraron
+    // antes de que existiera (no bloquea la carga de la pantalla).
+    if (_user != null) {
+      UserDirectoryService()
+          .ensureDirectoryEntry(_user.uid, _user.email)
+          .catchError((_) {});
+    }
   }
 
   Future<void> _loadRoutine() async {
@@ -46,6 +58,15 @@ class _HomePageState extends State<HomePage> {
     }
     if (mounted) {
       setState(() { _routine = routine; _macro = macro; _loading = false; });
+    }
+  }
+
+  Future<void> _loadIsTrainer() async {
+    try {
+      final profile = await ProfileService().getProfile(_user!.uid);
+      if (mounted) setState(() => _isTrainer = profile?.isTrainer ?? false);
+    } catch (_) {
+      // silencioso: el ícono de entrenador simplemente no aparece
     }
   }
 
@@ -249,8 +270,19 @@ class _HomePageState extends State<HomePage> {
                 setState(() { _loading = true; _chartKey++; });
                 await _loadRoutine();
               }
+              // El toggle "Modo entrenador" pudo cambiar en ProfilePage.
+              await _loadIsTrainer();
             },
           ),
+          if (_isTrainer)
+            IconButton(
+              icon: const Icon(Icons.groups),
+              tooltip: 'Mis atletas',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MyAthletesPage()),
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.history),
             tooltip: 'Historial',

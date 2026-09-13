@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_profile.dart';
 import '../profile_service.dart';
 import '../../onboarding/config/body_fat_options.dart';
+import '../../trainer/models/trainer_link.dart';
+import '../../trainer/services/trainer_link_service.dart';
 import '../../workout/services/routine_generator.dart';
 import '../../workout/services/routine_service.dart';
 import '../../workout/services/training_reset_service.dart';
@@ -31,11 +33,17 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _warmupEnabled = false;
   bool _stretchingEnabled = false;
   bool _cardioEnabled = false;
+  bool _isTrainer = false;
 
   UserProfile? _initial;
   bool _loading = true;
   bool _saving = false;
   bool _resettingData = false;
+
+  // Estado de "soy atleta de un entrenador": mi propio doc en trainer_links.
+  TrainerLink? _trainerLink;
+  bool _trainerLinkLoading = true;
+  bool _trainerLinkBusy = false;
 
   static const _goalLabels = {
     TrainingGoal.fatLoss: 'Perder grasa',
@@ -49,6 +57,7 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     _load();
+    _loadTrainerLink();
   }
 
   @override
@@ -75,8 +84,55 @@ class _ProfilePageState extends State<ProfilePage> {
       _warmupEnabled = profile.warmupEnabled;
       _stretchingEnabled = profile.stretchingEnabled;
       _cardioEnabled = profile.cardioEnabled;
+      _isTrainer = profile.isTrainer;
       _loading = false;
     });
+  }
+
+  Future<void> _loadTrainerLink() async {
+    try {
+      final link = await TrainerLinkService().getLinkForAthlete(_userId);
+      if (mounted) {
+        setState(() {
+          _trainerLink = link;
+          _trainerLinkLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _trainerLinkLoading = false);
+    }
+  }
+
+  Future<void> _acceptTrainer() async {
+    setState(() => _trainerLinkBusy = true);
+    try {
+      await TrainerLinkService().acceptRequest(_userId);
+      await _loadTrainerLink();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al aceptar: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _trainerLinkBusy = false);
+    }
+  }
+
+  Future<void> _rejectOrRevokeTrainer() async {
+    setState(() => _trainerLinkBusy = true);
+    try {
+      await TrainerLinkService().deleteLink(_userId);
+      await _loadTrainerLink();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _trainerLinkBusy = false);
+    }
   }
 
   Future<void> _pickBirthDate() async {
@@ -254,6 +310,8 @@ class _ProfilePageState extends State<ProfilePage> {
       warmupEnabled: _warmupEnabled,
       stretchingEnabled: _stretchingEnabled,
       cardioEnabled: _cardioEnabled,
+      forjadoHierroCompletado: _initial?.forjadoHierroCompletado ?? false,
+      isTrainer: _isTrainer,
     );
 
     final shouldAskRegenerate = _routineAffectingChanged;
@@ -550,6 +608,28 @@ class _ProfilePageState extends State<ProfilePage> {
                   onChanged: (v) => setState(() => _cardioEnabled = v),
                 ),
 
+                const SizedBox(height: 24),
+                _sectionTitle('Modo entrenador'),
+                const SizedBox(height: 4),
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Soy entrenador'),
+                  subtitle: const Text(
+                    'Habilita "Mis atletas" para enviar solicitudes y ver/editar '
+                    'la rutina de los atletas que las acepten.',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  value: _isTrainer,
+                  onChanged: (v) => setState(() => _isTrainer = v),
+                ),
+
+                if (!_trainerLinkLoading && _trainerLink != null) ...[
+                  const SizedBox(height: 24),
+                  _sectionTitle('Entrenador'),
+                  const SizedBox(height: 8),
+                  _buildTrainerLinkCard(),
+                ],
+
                 const SizedBox(height: 32),
                 FilledButton(
                   onPressed: _isValid ? _save : null,
@@ -602,6 +682,55 @@ class _ProfilePageState extends State<ProfilePage> {
                 const SizedBox(height: 24),
               ],
             ),
+    );
+  }
+
+  Widget _buildTrainerLinkCard() {
+    final link = _trainerLink!;
+    final isPending = link.status == TrainerLinkStatus.pending;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isPending
+                  ? 'Solicitud pendiente de ${link.trainerEmail}'
+                  : 'Tu entrenador: ${link.trainerEmail}',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              isPending
+                  ? 'Si aceptás, podrá ver y editar tu rutina y ver tu historial.'
+                  : 'Puede ver tu rutina e historial, y editar tu rutina y pesos.',
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                if (isPending) ...[
+                  FilledButton(
+                    onPressed: _trainerLinkBusy ? null : _acceptTrainer,
+                    child: const Text('Aceptar'),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: _trainerLinkBusy ? null : _rejectOrRevokeTrainer,
+                    child: const Text('Rechazar'),
+                  ),
+                ] else
+                  OutlinedButton(
+                    onPressed: _trainerLinkBusy ? null : _rejectOrRevokeTrainer,
+                    style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                    child: const Text('Revocar acceso'),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
