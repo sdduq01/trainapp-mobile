@@ -46,6 +46,10 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
   // exerciseId → apunte. Cargado en initState y editado en sesión.
   final Map<String, String> _notes = {};
 
+  // exerciseId → series de la última sesión registrada con ese ejercicio.
+  // Permite mostrar "última vez" para la serie activa.
+  final Map<String, List<SessionSet>> _lastSets = {};
+
   // Configuración de intensidad cargada del perfil.
   bool _intensityEnabled = false;
   int _failureCadence = UserProfile.kFailureCadenceDefault;
@@ -103,11 +107,13 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
   bool get _isLastExercise =>
       _exerciseIndex == _day.exercises.length - 1;
 
-  // El calentamiento solo va antes del primer ejercicio del día (con el
-  // mismo ejercicio pero liviano), no antes de cada ejercicio.
+  // El calentamiento solo va antes de la primera serie del primer ejercicio
+  // del día (con el mismo ejercicio pero liviano), no antes de cada serie
+  // ni de cada ejercicio.
   bool _shouldWarmup(RoutineExercise ex) =>
       _warmupEnabled &&
       _exerciseIndex == 0 &&
+      _setIndex == 0 &&
       !ex.isIsometric &&
       ex.currentWeight > 0;
 
@@ -313,7 +319,28 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
         .toList();
     _initControllers();
     _loadNotes();
+    _loadLastSets();
     _loadIntensityConfig();
+  }
+
+  Future<void> _loadLastSets() async {
+    final ids = _day.exercises.map((e) => e.exerciseId);
+    final lastSets = await SessionService().getLastLoggedSets(_userId, ids);
+    if (!mounted) return;
+    setState(() {
+      _lastSets
+        ..clear()
+        ..addAll(lastSets);
+    });
+  }
+
+  SessionSet? _lastSetFor(String exerciseId, int setNumber) {
+    final sets = _lastSets[exerciseId];
+    if (sets == null) return null;
+    for (final s in sets) {
+      if (s.setNumber == setNumber) return s;
+    }
+    return null;
   }
 
   @override
@@ -1500,6 +1527,9 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
                   repsCtrl: _repsCtrl,
                   rir: _warmupSetIndex != null ? null : _currentTarget().rir,
                   isFailure: _warmupSetIndex != null ? false : _currentTarget().isFailure,
+                  lastSet: _warmupSetIndex != null
+                      ? null
+                      : _lastSetFor(ex.exerciseId, _setIndex + 1),
                   isIsometric: ex.isIsometric,
                   isoRunning: _isoRunning,
                   isoElapsed: _isoElapsed,
@@ -1717,6 +1747,7 @@ class _ActiveSetCard extends StatelessWidget {
   final bool isFailure;
   final bool isIsometric;
   final bool isWarmup;
+  final SessionSet? lastSet;
   final bool isoRunning;
   final int isoElapsed;
   final VoidCallback? onStartIsoTimer;
@@ -1732,11 +1763,15 @@ class _ActiveSetCard extends StatelessWidget {
     this.isFailure = false,
     this.isIsometric = false,
     this.isWarmup = false,
+    this.lastSet,
     this.isoRunning = false,
     this.isoElapsed = 0,
     this.onStartIsoTimer,
     this.onStopIsoTimer,
   });
+
+  static String _trimDouble(double v) =>
+      v % 1 == 0 ? v.toStringAsFixed(0) : v.toString();
 
   @override
   Widget build(BuildContext context) {
@@ -1786,6 +1821,14 @@ class _ActiveSetCard extends StatelessWidget {
                 _RirBadge(rir: rir!),
             ],
           ),
+          if (lastSet != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Última vez: ${_trimDouble(lastSet!.weight)} ${lastSet!.weightUnit}'
+              ' × ${lastSet!.repsDone}${isIsometric ? " s" : ""}',
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            ),
+          ],
           const SizedBox(height: 12),
           Row(
             children: [
