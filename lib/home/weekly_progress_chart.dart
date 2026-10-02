@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../core/utils/iso_week.dart';
 import '../workout/models/workout_session.dart';
 import '../workout/services/progression_service.dart';
 import '../workout/services/session_service.dart';
@@ -42,19 +43,9 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
     super.dispose();
   }
 
-  // ISO 8601: semanas de lunes a domingo.
-  // El jueves de la semana determina el año ISO (evita edge cases en ene/dic).
-  static int _weekNumber(DateTime date) {
-    final thursday = date.add(Duration(days: DateTime.thursday - date.weekday));
-    final startOfYear = DateTime(thursday.year, 1, 1);
-    return ((thursday.difference(startOfYear).inDays) / 7).floor() + 1;
-  }
+  static int _weekNumber(DateTime date) => IsoWeek.weekNumber(date);
 
-  static int _isoYear(DateTime date) {
-    return date
-        .add(Duration(days: DateTime.thursday - date.weekday))
-        .year;
-  }
+  static int _isoYear(DateTime date) => IsoWeek.year(date);
 
   Future<void> _load() async {
     final now = DateTime.now();

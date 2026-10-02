@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../auth/auth_service.dart';
 import '../auth/auth_gate.dart';
+import '../core/utils/iso_week.dart';
+import '../core/widgets/trainapp_brand.dart';
 import '../workout/data/macrocycle_forjado.dart';
 import '../workout/models/macrocycle_progress.dart';
 import '../workout/models/routine.dart';
@@ -79,9 +81,6 @@ class _HomePageState extends State<HomePage> {
     if (updated != null) setState(() => _routine = updated);
   }
 
-  static int _weekOfYear(DateTime date) =>
-      (date.difference(DateTime(date.year, 1, 1)).inDays / 7).floor() + 1;
-
   Future<void> _onSessionCompleted() async {
     setState(() => _chartKey++);
     await _loadRoutine(); // refresca pesos actualizados por progresión
@@ -90,13 +89,15 @@ class _HomePageState extends State<HomePage> {
     // falla puntualmente: se reintentan al terminar la próxima sesión.
     try {
       final now = DateTime.now();
-      final currentWeek = _weekOfYear(now);
+      // Misma semana ISO que la gráfica de consistencia.
+      final currentWeek = IsoWeek.weekNumber(now);
+      final isoYear = IsoWeek.year(now);
 
       final totalExercises = _routine?.days
               .fold(0, (sum, d) => sum + d.exercises.length) ??
           0;
       final showSeneca = await ProgressionService().checkAndMarkSenecaMilestone(
-        _user!.uid, now.year, currentWeek, totalExercises,
+        _user!.uid, isoYear, currentWeek, totalExercises,
       );
       if (mounted && showSeneca) {
         _showSenecaDialog();
@@ -106,7 +107,9 @@ class _HomePageState extends State<HomePage> {
       if (_routine == null) return;
       final sessions = await SessionService().getSessionsForUser(_user.uid);
       final sessionsThisWeek = sessions
-          .where((s) => s.date.year == now.year && _weekOfYear(s.date) == currentWeek)
+          .where((s) =>
+              IsoWeek.year(s.date) == isoYear &&
+              IsoWeek.weekNumber(s.date) == currentWeek)
           .length;
 
       if (sessionsThisWeek >= _routine!.days.length) {
@@ -131,6 +134,8 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              const TrainAppBrand(),
+              const SizedBox(height: 20),
               const Text('🔥', style: TextStyle(fontSize: 64)),
               const SizedBox(height: 16),
               const Text(
@@ -195,6 +200,8 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              const TrainAppBrand(),
+              const SizedBox(height: 20),
               const Text('🏆', style: TextStyle(fontSize: 64)),
               const SizedBox(height: 16),
               const Text(
@@ -493,6 +500,9 @@ class _DayCard extends StatelessWidget {
 
   const _DayCard({required this.day, required this.onSessionCompleted});
 
+  static String _trimDouble(double v) =>
+      v % 1 == 0 ? v.toStringAsFixed(0) : v.toString();
+
   IconData get _icon {
     return switch (day.focus) {
       'push'  => Icons.fitness_center,
@@ -528,13 +538,14 @@ class _DayCard extends StatelessWidget {
               ),
               trailing: ex.currentWeight > 0
                   ? Text(
-                      '${ex.currentWeight} kg',
+                      '${_trimDouble(ex.currentWeight)} ${ex.weightUnit}',
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.primary,
                         fontWeight: FontWeight.bold,
                       ),
                     )
-                  : const Text('— kg', style: TextStyle(color: Colors.grey)),
+                  : Text('— ${ex.weightUnit}',
+                      style: const TextStyle(color: Colors.grey)),
             ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),

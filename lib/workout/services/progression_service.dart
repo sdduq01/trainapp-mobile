@@ -1,11 +1,7 @@
 import '../../core/firebase/firestore_instance.dart';
+import '../../core/utils/iso_week.dart';
 
 class ProgressionService {
-  static int _weekNumber(DateTime date) {
-    final startOfYear = DateTime(date.year, 1, 1);
-    return (date.difference(startOfYear).inDays / 7).floor() + 1;
-  }
-
   Future<void> saveProgressionEvent(String userId, int exerciseCount) async {
     final now = DateTime.now();
     await db
@@ -14,23 +10,32 @@ class ProgressionService {
         .collection('logs')
         .add({
       'date': now.toIso8601String(),
-      'year': now.year,
-      'weekNumber': _weekNumber(now),
+      'year': IsoWeek.year(now),
+      'weekNumber': IsoWeek.weekNumber(now),
       'exerciseCount': exerciseCount,
     });
   }
 
-  Future<Map<int, int>> getProgressionsByWeek(String userId, int year) async {
+  /// Progresiones por semana ISO del año ISO [isoYear]. La semana se deriva
+  /// de `date` y no del `weekNumber` guardado: los eventos anteriores a
+  /// 2026-10 se guardaron con semanas contadas desde el 1 de enero (no ISO) y
+  /// el resaltado de la gráfica caía corrido una semana.
+  Future<Map<int, int>> getProgressionsByWeek(String userId, int isoYear) async {
+    final start = IsoWeek.firstMonday(isoYear);
+    final end = IsoWeek.firstMonday(isoYear + 1);
     final snap = await db
         .collection('progressions')
         .doc(userId)
         .collection('logs')
-        .where('year', isEqualTo: year)
+        .where('date', isGreaterThanOrEqualTo: start.toIso8601String())
+        .where('date', isLessThan: end.toIso8601String())
         .get();
 
     final Map<int, int> result = {};
     for (final doc in snap.docs) {
-      final week = doc.data()['weekNumber'] as int;
+      final date = DateTime.tryParse(doc.data()['date'] as String? ?? '');
+      if (date == null) continue;
+      final week = IsoWeek.weekNumber(date);
       final count = doc.data()['exerciseCount'] as int? ?? 0;
       result[week] = (result[week] ?? 0) + count;
     }

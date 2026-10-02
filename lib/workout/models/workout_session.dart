@@ -65,6 +65,9 @@ class WorkoutSession {
   final String focus;
   final List<SessionExercise> exercises;
   final bool completed;
+  // uid del entrenador si él registró la sesión desde su equipo; null si la
+  // registró el propio atleta.
+  final String? recordedBy;
 
   WorkoutSession({
     required this.id,
@@ -75,6 +78,7 @@ class WorkoutSession {
     required this.focus,
     required this.exercises,
     required this.completed,
+    this.recordedBy,
   });
 
   Map<String, dynamic> toMap() => {
@@ -85,6 +89,7 @@ class WorkoutSession {
         'focus': focus,
         'exercises': exercises.map((e) => e.toMap()).toList(),
         'completed': completed,
+        if (recordedBy != null) 'recordedBy': recordedBy,
       };
 
   factory WorkoutSession.fromMap(String id, Map<String, dynamic> m) =>
@@ -99,5 +104,6 @@ class WorkoutSession {
             .map((e) => SessionExercise.fromMap(e as Map<String, dynamic>))
             .toList(),
         completed: m['completed'] as bool? ?? false,
+        recordedBy: m['recordedBy'] as String?,
       );
 }

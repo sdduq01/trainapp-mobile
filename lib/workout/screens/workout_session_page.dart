@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../core/widgets/trainapp_brand.dart';
 import '../../profile/models/user_profile.dart';
 import '../../profile/profile_service.dart';
 import '../data/macrocycle_forjado.dart';
@@ -24,7 +25,17 @@ import 'edit_session_exercises_page.dart';
 class WorkoutSessionPage extends StatefulWidget {
   final RoutineDay day;
 
-  const WorkoutSessionPage({required this.day, super.key});
+  /// Si no es null, la sesión la registra el entrenador desde su equipo en
+  /// nombre de este atleta: todo se lee y se guarda en los datos del atleta.
+  final String? athleteUid;
+  final String? athleteLabel;
+
+  const WorkoutSessionPage({
+    required this.day,
+    this.athleteUid,
+    this.athleteLabel,
+    super.key,
+  });
 
   @override
   State<WorkoutSessionPage> createState() => _WorkoutSessionPageState();
@@ -32,7 +43,10 @@ class WorkoutSessionPage extends StatefulWidget {
 
 class _WorkoutSessionPageState extends State<WorkoutSessionPage>
     with WidgetsBindingObserver {
-  final _userId = FirebaseAuth.instance.currentUser!.uid;
+  // Dueño de los datos de la sesión: el atleta si la registra su entrenador.
+  late final String _userId =
+      widget.athleteUid ?? FirebaseAuth.instance.currentUser!.uid;
+  bool get _isTrainerSession => widget.athleteUid != null;
   final _audioPlayer = AudioPlayer();
 
   static const int kNoteMaxLength = 200;
@@ -47,7 +61,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
   final Map<String, String> _notes = {};
 
   // exerciseId → series de la última sesión registrada con ese ejercicio.
-  // Permite mostrar "última vez" para la serie activa.
+  // Permite mostrar todas las series de "la última vez" del ejercicio activo.
   final Map<String, List<SessionSet>> _lastSets = {};
 
   // Configuración de intensidad cargada del perfil.
@@ -58,6 +72,9 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
   // trabajo. null = no está calentando (o el calentamiento terminó).
   bool _warmupEnabled = false;
   int? _warmupSetIndex;
+  // true una vez terminadas las aproximaciones: evita repetirlas si el primer
+  // ejercicio se envía al final y otro pasa a ocupar la posición 0.
+  bool _warmupDone = false;
   static const int kWarmupSets = 2;
   static const List<double> kWarmupPercents = [0.5, 0.75];
   static const List<int> kWarmupReps = [10, 5];
@@ -112,6 +129,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
   // ni de cada ejercicio.
   bool _shouldWarmup(RoutineExercise ex) =>
       _warmupEnabled &&
+      !_warmupDone &&
       _exerciseIndex == 0 &&
       _setIndex == 0 &&
       !ex.isIsometric &&
@@ -183,6 +201,11 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
 
   static const _kDraftKey = 'session_draft';
 
+  // Un draft por atleta en el equipo del entrenador, para no pisar el draft
+  // de su propia sesión ni el de otro atleta.
+  String get _draftKey =>
+      _isTrainerSession ? '${_kDraftKey}_${widget.athleteUid}' : _kDraftKey;
+
   Future<void> _saveDraft() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -190,9 +213,12 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
           .map((ex) => ex.map((s) => s == null ? null : [s.$1, s.$2]).toList())
           .toList();
       await prefs.setString(
-        _kDraftKey,
+        _draftKey,
         jsonEncode({
           'dayNumber': _day.dayNumber,
+          // Orden en curso: puede diferir del de la rutina si se envió algún
+          // ejercicio al final.
+          'order': _day.exercises.map((e) => e.exerciseId).toList(),
           'exerciseIndex': _exerciseIndex,
           'setIndex': _setIndex,
           'logged': loggedJson,
@@ -204,31 +230,33 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
   Future<void> _clearDraft() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_kDraftKey);
+      await prefs.remove(_draftKey);
     } catch (_) {}
   }
 
   Future<void> _tryRestoreDraft() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_kDraftKey);
+      final raw = prefs.getString(_draftKey);
       if (raw == null || !mounted) return;
 
       final map = jsonDecode(raw) as Map<String, dynamic>;
       if (map['dayNumber'] != _day.dayNumber) {
-        await prefs.remove(_kDraftKey);
+        await prefs.remove(_draftKey);
         return;
       }
 
       final rawLogged = map['logged'] as List;
+      // Se aplica a _day solo si el draft resulta válido.
+      final exercises = _reorderedFromDraft(map['order']) ?? _day.exercises;
       // Valida que la estructura coincida con los ejercicios actuales del día
-      if (rawLogged.length != _day.exercises.length) {
-        await prefs.remove(_kDraftKey);
+      if (rawLogged.length != exercises.length) {
+        await prefs.remove(_draftKey);
         return;
       }
-      for (int i = 0; i < _day.exercises.length; i++) {
-        if ((rawLogged[i] as List).length != _day.exercises[i].sets) {
-          await prefs.remove(_kDraftKey);
+      for (int i = 0; i < exercises.length; i++) {
+        if ((rawLogged[i] as List).length != exercises[i].sets) {
+          await prefs.remove(_draftKey);
           return;
         }
       }
@@ -261,7 +289,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
 
       if (!mounted) return;
       if (shouldRestore != true) {
-        await prefs.remove(_kDraftKey);
+        await prefs.remove(_draftKey);
         return;
       }
 
@@ -278,27 +306,35 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
 
       // Si el set guardado ya estaba completado (la app murió durante el descanso),
       // avanza silenciosamente al siguiente set/ejercicio sin timer
-      if (exIdx < _day.exercises.length &&
-          setIdx < _day.exercises[exIdx].sets &&
+      if (exIdx < exercises.length &&
+          setIdx < exercises[exIdx].sets &&
           restored[exIdx][setIdx] != null) {
-        final ex = _day.exercises[exIdx];
+        final ex = exercises[exIdx];
         if (setIdx < ex.sets - 1) {
           setIdx++;
-        } else if (exIdx < _day.exercises.length - 1) {
+        } else if (exIdx < exercises.length - 1) {
           exIdx++;
-          setIdx = 0;
+          final pending = restored[exIdx].indexWhere((s) => s == null);
+          setIdx = pending == -1 ? 0 : pending;
         } else {
           // Murió en el descanso del último set del último ejercicio
-          setState(() { _logged = restored; _exerciseIndex = exIdx; _setIndex = setIdx; });
+          setState(() {
+            _day = _withExercises(exercises);
+            _logged = restored;
+            _exerciseIndex = exIdx;
+            _setIndex = setIdx;
+          });
           _finishSession();
           return;
         }
       }
 
       setState(() {
+        _day = _withExercises(exercises);
         _logged = restored;
         _exerciseIndex = exIdx;
         _setIndex = setIdx;
+        _warmupDone = true;
       });
       _disposeControllers();
       _initControllers();
@@ -306,6 +342,27 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
       // Draft corrupto — ignora
     }
   }
+
+  /// Ejercicios del día en el orden guardado en el draft, o null si el draft
+  /// no trae orden o ya no coincide con los ejercicios actuales.
+  List<RoutineExercise>? _reorderedFromDraft(Object? rawOrder) {
+    if (rawOrder is! List) return null;
+    final pool = [..._day.exercises];
+    final result = <RoutineExercise>[];
+    for (final id in rawOrder) {
+      final i = pool.indexWhere((e) => e.exerciseId == id);
+      if (i == -1) return null;
+      result.add(pool.removeAt(i));
+    }
+    return pool.isEmpty ? result : null;
+  }
+
+  RoutineDay _withExercises(List<RoutineExercise> exercises) => RoutineDay(
+        dayNumber: _day.dayNumber,
+        name: _day.name,
+        focus: _day.focus,
+        exercises: exercises,
+      );
 
   // ── Ciclo de vida ─────────────────────────────────────────
 
@@ -332,15 +389,6 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
         ..clear()
         ..addAll(lastSets);
     });
-  }
-
-  SessionSet? _lastSetFor(String exerciseId, int setNumber) {
-    final sets = _lastSets[exerciseId];
-    if (sets == null) return null;
-    for (final s in sets) {
-      if (s.setNumber == setNumber) return s;
-    }
-    return null;
   }
 
   @override
@@ -463,7 +511,8 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
     if (_warmupSetIndex != null) {
       final ex = _currentExercise;
       final idx = _warmupSetIndex!;
-      final w = ex.currentWeight * kWarmupPercents[idx];
+      final w = _roundToStep(
+          ex.currentWeight * kWarmupPercents[idx], ex.progressionStep);
       _weightCtrl.text = w > 0 ? _trimDouble(w) : '';
       _repsCtrl.text = kWarmupReps[idx].toString();
       return;
@@ -475,6 +524,16 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
 
   static String _trimDouble(double v) =>
       v % 1 == 0 ? v.toStringAsFixed(0) : v.toString();
+
+  /// Redondea [w] al múltiplo más cercano de [step] (el incremento de
+  /// progresión del ejercicio), para que el peso sugerido exista en la
+  /// máquina o con los discos disponibles. Nunca baja de un [step].
+  static double _roundToStep(double w, double step) {
+    if (step <= 0 || w <= 0) return w;
+    final steps = math.max(1, (w / step).round());
+    // toStringAsFixed limpia el ruido de punto flotante (p. ej. 7.500000001).
+    return double.parse((steps * step).toStringAsFixed(2));
+  }
 
   Future<void> _loadNotes() async {
     final ids = _day.exercises.map((e) => e.exerciseId).toList();
@@ -656,7 +715,10 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
 
   void _completeWarmupSet() {
     final next = _warmupSetIndex! + 1;
-    setState(() => _warmupSetIndex = next >= kWarmupSets ? null : next);
+    setState(() {
+      _warmupSetIndex = next >= kWarmupSets ? null : next;
+      if (_warmupSetIndex == null) _warmupDone = true;
+    });
     _startRest(kWarmupRestSeconds, onDone: _refillControllers);
   }
 
@@ -669,8 +731,48 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
   void _advanceExercise() {
     _disposeControllers();
     _resetIsoTimer();
-    setState(() { _exerciseIndex++; _setIndex = 0; });
+    setState(() {
+      _exerciseIndex++;
+      _setIndex = _firstPendingSet(_exerciseIndex);
+    });
     _initControllers();
+  }
+
+  /// Primera serie sin registrar del ejercicio [exIdx]. Un ejercicio enviado
+  /// al final a mitad de camino retoma donde quedó.
+  int _firstPendingSet(int exIdx) {
+    final i = _logged[exIdx].indexWhere((s) => s == null);
+    return i == -1 ? 0 : i;
+  }
+
+  bool get _canSendToEnd =>
+      !_isLastExercise && !_resting && !_isoRunning && !_saving;
+
+  /// Mueve el ejercicio actual al final de la sesión de hoy (p. ej. la
+  /// máquina está ocupada) conservando las series ya registradas. Solo afecta
+  /// a esta sesión, no al orden de la rutina.
+  void _sendExerciseToEnd() {
+    if (!_canSendToEnd) return;
+    final moved = _currentExercise;
+    final exercises = [..._day.exercises];
+    final logs = [..._logged];
+    exercises.add(exercises.removeAt(_exerciseIndex));
+    logs.add(logs.removeAt(_exerciseIndex));
+
+    _disposeControllers();
+    _resetIsoTimer();
+    setState(() {
+      _day = _withExercises(exercises);
+      _logged = logs;
+      _setIndex = _firstPendingSet(_exerciseIndex);
+    });
+    _initControllers();
+    _saveDraft();
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text('${moved.name} quedó para el final')),
+      );
   }
 
   // ── Finalizar sesión ──────────────────────────────────────
@@ -708,6 +810,8 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
       focus: _day.focus,
       exercises: exercises,
       completed: true,
+      recordedBy:
+          _isTrainerSession ? FirebaseAuth.instance.currentUser!.uid : null,
     );
 
     List<(String, double, double, String)> progressed = [];
@@ -736,7 +840,11 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
           macroAdvance?.newDay4 != null) {
         await _swapMacrocycleDay4(macroAdvance!.newDay4!)
             .timeout(const Duration(seconds: 15));
-      } else if (macroAdvance?.kind == MacroAdvanceKind.macrocycleComplete) {
+      } else if (macroAdvance?.kind == MacroAdvanceKind.macrocycleComplete &&
+          !_isTrainerSession) {
+        // El entrenador no escribe el perfil del atleta: el desbloqueo de Top
+        // Secret se reconcilia desde `macrocycles/{uid}.completed` en el
+        // catálogo del atleta.
         await ProfileService()
             .markForjadoHierroCompleted(_userId)
             .timeout(const Duration(seconds: 10));
@@ -819,6 +927,8 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              const TrainAppBrand(),
+              const SizedBox(height: 20),
               const Text('🔥', style: TextStyle(fontSize: 64)),
               const SizedBox(height: 16),
               const Text(
@@ -878,6 +988,8 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                const SizedBox(height: 8),
+                const TrainAppBrand(markSize: 40),
                 const Spacer(),
                 const Text('⚒️', style: TextStyle(fontSize: 88)),
                 const SizedBox(height: 32),
@@ -1106,6 +1218,8 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              const TrainAppBrand(),
+              const SizedBox(height: 20),
               const Text('💪', style: TextStyle(fontSize: 64)),
               const SizedBox(height: 16),
               const Text(
@@ -1298,7 +1412,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
       final routine = await RoutineService().getRoutine(_userId);
       if (routine == null) return;
       final updatedDays = routine.days
-          .map((d) => d.dayNumber == _day.dayNumber ? _day : d)
+          .map((d) => d.dayNumber == _day.dayNumber ? _inRoutineOrder(d) : d)
           .toList();
       await RoutineService().saveRoutine(Routine(
         userId: routine.userId,
@@ -1317,6 +1431,19 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
     }
   }
 
+  /// [_day] con el orden de [routineDay]: "enviar al final" solo reordena la
+  /// sesión de hoy, así que al persistir una edición se respeta el orden de la
+  /// rutina. Los ejercicios nuevos van al final.
+  RoutineDay _inRoutineOrder(RoutineDay routineDay) {
+    final byId = {for (final e in _day.exercises) e.exerciseId: e};
+    final ordered = <RoutineExercise>[
+      for (final e in routineDay.exercises)
+        if (byId.remove(e.exerciseId) case final updated?) updated,
+      ...byId.values,
+    ];
+    return _withExercises(ordered);
+  }
+
   // ── Build ─────────────────────────────────────────────────
 
   @override
@@ -1331,7 +1458,18 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text('Día ${day.dayNumber} · ${day.name}'),
+          title: _isTrainerSession
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Día ${day.dayNumber} · ${day.name}'),
+                    Text(
+                      widget.athleteLabel ?? 'Atleta',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
+                )
+              : Text('Día ${day.dayNumber} · ${day.name}'),
           actions: [
             IconButton(
               icon: const Icon(Icons.edit_outlined),
@@ -1503,6 +1641,16 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
                   onTap: _editNote,
                 ),
 
+                if (_lastSets[ex.exerciseId]?.isNotEmpty ?? false) ...[
+                  const SizedBox(height: 12),
+                  _LastSessionCard(
+                    sets: _lastSets[ex.exerciseId]!,
+                    currentSetNumber:
+                        _warmupSetIndex != null ? null : _setIndex + 1,
+                    isIsometric: ex.isIsometric,
+                  ),
+                ],
+
                 const SizedBox(height: 20),
 
                 for (int s = 0; s < _setIndex; s++) ...[
@@ -1527,9 +1675,6 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
                   repsCtrl: _repsCtrl,
                   rir: _warmupSetIndex != null ? null : _currentTarget().rir,
                   isFailure: _warmupSetIndex != null ? false : _currentTarget().isFailure,
-                  lastSet: _warmupSetIndex != null
-                      ? null
-                      : _lastSetFor(ex.exerciseId, _setIndex + 1),
                   isIsometric: ex.isIsometric,
                   isoRunning: _isoRunning,
                   isoElapsed: _isoElapsed,
@@ -1555,6 +1700,17 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
                     ),
                   ),
                 ),
+                if (_canSendToEnd) ...[
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton.icon(
+                      onPressed: _sendExerciseToEnd,
+                      icon: const Icon(Icons.low_priority),
+                      label: const Text('Máquina ocupada · enviar al final'),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -1737,6 +1893,97 @@ class _CompletedSetTile extends StatelessWidget {
   }
 }
 
+/// Todas las series que se registraron la última vez que se hizo el
+/// ejercicio, con la serie en curso resaltada como referencia.
+class _LastSessionCard extends StatelessWidget {
+  final List<SessionSet> sets;
+  final int? currentSetNumber; // null durante las aproximaciones
+  final bool isIsometric;
+
+  const _LastSessionCard({
+    required this.sets,
+    required this.currentSetNumber,
+    this.isIsometric = false,
+  });
+
+  static String _trimDouble(double v) =>
+      v % 1 == 0 ? v.toStringAsFixed(0) : v.toString();
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.history, size: 16, color: Colors.grey[600]),
+              const SizedBox(width: 6),
+              Text(
+                'Última vez',
+                style: TextStyle(
+                  color: Colors.grey[700],
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          for (final s in sets)
+            Builder(builder: (context) {
+              final isCurrent = s.setNumber == currentSetNumber;
+              final skipped = s.repsDone == 0 && s.weight == 0;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isCurrent
+                      ? colorScheme.primaryContainer.withValues(alpha: 0.6)
+                      : null,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 64,
+                      child: Text(
+                        'Serie ${s.setNumber}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isCurrent ? colorScheme.primary : Colors.grey[700],
+                          fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      skipped
+                          ? '—'
+                          : '${_trimDouble(s.weight)} ${s.weightUnit}'
+                              ' × ${s.repsDone}${isIsometric ? " s" : ""}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+        ],
+      ),
+    );
+  }
+}
+
 class _ActiveSetCard extends StatelessWidget {
   final int setNumber;
   final int totalSets;
@@ -1747,7 +1994,6 @@ class _ActiveSetCard extends StatelessWidget {
   final bool isFailure;
   final bool isIsometric;
   final bool isWarmup;
-  final SessionSet? lastSet;
   final bool isoRunning;
   final int isoElapsed;
   final VoidCallback? onStartIsoTimer;
@@ -1763,15 +2009,11 @@ class _ActiveSetCard extends StatelessWidget {
     this.isFailure = false,
     this.isIsometric = false,
     this.isWarmup = false,
-    this.lastSet,
     this.isoRunning = false,
     this.isoElapsed = 0,
     this.onStartIsoTimer,
     this.onStopIsoTimer,
   });
-
-  static String _trimDouble(double v) =>
-      v % 1 == 0 ? v.toStringAsFixed(0) : v.toString();
 
   @override
   Widget build(BuildContext context) {
@@ -1821,14 +2063,6 @@ class _ActiveSetCard extends StatelessWidget {
                 _RirBadge(rir: rir!),
             ],
           ),
-          if (lastSet != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              'Última vez: ${_trimDouble(lastSet!.weight)} ${lastSet!.weightUnit}'
-              ' × ${lastSet!.repsDone}${isIsometric ? " s" : ""}',
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
-            ),
-          ],
           const SizedBox(height: 12),
           Row(
             children: [

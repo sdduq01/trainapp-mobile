@@ -378,9 +378,23 @@ class _WeekSummaryCard extends StatelessWidget {
                       ),
                     ),
                     Expanded(
-                      child: Text(
-                        session.dayName,
-                        style: const TextStyle(fontSize: 13),
+                      child: Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              session.dayName,
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                          if (session.recordedBy != null) ...[
+                            const SizedBox(width: 4),
+                            Tooltip(
+                              message: 'Registrada por el entrenador',
+                              child: Icon(Icons.sports, size: 14,
+                                  color: Colors.grey[600]),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                     Text(

@@ -5,23 +5,33 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Perfil: solo el propio usuario
-    match /profiles/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
-    }
-
-    // Rutina activa: el propio usuario, o su entrenador activo (accepted)
-    match /routines/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
-      allow read, write: if request.auth != null &&
+    // true si quien hace la petición es el entrenador activo (accepted) de uid.
+    function isActiveTrainerOf(uid) {
+      return request.auth != null &&
         exists(/databases/$(database)/documents/trainer_links/$(uid)) &&
         get(/databases/$(database)/documents/trainer_links/$(uid)).data.trainerUid == request.auth.uid &&
         get(/databases/$(database)/documents/trainer_links/$(uid)).data.status == 'accepted';
     }
 
-    // Macro ciclo activo del usuario ("Forjado por el Hierro")
+    // Perfil: el propio usuario. El entrenador activo solo lee (necesita la
+    // config de intensidad/calentamiento para registrar la sesión del atleta).
+    match /profiles/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read: if isActiveTrainerOf(uid);
+    }
+
+    // Rutina activa: el propio usuario, o su entrenador activo (accepted)
+    match /routines/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if isActiveTrainerOf(uid);
+    }
+
+    // Macro ciclo activo del usuario ("Forjado por el Hierro"). El entrenador
+    // activo lee y avanza el conteo al registrar una sesión del atleta, pero
+    // no lo crea ni lo borra.
     match /macrocycles/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, update: if isActiveTrainerOf(userId);
     }
 
     // Catálogo de ejercicios: lectura autenticada; nadie escribe desde la app
@@ -44,16 +54,17 @@ service cloud.firestore {
     // Sesiones completadas: sessions/{uid}/logs/{sessionId}
     match /sessions/{uid}/logs/{sessionId} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
-      // El entrenador activo solo lee, nunca escribe el historial del atleta.
-      allow read: if request.auth != null &&
-        exists(/databases/$(database)/documents/trainer_links/$(uid)) &&
-        get(/databases/$(database)/documents/trainer_links/$(uid)).data.trainerUid == request.auth.uid &&
-        get(/databases/$(database)/documents/trainer_links/$(uid)).data.status == 'accepted';
+      // El entrenador activo lee el historial y puede agregar sesiones que él
+      // registró (firmadas con recordedBy), pero no edita ni borra ninguna.
+      allow read: if isActiveTrainerOf(uid);
+      allow create: if isActiveTrainerOf(uid) &&
+        request.resource.data.recordedBy == request.auth.uid;
     }
 
-    // Eventos de progresión semanal
+    // Eventos de progresión semanal. El entrenador activo solo agrega eventos.
     match /progressions/{userId}/logs/{logId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow create: if isActiveTrainerOf(userId);
     }
 
     // Plantillas de rutinas (catálogo): lectura autenticada; nadie escribe.
@@ -63,13 +74,17 @@ service cloud.firestore {
     }
 
     // Pesos de referencia (PRs) por ejercicio
+    // (el entrenador activo los actualiza al registrar una sesión del atleta).
     match /exercise_prs/{userId}/items/{exerciseId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isActiveTrainerOf(userId);
     }
 
-    // Notas personales por ejercicio
+    // Notas personales por ejercicio (ajustes de máquina, cues). El
+    // entrenador activo las ve y edita durante la sesión del atleta.
     match /exercise_notes/{userId}/items/{exerciseId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isActiveTrainerOf(userId);
     }
 
     // Directorio liviano email->uid para que un entrenador pueda ubicar a un

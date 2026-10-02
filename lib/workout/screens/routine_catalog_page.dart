@@ -199,7 +199,14 @@ class _TopSecretTabState extends State<_TopSecretTab>
     if (uid == null) return (unlocked: false, macro: null);
     final profile = await ProfileService().getProfile(uid);
     final macro = await MacrocycleService().get(uid);
-    return (unlocked: profile?.forjadoHierroCompletado ?? false, macro: macro);
+    var unlocked = profile?.forjadoHierroCompletado ?? false;
+    // Si la última sesión del macro ciclo la registró el entrenador, él no
+    // puede escribir el perfil del atleta: el desbloqueo se marca aquí.
+    if (!unlocked && (macro?.completed ?? false)) {
+      unlocked = true;
+      ProfileService().markForjadoHierroCompleted(uid).catchError((_) {});
+    }
+    return (unlocked: unlocked, macro: macro);
   }
 
   @override
