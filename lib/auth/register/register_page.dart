@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../auth_service.dart';
+import '../../core/utils/legal_links.dart';
 import '../../trainer/services/user_directory_service.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -133,7 +134,18 @@ class _RegisterPageState extends State<RegisterPage> {
                     )
                   : const Text('Crear cuenta'),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+            const Text(
+              'Al crear tu cuenta aceptas el tratamiento de tus datos según '
+              'nuestra política de privacidad.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            TextButton(
+              onPressed: openPrivacyPolicy,
+              child: const Text('Ver política de privacidad'),
+            ),
+            const SizedBox(height: 8),
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('¿Ya tienes cuenta? Inicia sesión'),

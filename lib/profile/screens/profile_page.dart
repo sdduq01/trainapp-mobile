@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/user_profile.dart';
 import '../profile_service.dart';
+import '../../core/utils/legal_links.dart';
 import '../../onboarding/config/body_fat_options.dart';
 import '../../trainer/models/trainer_link.dart';
 import '../../trainer/services/trainer_link_service.dart';
@@ -680,9 +681,25 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
                 const SizedBox(height: 24),
+                const Divider(),
+                TextButton.icon(
+                  onPressed: _openPrivacyPolicy,
+                  icon: const Icon(Icons.privacy_tip_outlined, size: 18),
+                  label: const Text('Política de privacidad'),
+                ),
+                const SizedBox(height: 24),
               ],
             ),
     );
+  }
+
+  Future<void> _openPrivacyPolicy() async {
+    final ok = await openPrivacyPolicy();
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo abrir: $kPrivacyPolicyUrl')),
+      );
+    }
   }
 
   Widget _buildTrainerLinkCard() {
