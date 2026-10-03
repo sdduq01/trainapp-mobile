@@ -1,4 +1,4 @@
-package com.example.trainapp_mobile
+package com.ariete.trainapp
 
 import io.flutter.embedding.android.FlutterActivity
 

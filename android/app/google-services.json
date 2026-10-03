@@ -7,6 +7,42 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:168253128406:android:bdacc16e5690596e51d377",
+        "android_client_info": {
+          "package_name": "com.ariete.trainapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "168253128406-79akv0bnvdsgnicoh46m6n6c1vor5hpf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBq6KROTf1c4pe70S5XCL5atdwN-0wTI34"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "168253128406-79akv0bnvdsgnicoh46m6n6c1vor5hpf.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "168253128406-gp1gobhia4bq773fobs95o618e8jn1c7.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.trainappMobile"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:168253128406:android:3490e4ff7dde9b1851d377",
         "android_client_info": {
           "package_name": "com.example.trainapp_mobile"
@@ -29,6 +65,49 @@
             {
               "client_id": "168253128406-79akv0bnvdsgnicoh46m6n6c1vor5hpf.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "168253128406-gp1gobhia4bq773fobs95o618e8jn1c7.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.trainappMobile"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:168253128406:android:3cdd3065d51f53e651d377",
+        "android_client_info": {
+          "package_name": "com.trainapp.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "168253128406-79akv0bnvdsgnicoh46m6n6c1vor5hpf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBq6KROTf1c4pe70S5XCL5atdwN-0wTI34"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "168253128406-79akv0bnvdsgnicoh46m6n6c1vor5hpf.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "168253128406-gp1gobhia4bq773fobs95o618e8jn1c7.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.trainappMobile"
+              }
             }
           ]
         }

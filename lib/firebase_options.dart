@@ -58,7 +58,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyBq6KROTf1c4pe70S5XCL5atdwN-0wTI34',
-    appId: '1:168253128406:android:3490e4ff7dde9b1851d377',
+    appId: '1:168253128406:android:bdacc16e5690596e51d377',
     messagingSenderId: '168253128406',
     projectId: 'trainapp-prod',
     storageBucket: 'trainapp-prod.firebasestorage.app',
@@ -66,11 +66,12 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyDEU0rObF1LkvA6fb-HhGMGRkQ5RuZnkY0',
-    appId: '1:168253128406:ios:cb2d9cc82ef1398051d377',
+    appId: '1:168253128406:ios:d1498aff375b919751d377',
     messagingSenderId: '168253128406',
     projectId: 'trainapp-prod',
     storageBucket: 'trainapp-prod.firebasestorage.app',
-    iosClientId: '168253128406-gp1gobhia4bq773fobs95o618e8jn1c7.apps.googleusercontent.com',
-    iosBundleId: 'com.example.trainappMobile',
+    iosClientId: '168253128406-ibf9ss9vu4jictko0vjpfp9go7kmc04r.apps.googleusercontent.com',
+    iosBundleId: 'com.ariete.trainapp',
   );
+
 }
