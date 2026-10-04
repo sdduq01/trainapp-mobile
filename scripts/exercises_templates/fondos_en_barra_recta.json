@@ -1,0 +1,12 @@
+{
+  "id": "fondos_en_barra_recta",
+  "name": "Fondos en Barra Recta",
+  "muscle": "push",
+  "defaultSets": 3,
+  "defaultRepsMin": 6,
+  "defaultRepsMax": 12,
+  "restSeconds": 120,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "calistenia"
+}

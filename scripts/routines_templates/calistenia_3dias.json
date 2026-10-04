@@ -1,0 +1,251 @@
+{
+  "id": "rec_calistenia_3dias",
+  "category": "recommended",
+  "name": "Dueño de la Barra (Calistenia)",
+  "description": "Calistenia en 3 días: empuje, tirón y piernas con core. Solo necesitas una barra y unas paralelas. Construye la base — dominadas, fondos, flexiones y pistol — antes de ir por los trucos. Ideal para empezar en la calistenia o para quien entrena tres veces por semana.",
+  "type": "Calistenia",
+  "sport": null,
+  "order": 4,
+  "days": [
+    {
+      "dayNumber": 1,
+      "name": "Empuje — Fondos · Flexiones · Pino",
+      "focus": "push",
+      "exercises": [
+        {
+          "exerciseId": "fondos_en_paralelas",
+          "name": "Fondos en Paralelas",
+          "sets": 4,
+          "repsMin": 6,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "flexiones",
+          "name": "Flexiones",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "flexiones_pica",
+          "name": "Flexiones en Pica",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "flexiones_diamante",
+          "name": "Flexiones Diamante",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "pino_contra_pared",
+          "name": "Pino contra la Pared",
+          "sets": 3,
+          "repsMin": 20,
+          "repsMax": 45,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        },
+        {
+          "exerciseId": "hollow_body_hold",
+          "name": "Hollow Body Hold",
+          "sets": 3,
+          "repsMin": 20,
+          "repsMax": 45,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        }
+      ]
+    },
+    {
+      "dayNumber": 2,
+      "name": "Tirón — Dominadas · Remo · Agarre",
+      "focus": "pull",
+      "exercises": [
+        {
+          "exerciseId": "dominadas",
+          "name": "Dominadas",
+          "sets": 4,
+          "repsMin": 5,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "dominadas_supinas",
+          "name": "Dominadas Supinas (Chin-Up)",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "dominadas_australianas",
+          "name": "Dominadas Australianas (Remo Invertido)",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "colgado_en_barra",
+          "name": "Colgado en Barra (Dead Hang)",
+          "sets": 3,
+          "repsMin": 20,
+          "repsMax": 60,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        },
+        {
+          "exerciseId": "elevacion_rodillas_colgado",
+          "name": "Elevación de Rodillas Colgado",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "l_sit",
+          "name": "L-Sit",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 30,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        }
+      ]
+    },
+    {
+      "dayNumber": 3,
+      "name": "Piernas y Core — Pistol · Nórdico · Abdomen",
+      "focus": "legs",
+      "exercises": [
+        {
+          "exerciseId": "sentadilla_pistol",
+          "name": "Sentadilla Pistol",
+          "sets": 3,
+          "repsMin": 4,
+          "repsMax": 8,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "zancada_peso_corporal",
+          "name": "Zancada con Peso Corporal",
+          "sets": 3,
+          "repsMin": 12,
+          "repsMax": 20,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "sentadilla_con_salto",
+          "name": "Sentadilla con Salto",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "curl_nordico",
+          "name": "Curl Nórdico",
+          "sets": 3,
+          "repsMin": 4,
+          "repsMax": 8,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "puente_gluteo_unilateral",
+          "name": "Puente de Glúteo Unilateral",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "elevacion_piernas_colgado",
+          "name": "Elevación de Piernas Colgado",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "plancha",
+          "name": "Plancha",
+          "sets": 3,
+          "repsMin": 30,
+          "repsMax": 60,
+          "currentWeight": 0,
+          "restSeconds": 45,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "subida_de_cuerda",
+  "name": "Subida de Cuerda (Rope Climb)",
+  "muscle": "pull",
+  "defaultSets": 3,
+  "defaultRepsMin": 1,
+  "defaultRepsMax": 3,
+  "restSeconds": 150,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "crossfit"
+}

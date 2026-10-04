@@ -10,6 +10,7 @@ class RoutineTemplate {
   final String description;
   final String? sport;       // 'futbol', etc. Solo para category == 'sport'
   final String type;         // 'PPL' | 'UpperLower' | 'FullBody' | 'Sport'
+  final int? order;          // posición en su pestaña; sin orden van al final
   final List<RoutineDay> days;
 
   const RoutineTemplate({
@@ -20,6 +21,7 @@ class RoutineTemplate {
     required this.type,
     required this.days,
     this.sport,
+    this.order,
   });
 
   factory RoutineTemplate.fromMap(String id, Map<String, dynamic> m) =>
@@ -30,6 +32,7 @@ class RoutineTemplate {
         description: m['description'] as String? ?? '',
         type: m['type'] as String? ?? 'Custom',
         sport: m['sport'] as String?,
+        order: (m['order'] as num?)?.toInt(),
         days: (m['days'] as List)
             .map((d) => RoutineDay.fromMap(d as Map<String, dynamic>))
             .toList(),

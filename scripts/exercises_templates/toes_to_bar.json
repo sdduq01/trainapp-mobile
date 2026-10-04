@@ -1,0 +1,12 @@
+{
+  "id": "toes_to_bar",
+  "name": "Toes to Bar",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 8,
+  "defaultRepsMax": 12,
+  "restSeconds": 90,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "crossfit"
+}

@@ -1,0 +1,12 @@
+{
+  "id": "double_unders",
+  "name": "Saltos Dobles de Cuerda (Double Unders)",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 30,
+  "defaultRepsMax": 50,
+  "restSeconds": 60,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "crossfit"
+}

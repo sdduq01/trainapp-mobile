@@ -1,0 +1,233 @@
+{
+  "id": "rec_crossfit_3dias",
+  "category": "limited",
+  "name": "WOD de Tres (CrossFit)",
+  "description": "CrossFit en 3 días: cada sesión abre con un levantamiento pesado y cierra con trabajo metabólico. Sentadilla frontal y thrusters el primer día, cargada y peso muerto el segundo, dos tiempos y gimnásticos el tercero. Para quien quiere fuerza y motor sin vivir en el box.",
+  "type": "CrossFit",
+  "sport": null,
+  "days": [
+    {
+      "dayNumber": 1,
+      "name": "Piernas y Empuje — Frontal · Push Press · Thruster",
+      "focus": "legs",
+      "exercises": [
+        {
+          "exerciseId": "sentadilla_frontal",
+          "name": "Sentadilla Frontal",
+          "sets": 4,
+          "repsMin": 5,
+          "repsMax": 8,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "push_press",
+          "name": "Push Press",
+          "sets": 4,
+          "repsMin": 5,
+          "repsMax": 8,
+          "currentWeight": 0,
+          "restSeconds": 150,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "thruster",
+          "name": "Thruster",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "wall_ball",
+          "name": "Wall Ball",
+          "sets": 3,
+          "repsMin": 15,
+          "repsMax": 20,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "box_jump",
+          "name": "Salto al Cajón (Box Jump)",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "toes_to_bar",
+          "name": "Toes to Bar",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        }
+      ]
+    },
+    {
+      "dayNumber": 2,
+      "name": "Cargada y Tirón — Power Clean · Peso Muerto · Dominadas",
+      "focus": "pull",
+      "exercises": [
+        {
+          "exerciseId": "power_clean",
+          "name": "Cargada de Potencia (Power Clean)",
+          "sets": 5,
+          "repsMin": 3,
+          "repsMax": 5,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "peso_muerto",
+          "name": "Peso Muerto",
+          "sets": 3,
+          "repsMin": 5,
+          "repsMax": 8,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 10
+        },
+        {
+          "exerciseId": "dominadas_kipping",
+          "name": "Dominadas Kipping",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "kettlebell_swing",
+          "name": "Kettlebell Swing",
+          "sets": 3,
+          "repsMin": 15,
+          "repsMax": 20,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "sit_up_abmat",
+          "name": "Sit-Up con AbMat",
+          "sets": 3,
+          "repsMin": 15,
+          "repsMax": 25,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "remoergometro",
+          "name": "Remoergómetro",
+          "sets": 4,
+          "repsMin": 60,
+          "repsMax": 120,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        }
+      ]
+    },
+    {
+      "dayNumber": 3,
+      "name": "Mixto — Dos Tiempos · Gimnásticos · Motor",
+      "focus": "push",
+      "exercises": [
+        {
+          "exerciseId": "clean_and_jerk",
+          "name": "Dos Tiempos (Clean and Jerk)",
+          "sets": 4,
+          "repsMin": 2,
+          "repsMax": 4,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "handstand_push_up",
+          "name": "Flexiones en Pino (Handstand Push-Up)",
+          "sets": 3,
+          "repsMin": 5,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "devil_press",
+          "name": "Devil Press",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "burpee_box_jump_over",
+          "name": "Burpee Box Jump Over",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "double_unders",
+          "name": "Saltos Dobles de Cuerda (Double Unders)",
+          "sets": 3,
+          "repsMin": 30,
+          "repsMax": 50,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "paseo_del_granjero",
+          "name": "Paseo del Granjero (Farmer Carry)",
+          "sets": 3,
+          "repsMin": 30,
+          "repsMax": 60,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 2.5,
+          "progressionType": "none",
+          "isIsometric": true
+        }
+      ]
+    }
+  ]
+}

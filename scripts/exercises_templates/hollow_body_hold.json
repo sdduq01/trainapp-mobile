@@ -1,0 +1,13 @@
+{
+  "id": "hollow_body_hold",
+  "name": "Hollow Body Hold",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 20,
+  "defaultRepsMax": 45,
+  "restSeconds": 60,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "calistenia",
+  "isIsometric": true
+}

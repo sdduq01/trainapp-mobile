@@ -1,0 +1,13 @@
+{
+  "id": "colgado_en_barra",
+  "name": "Colgado en Barra (Dead Hang)",
+  "muscle": "pull",
+  "defaultSets": 3,
+  "defaultRepsMin": 20,
+  "defaultRepsMax": 60,
+  "restSeconds": 90,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "calistenia",
+  "isIsometric": true
+}

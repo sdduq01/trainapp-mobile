@@ -1,0 +1,244 @@
+{
+  "id": "sport_natacion_3dias",
+  "category": "sport",
+  "name": "Natación",
+  "description": "Rutina de gimnasio de 3 días para nadadores. En el agua no hay impacto ni carga pesada, así que la fuerza se construye en seco. El día 1 trabaja la tracción — dorsales y espalda — que es el motor de cada brazada. El día 2 equilibra con empuje y cuida el manguito rotador, porque el hombro del nadador hace miles de rotaciones por semana. El día 3 es para la patada, la potencia de las salidas y los virajes, y el core que mantiene el cuerpo en línea.",
+  "type": "Deporte",
+  "sport": "natacion",
+  "days": [
+    {
+      "dayNumber": 1,
+      "name": "Tracción — Dorsales · Brazada · Agarre",
+      "focus": "pull",
+      "exercises": [
+        {
+          "exerciseId": "dominadas",
+          "name": "Dominadas",
+          "sets": 4,
+          "repsMin": 5,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "remo_gironda",
+          "name": "Remo en Gironda",
+          "sets": 4,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "jalon_unilateral_polea",
+          "name": "Jalón Unilateral en Polea",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "pull_over",
+          "name": "Pull Over",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "face_pull",
+          "name": "Face Pull",
+          "sets": 3,
+          "repsMin": 12,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "colgado_en_barra",
+          "name": "Colgado en Barra (Dead Hang)",
+          "sets": 3,
+          "repsMin": 20,
+          "repsMax": 60,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        }
+      ]
+    },
+    {
+      "dayNumber": 2,
+      "name": "Empuje y Salud del Hombro — Pecho · Deltoides · Tríceps",
+      "focus": "push",
+      "exercises": [
+        {
+          "exerciseId": "press_inclinado_mancuernas",
+          "name": "Press Inclinado con Mancuernas",
+          "sets": 4,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "press_hombro_mancuerna",
+          "name": "Press de Hombro con Mancuernas",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "elevacion_lateral_mancuerna",
+          "name": "Elevación Lateral con Mancuerna",
+          "sets": 3,
+          "repsMin": 12,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "aperturas_posteriores_pec_dec",
+          "name": "Aperturas Posteriores en Pec Dec",
+          "sets": 3,
+          "repsMin": 12,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "extension_triceps",
+          "name": "Extensión de Tríceps",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "extension_triceps_cabeza",
+          "name": "Extensión de Tríceps sobre la Cabeza",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        }
+      ]
+    },
+    {
+      "dayNumber": 3,
+      "name": "Patada, Salidas y Core — Piernas · Explosividad · Línea Corporal",
+      "focus": "legs",
+      "exercises": [
+        {
+          "exerciseId": "sentadilla_peso_libre",
+          "name": "Sentadilla con Peso Libre",
+          "sets": 4,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 5
+        },
+        {
+          "exerciseId": "sentadilla_con_salto",
+          "name": "Sentadilla con Salto",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "hip_thrust",
+          "name": "Hip Thrust",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 10
+        },
+        {
+          "exerciseId": "peso_muerto_rumano",
+          "name": "Peso Muerto Rumano",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "hollow_body_hold",
+          "name": "Hollow Body Hold",
+          "sets": 3,
+          "repsMin": 20,
+          "repsMax": 45,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        },
+        {
+          "exerciseId": "elevacion_piernas_colgado",
+          "name": "Elevación de Piernas Colgado",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "superman",
+          "name": "Superman",
+          "sets": 3,
+          "repsMin": 12,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,305 @@
+{
+  "id": "rec_calistenia_4dias",
+  "category": "limited",
+  "name": "Gravedad Cero (Calistenia)",
+  "description": "Calistenia en 4 días para quien ya domina dominadas y fondos. Tres sesiones de fuerza (empuje, tirón, piernas y core) y un cuarto día dedicado a las habilidades: muscle-up, levers, plancha y pino. Menos repeticiones fáciles, más palancas difíciles.",
+  "type": "Calistenia",
+  "sport": null,
+  "days": [
+    {
+      "dayNumber": 1,
+      "name": "Empuje — Fuerza y Plancha",
+      "focus": "push",
+      "exercises": [
+        {
+          "exerciseId": "fondos_en_paralelas",
+          "name": "Fondos en Paralelas",
+          "sets": 4,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "flexiones_pseudo_plancha",
+          "name": "Flexiones Pseudo Plancha",
+          "sets": 4,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "flexiones_arquero",
+          "name": "Flexiones Arquero",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "flexiones_pica",
+          "name": "Flexiones en Pica",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "plancha_agrupada",
+          "name": "Plancha Agrupada (Tuck Planche)",
+          "sets": 4,
+          "repsMin": 8,
+          "repsMax": 20,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        }
+      ]
+    },
+    {
+      "dayNumber": 2,
+      "name": "Tirón — Fuerza y Front Lever",
+      "focus": "pull",
+      "exercises": [
+        {
+          "exerciseId": "dominadas",
+          "name": "Dominadas",
+          "sets": 4,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "dominadas_arquero",
+          "name": "Dominadas Arquero",
+          "sets": 3,
+          "repsMin": 4,
+          "repsMax": 8,
+          "currentWeight": 0,
+          "restSeconds": 150,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "dominadas_australianas",
+          "name": "Dominadas Australianas (Remo Invertido)",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "front_lever_agrupado",
+          "name": "Front Lever Agrupado",
+          "sets": 4,
+          "repsMin": 8,
+          "repsMax": 20,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        },
+        {
+          "exerciseId": "colgado_en_barra",
+          "name": "Colgado en Barra (Dead Hang)",
+          "sets": 3,
+          "repsMin": 20,
+          "repsMax": 60,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        }
+      ]
+    },
+    {
+      "dayNumber": 3,
+      "name": "Piernas y Core — Pistol · Nórdico · Dragon Flag",
+      "focus": "legs",
+      "exercises": [
+        {
+          "exerciseId": "sentadilla_pistol",
+          "name": "Sentadilla Pistol",
+          "sets": 4,
+          "repsMin": 4,
+          "repsMax": 8,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "curl_nordico",
+          "name": "Curl Nórdico",
+          "sets": 3,
+          "repsMin": 4,
+          "repsMax": 8,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "zancada_peso_corporal",
+          "name": "Zancada con Peso Corporal",
+          "sets": 3,
+          "repsMin": 12,
+          "repsMax": 20,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "sentadilla_con_salto",
+          "name": "Sentadilla con Salto",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "dragon_flag",
+          "name": "Dragon Flag",
+          "sets": 3,
+          "repsMin": 4,
+          "repsMax": 8,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "l_sit",
+          "name": "L-Sit",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 30,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        }
+      ]
+    },
+    {
+      "dayNumber": 4,
+      "name": "Habilidades — Muscle-Up · Levers · Pino",
+      "focus": "upper",
+      "exercises": [
+        {
+          "exerciseId": "muscle_up",
+          "name": "Muscle-Up",
+          "sets": 4,
+          "repsMin": 2,
+          "repsMax": 5,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "fondos_en_barra_recta",
+          "name": "Fondos en Barra Recta",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "skin_the_cat",
+          "name": "Skin the Cat",
+          "sets": 3,
+          "repsMin": 3,
+          "repsMax": 6,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "back_lever_agrupado",
+          "name": "Back Lever Agrupado",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 20,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        },
+        {
+          "exerciseId": "pino_contra_pared",
+          "name": "Pino contra la Pared",
+          "sets": 3,
+          "repsMin": 20,
+          "repsMax": 45,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        },
+        {
+          "exerciseId": "flexiones_con_palmada",
+          "name": "Flexiones con Palmada",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "hollow_body_hold",
+          "name": "Hollow Body Hold",
+          "sets": 3,
+          "repsMin": 20,
+          "repsMax": 45,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "sentadilla_overhead",
+  "name": "Sentadilla Overhead",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 5,
+  "defaultRepsMax": 8,
+  "restSeconds": 180,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 2.5,
+  "muscleGroup": "crossfit"
+}

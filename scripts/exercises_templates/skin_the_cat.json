@@ -1,0 +1,12 @@
+{
+  "id": "skin_the_cat",
+  "name": "Skin the Cat",
+  "muscle": "pull",
+  "defaultSets": 3,
+  "defaultRepsMin": 3,
+  "defaultRepsMax": 6,
+  "restSeconds": 120,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "calistenia"
+}

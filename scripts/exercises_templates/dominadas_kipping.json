@@ -1,0 +1,12 @@
+{
+  "id": "dominadas_kipping",
+  "name": "Dominadas Kipping",
+  "muscle": "pull",
+  "defaultSets": 3,
+  "defaultRepsMin": 10,
+  "defaultRepsMax": 15,
+  "restSeconds": 120,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "crossfit"
+}

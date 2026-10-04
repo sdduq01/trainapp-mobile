@@ -1,0 +1,12 @@
+{
+  "id": "muscle_up",
+  "name": "Muscle-Up",
+  "muscle": "pull",
+  "defaultSets": 3,
+  "defaultRepsMin": 3,
+  "defaultRepsMax": 6,
+  "restSeconds": 180,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "calistenia"
+}

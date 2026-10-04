@@ -1,0 +1,12 @@
+{
+  "id": "dominadas_arquero",
+  "name": "Dominadas Arquero",
+  "muscle": "pull",
+  "defaultSets": 3,
+  "defaultRepsMin": 4,
+  "defaultRepsMax": 8,
+  "restSeconds": 150,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "calistenia"
+}

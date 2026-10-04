@@ -1,0 +1,13 @@
+{
+  "id": "back_lever_agrupado",
+  "name": "Back Lever Agrupado",
+  "muscle": "pull",
+  "defaultSets": 3,
+  "defaultRepsMin": 8,
+  "defaultRepsMax": 20,
+  "restSeconds": 120,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "calistenia",
+  "isIsometric": true
+}

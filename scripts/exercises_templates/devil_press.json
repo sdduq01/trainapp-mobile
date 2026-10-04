@@ -1,0 +1,12 @@
+{
+  "id": "devil_press",
+  "name": "Devil Press",
+  "muscle": "push",
+  "defaultSets": 3,
+  "defaultRepsMin": 8,
+  "defaultRepsMax": 12,
+  "restSeconds": 120,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 2.5,
+  "muscleGroup": "crossfit"
+}

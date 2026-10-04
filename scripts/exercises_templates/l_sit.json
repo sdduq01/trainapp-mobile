@@ -1,0 +1,13 @@
+{
+  "id": "l_sit",
+  "name": "L-Sit",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 10,
+  "defaultRepsMax": 30,
+  "restSeconds": 90,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "calistenia",
+  "isIsometric": true
+}

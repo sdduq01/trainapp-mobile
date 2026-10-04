@@ -84,6 +84,9 @@ function validateRoutine(file, r) {
   if (!r.type || typeof r.type !== 'string') {
     errs.push(`type vacío (ej: PPL, UpperLower, FullBody, Sport, Custom)`);
   }
+  if (r.order !== undefined && r.order !== null && !Number.isInteger(r.order)) {
+    errs.push(`order debe ser un entero (posición dentro de su pestaña)`);
+  }
   if (r.category === 'sport' && !r.sport) {
     errs.push(`category="sport" requiere campo "sport" (ej: "futbol")`);
   }
@@ -160,6 +163,7 @@ function normalize(r) {
     },
   };
   if (r.sport) out.data.sport = r.sport;
+  if (r.order !== undefined && r.order !== null) out.data.order = r.order;
   return out;
 }
 

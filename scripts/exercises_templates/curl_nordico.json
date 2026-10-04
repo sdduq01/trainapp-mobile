@@ -1,0 +1,12 @@
+{
+  "id": "curl_nordico",
+  "name": "Curl Nórdico",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 4,
+  "defaultRepsMax": 8,
+  "restSeconds": 120,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "calistenia"
+}

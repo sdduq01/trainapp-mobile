@@ -1,0 +1,251 @@
+{
+  "id": "rec_en_casa_3dias",
+  "category": "recommended",
+  "name": "Sin Excusas (En Casa)",
+  "description": "Tres días para entrenar en casa sin ningún equipo: solo tu cuerpo, el piso, una silla y una pared. Un día de empuje y core, uno de piernas y glúteos, y uno de cardio con cuerpo completo. Ideal para empezar o para no perder el ritmo cuando no hay gimnasio.",
+  "type": "En Casa",
+  "sport": null,
+  "order": 6,
+  "days": [
+    {
+      "dayNumber": 1,
+      "name": "Empuje y Core — Flexiones · Fondos · Abdomen",
+      "focus": "push",
+      "exercises": [
+        {
+          "exerciseId": "flexiones",
+          "name": "Flexiones",
+          "sets": 4,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "flexiones_abiertas",
+          "name": "Flexiones Abiertas",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "flexiones_pica",
+          "name": "Flexiones en Pica",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "fondos_en_silla",
+          "name": "Fondos en Silla",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "crunch_abdominal",
+          "name": "Crunch Abdominal",
+          "sets": 3,
+          "repsMin": 15,
+          "repsMax": 20,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "plancha_lateral",
+          "name": "Plancha Lateral",
+          "sets": 3,
+          "repsMin": 20,
+          "repsMax": 45,
+          "currentWeight": 0,
+          "restSeconds": 45,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        }
+      ]
+    },
+    {
+      "dayNumber": 2,
+      "name": "Piernas y Glúteos — Sentadilla · Zancada · Puente",
+      "focus": "legs",
+      "exercises": [
+        {
+          "exerciseId": "sentadilla_peso_corporal",
+          "name": "Sentadilla con Peso Corporal",
+          "sets": 4,
+          "repsMin": 15,
+          "repsMax": 20,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "zancada_peso_corporal",
+          "name": "Zancada con Peso Corporal",
+          "sets": 3,
+          "repsMin": 12,
+          "repsMax": 20,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "puente_gluteo",
+          "name": "Puente de Glúteo",
+          "sets": 3,
+          "repsMin": 15,
+          "repsMax": 20,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "patada_gluteo_piso",
+          "name": "Patada de Glúteo en el Piso",
+          "sets": 3,
+          "repsMin": 15,
+          "repsMax": 20,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "hidrante",
+          "name": "Hidrante",
+          "sets": 3,
+          "repsMin": 15,
+          "repsMax": 20,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "sentadilla_isometrica_pared",
+          "name": "Sentadilla Isométrica en Pared",
+          "sets": 3,
+          "repsMin": 30,
+          "repsMax": 60,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        }
+      ]
+    },
+    {
+      "dayNumber": 3,
+      "name": "Cardio y Cuerpo Completo — Burpees · Saltos · Espalda",
+      "focus": "legs",
+      "exercises": [
+        {
+          "exerciseId": "jumping_jacks",
+          "name": "Jumping Jacks",
+          "sets": 3,
+          "repsMin": 30,
+          "repsMax": 60,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        },
+        {
+          "exerciseId": "burpees",
+          "name": "Burpees",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "mountain_climbers",
+          "name": "Mountain Climbers",
+          "sets": 3,
+          "repsMin": 30,
+          "repsMax": 60,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        },
+        {
+          "exerciseId": "sentadilla_con_salto",
+          "name": "Sentadilla con Salto",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "superman",
+          "name": "Superman",
+          "sets": 3,
+          "repsMin": 12,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "crunch_bicicleta",
+          "name": "Crunch Bicicleta",
+          "sets": 3,
+          "repsMin": 20,
+          "repsMax": 30,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "skipping_con_aplauso",
+          "name": "Skipping con Aplauso",
+          "sets": 3,
+          "repsMin": 30,
+          "repsMax": 60,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        }
+      ]
+    }
+  ]
+}

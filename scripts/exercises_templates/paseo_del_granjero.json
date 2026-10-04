@@ -1,0 +1,13 @@
+{
+  "id": "paseo_del_granjero",
+  "name": "Paseo del Granjero (Farmer Carry)",
+  "muscle": "pull",
+  "defaultSets": 3,
+  "defaultRepsMin": 30,
+  "defaultRepsMax": 60,
+  "restSeconds": 90,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 2.5,
+  "muscleGroup": "crossfit",
+  "isIsometric": true
+}

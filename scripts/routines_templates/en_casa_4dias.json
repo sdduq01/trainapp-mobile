@@ -1,0 +1,301 @@
+{
+  "id": "rec_en_casa_4dias",
+  "category": "limited",
+  "name": "Hogar de Hierro (En Casa)",
+  "description": "Cuatro días en casa sin equipo, con más volumen y variantes más exigentes. Empuje con cuatro tipos de flexiones, piernas con trabajo unilateral, un día de core y espalda, y un cierre de cardio de alta intensidad. Para quien ya tiene base y quiere que entrenar en la sala se sienta como entrenar en serio.",
+  "type": "En Casa",
+  "sport": null,
+  "days": [
+    {
+      "dayNumber": 1,
+      "name": "Empuje — Flexiones en Todas sus Formas",
+      "focus": "push",
+      "exercises": [
+        {
+          "exerciseId": "flexiones",
+          "name": "Flexiones",
+          "sets": 4,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "flexiones_diamante",
+          "name": "Flexiones Diamante",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "flexiones_hindu",
+          "name": "Flexiones Hindú",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "flexiones_pica",
+          "name": "Flexiones en Pica",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "fondos_en_silla",
+          "name": "Fondos en Silla",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        }
+      ]
+    },
+    {
+      "dayNumber": 2,
+      "name": "Piernas y Glúteos — Sentadilla · Zancada · Unilateral",
+      "focus": "legs",
+      "exercises": [
+        {
+          "exerciseId": "sentadilla_peso_corporal",
+          "name": "Sentadilla con Peso Corporal",
+          "sets": 4,
+          "repsMin": 15,
+          "repsMax": 20,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "zancada_peso_corporal",
+          "name": "Zancada con Peso Corporal",
+          "sets": 3,
+          "repsMin": 12,
+          "repsMax": 20,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "sentadilla_con_salto",
+          "name": "Sentadilla con Salto",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "puente_gluteo_unilateral",
+          "name": "Puente de Glúteo Unilateral",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "hidrante",
+          "name": "Hidrante",
+          "sets": 3,
+          "repsMin": 15,
+          "repsMax": 20,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "sentadilla_isometrica_pared",
+          "name": "Sentadilla Isométrica en Pared",
+          "sets": 3,
+          "repsMin": 30,
+          "repsMax": 60,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        }
+      ]
+    },
+    {
+      "dayNumber": 3,
+      "name": "Core y Espalda — Abdomen · Oblicuos · Lumbar",
+      "focus": "pull",
+      "exercises": [
+        {
+          "exerciseId": "superman",
+          "name": "Superman",
+          "sets": 4,
+          "repsMin": 12,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "crunch_abdominal",
+          "name": "Crunch Abdominal",
+          "sets": 3,
+          "repsMin": 15,
+          "repsMax": 20,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "elevacion_piernas_piso",
+          "name": "Elevación de Piernas en el Piso",
+          "sets": 3,
+          "repsMin": 12,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "crunch_bicicleta",
+          "name": "Crunch Bicicleta",
+          "sets": 3,
+          "repsMin": 20,
+          "repsMax": 30,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "crunch_lateral_toque_talon",
+          "name": "Crunch Lateral con Toque de Talón",
+          "sets": 3,
+          "repsMin": 20,
+          "repsMax": 30,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "plancha_lateral",
+          "name": "Plancha Lateral",
+          "sets": 3,
+          "repsMin": 20,
+          "repsMax": 45,
+          "currentWeight": 0,
+          "restSeconds": 45,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        }
+      ]
+    },
+    {
+      "dayNumber": 4,
+      "name": "Cardio — Alta Intensidad",
+      "focus": "legs",
+      "exercises": [
+        {
+          "exerciseId": "jumping_jacks",
+          "name": "Jumping Jacks",
+          "sets": 3,
+          "repsMin": 30,
+          "repsMax": 60,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        },
+        {
+          "exerciseId": "burpees",
+          "name": "Burpees",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "mountain_climbers",
+          "name": "Mountain Climbers",
+          "sets": 3,
+          "repsMin": 30,
+          "repsMax": 60,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        },
+        {
+          "exerciseId": "skipping_lateral_codo_a_rodilla",
+          "name": "Skipping Lateral Codo a Rodilla",
+          "sets": 3,
+          "repsMin": 30,
+          "repsMax": 60,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        },
+        {
+          "exerciseId": "crunch_cruzado_de_pie",
+          "name": "Crunch Cruzado de Pie",
+          "sets": 3,
+          "repsMin": 15,
+          "repsMax": 20,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "flexiones_abiertas",
+          "name": "Flexiones Abiertas",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        }
+      ]
+    }
+  ]
+}

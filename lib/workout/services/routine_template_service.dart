@@ -10,7 +10,14 @@ class RoutineTemplateService {
     final list = snap.docs
         .map((d) => RoutineTemplate.fromMap(d.id, d.data()))
         .toList();
-    list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    // Primero las que traen `order` (ascendente); el resto, alfabéticamente.
+    list.sort((a, b) {
+      final ao = a.order, bo = b.order;
+      if (ao != null && bo != null && ao != bo) return ao.compareTo(bo);
+      if (ao != null && bo == null) return -1;
+      if (ao == null && bo != null) return 1;
+      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    });
     return list;
   }
 }

@@ -1,0 +1,12 @@
+{
+  "id": "box_jump",
+  "name": "Salto al Cajón (Box Jump)",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 10,
+  "defaultRepsMax": 15,
+  "restSeconds": 90,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "crossfit"
+}

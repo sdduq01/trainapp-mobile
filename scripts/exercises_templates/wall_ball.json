@@ -1,0 +1,12 @@
+{
+  "id": "wall_ball",
+  "name": "Wall Ball",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 15,
+  "defaultRepsMax": 20,
+  "restSeconds": 90,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "crossfit"
+}

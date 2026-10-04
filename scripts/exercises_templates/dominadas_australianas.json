@@ -1,0 +1,12 @@
+{
+  "id": "dominadas_australianas",
+  "name": "Dominadas Australianas (Remo Invertido)",
+  "muscle": "pull",
+  "defaultSets": 3,
+  "defaultRepsMin": 8,
+  "defaultRepsMax": 15,
+  "restSeconds": 90,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "calistenia"
+}

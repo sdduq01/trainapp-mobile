@@ -1,0 +1,233 @@
+{
+  "id": "sport_running_3dias",
+  "category": "sport",
+  "name": "Running",
+  "description": "Rutina de gimnasio de 3 días para corredores, del 5K a la maratón. Correr más no siempre es correr mejor: la fuerza mejora la economía de carrera y es el mejor seguro contra las lesiones por sobreuso. El día 1 trabaja la zancada con énfasis unilateral, porque correr es saltar de una pierna a la otra. El día 2 fortalece el core y el tren superior que mantienen la postura cuando llega la fatiga. El día 3 protege isquiotibiales, cadera y tobillos — los puntos donde se rompe casi todo corredor.",
+  "type": "Deporte",
+  "sport": "running",
+  "days": [
+    {
+      "dayNumber": 1,
+      "name": "Fuerza de Zancada — Cuádriceps · Glúteo · Pantorrilla",
+      "focus": "legs",
+      "exercises": [
+        {
+          "exerciseId": "sentadilla_peso_libre",
+          "name": "Sentadilla con Peso Libre",
+          "sets": 4,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 5
+        },
+        {
+          "exerciseId": "zancada_mancuernas",
+          "name": "Zancada con Mancuernas",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "step_up_mancuernas",
+          "name": "Step Up con Mancuernas",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "hip_thrust_unilateral",
+          "name": "Hip Thrust Unilateral",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 150,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "extension_pantorrila",
+          "name": "Extensión de pantorrilla",
+          "sets": 3,
+          "repsMin": 12,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "extension_pantorrilla_sentado",
+          "name": "Extensión de Pantorrilla Sentado",
+          "sets": 3,
+          "repsMin": 15,
+          "repsMax": 20,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        }
+      ]
+    },
+    {
+      "dayNumber": 2,
+      "name": "Core y Braceo — Postura · Estabilidad · Rotación",
+      "focus": "upper",
+      "exercises": [
+        {
+          "exerciseId": "remo_mancuerna_unilateral",
+          "name": "Remo con Mancuerna Unilateral",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "press_hombro_mancuerna",
+          "name": "Press de Hombro con Mancuernas",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "jalones_pecho",
+          "name": "Jalones al Pecho",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "giro_oblicuo_polea",
+          "name": "Giro Oblicuo en Polea",
+          "sets": 3,
+          "repsMin": 12,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "plancha",
+          "name": "Plancha",
+          "sets": 3,
+          "repsMin": 30,
+          "repsMax": 60,
+          "currentWeight": 0,
+          "restSeconds": 45,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        },
+        {
+          "exerciseId": "plancha_lateral",
+          "name": "Plancha Lateral",
+          "sets": 3,
+          "repsMin": 20,
+          "repsMax": 45,
+          "currentWeight": 0,
+          "restSeconds": 45,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        }
+      ]
+    },
+    {
+      "dayNumber": 3,
+      "name": "Cadena Posterior y Prevención — Isquios · Cadera · Tobillo",
+      "focus": "legs",
+      "exercises": [
+        {
+          "exerciseId": "peso_muerto_rumano",
+          "name": "Peso Muerto Rumano",
+          "sets": 4,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "rdl_unilateral",
+          "name": "Peso Muerto Rumano Unilateral",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 150,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "curl_nordico",
+          "name": "Curl Nórdico",
+          "sets": 3,
+          "repsMin": 4,
+          "repsMax": 8,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 1
+        },
+        {
+          "exerciseId": "abduccion_cadera_polea",
+          "name": "Abducción de Cadera en Polea",
+          "sets": 3,
+          "repsMin": 12,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "aduccion_cadera_polea",
+          "name": "Aducción de Cadera en Polea",
+          "sets": 3,
+          "repsMin": 12,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "extension_pantorrilla_unilateral",
+          "name": "Extensión de Pantorrilla Unilateral",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        }
+      ]
+    }
+  ]
+}

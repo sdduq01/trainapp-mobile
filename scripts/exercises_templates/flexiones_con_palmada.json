@@ -1,0 +1,12 @@
+{
+  "id": "flexiones_con_palmada",
+  "name": "Flexiones con Palmada",
+  "muscle": "push",
+  "defaultSets": 3,
+  "defaultRepsMin": 6,
+  "defaultRepsMax": 10,
+  "restSeconds": 90,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "calistenia"
+}

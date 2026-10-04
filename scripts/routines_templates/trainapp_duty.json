@@ -5,6 +5,7 @@
   "description": "Recomendada para quien está iniciando su camino, general, balanceada, frecuencia 2, media intensidad.",
   "type": "PPL",
   "sport": null,
+  "order": 2,
   "days": [
     {
       "dayNumber": 1,

@@ -1,0 +1,12 @@
+{
+  "id": "handstand_push_up",
+  "name": "Flexiones en Pino (Handstand Push-Up)",
+  "muscle": "push",
+  "defaultSets": 3,
+  "defaultRepsMin": 5,
+  "defaultRepsMax": 10,
+  "restSeconds": 120,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "crossfit"
+}

@@ -1,0 +1,305 @@
+{
+  "id": "lim_de_0_a_100",
+  "category": "limited",
+  "name": "De 0 a 100",
+  "description": "Cuatro días con un solo objetivo: poner 100 kg en el press de banca. Presionas dos veces por semana — un día pesado de pocas repeticiones para construir fuerza máxima y un día de volumen para pulir la técnica y sumar músculo. El resto del plan está al servicio de la barra: tríceps y hombros para el bloqueo, una espalda ancha que te dé una base sólida sobre el banco y piernas fuertes para empujar desde el suelo. Sube el peso cada vez que completes todas las series en el tope de repeticiones. El 100 no se regala: se forja disco a disco.",
+  "type": "Fuerza",
+  "sport": null,
+  "order": 1,
+  "days": [
+    {
+      "dayNumber": 1,
+      "name": "Banca Pesada — Fuerza Máxima",
+      "focus": "push",
+      "exercises": [
+        {
+          "exerciseId": "press_banca",
+          "name": "Press de Banca",
+          "sets": 5,
+          "repsMin": 3,
+          "repsMax": 5,
+          "currentWeight": 0,
+          "restSeconds": 240,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "press_banca_inclinado_barra",
+          "name": "Press de Banca Inclinado con Barra",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 8,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "press_militar",
+          "name": "Press Militar",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 8,
+          "currentWeight": 0,
+          "restSeconds": 150,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "fondos_lastrados",
+          "name": "Fondos Lastrados",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 150,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "skullcrusher",
+          "name": "Skullcrusher",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "elevacion_lateral_mancuerna",
+          "name": "Elevación Lateral con Mancuerna",
+          "sets": 3,
+          "repsMin": 12,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        }
+      ]
+    },
+    {
+      "dayNumber": 2,
+      "name": "Espalda — La Base del Press",
+      "focus": "pull",
+      "exercises": [
+        {
+          "exerciseId": "remo_barra",
+          "name": "Remo con Barra",
+          "sets": 4,
+          "repsMin": 6,
+          "repsMax": 8,
+          "currentWeight": 0,
+          "restSeconds": 150,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "dominadas_lastradas",
+          "name": "Dominadas Lastradas",
+          "sets": 4,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 150,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "remo_gironda",
+          "name": "Remo en Gironda",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "face_pull",
+          "name": "Face Pull",
+          "sets": 3,
+          "repsMin": 12,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "aperturas_posteriores_pec_dec",
+          "name": "Aperturas Posteriores en Pec Dec",
+          "sets": 3,
+          "repsMin": 12,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "curl_barra",
+          "name": "Curl con Barra",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        }
+      ]
+    },
+    {
+      "dayNumber": 3,
+      "name": "Banca Volumen — Técnica y Accesorios",
+      "focus": "push",
+      "exercises": [
+        {
+          "exerciseId": "press_banca",
+          "name": "Press de Banca",
+          "sets": 4,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "press_inclinado_mancuernas",
+          "name": "Press Inclinado con Mancuernas",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "press_hombro_mancuerna",
+          "name": "Press de Hombro con Mancuernas",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "cruces_poleas",
+          "name": "Cruces en Poleas",
+          "sets": 3,
+          "repsMin": 12,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "extension_triceps",
+          "name": "Extensión de Tríceps",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "extension_triceps_cabeza",
+          "name": "Extensión de Tríceps sobre la Cabeza",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        }
+      ]
+    },
+    {
+      "dayNumber": 4,
+      "name": "Piernas — El Empuje Empieza en el Suelo",
+      "focus": "legs",
+      "exercises": [
+        {
+          "exerciseId": "sentadilla_peso_libre",
+          "name": "Sentadilla con Peso Libre",
+          "sets": 4,
+          "repsMin": 6,
+          "repsMax": 10,
+          "currentWeight": 0,
+          "restSeconds": 180,
+          "weightUnit": "kg",
+          "progressionStep": 5
+        },
+        {
+          "exerciseId": "peso_muerto_rumano",
+          "name": "Peso Muerto Rumano",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 150,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "prensa",
+          "name": "Prensa de Piernas",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 12,
+          "currentWeight": 0,
+          "restSeconds": 120,
+          "weightUnit": "kg",
+          "progressionStep": 10
+        },
+        {
+          "exerciseId": "curl_femoral_tumbado",
+          "name": "Curl Femoral Tumbado en Máquina",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 90,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "extension_pantorrila",
+          "name": "Extensión de pantorrilla",
+          "sets": 3,
+          "repsMin": 12,
+          "repsMax": 15,
+          "currentWeight": 0,
+          "restSeconds": 60,
+          "weightUnit": "kg",
+          "progressionStep": 2.5
+        },
+        {
+          "exerciseId": "plancha",
+          "name": "Plancha",
+          "sets": 3,
+          "repsMin": 30,
+          "repsMax": 60,
+          "currentWeight": 0,
+          "restSeconds": 45,
+          "weightUnit": "kg",
+          "progressionStep": 1,
+          "progressionType": "none",
+          "isIsometric": true
+        }
+      ]
+    }
+  ]
+}

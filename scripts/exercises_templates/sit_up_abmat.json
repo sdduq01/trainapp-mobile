@@ -1,0 +1,12 @@
+{
+  "id": "sit_up_abmat",
+  "name": "Sit-Up con AbMat",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 15,
+  "defaultRepsMax": 25,
+  "restSeconds": 60,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "crossfit"
+}

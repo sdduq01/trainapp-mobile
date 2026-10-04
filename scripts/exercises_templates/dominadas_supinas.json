@@ -1,0 +1,12 @@
+{
+  "id": "dominadas_supinas",
+  "name": "Dominadas Supinas (Chin-Up)",
+  "muscle": "pull",
+  "defaultSets": 3,
+  "defaultRepsMin": 6,
+  "defaultRepsMax": 12,
+  "restSeconds": 120,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "calistenia"
+}

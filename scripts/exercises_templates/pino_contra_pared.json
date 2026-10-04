@@ -1,0 +1,13 @@
+{
+  "id": "pino_contra_pared",
+  "name": "Pino contra la Pared",
+  "muscle": "push",
+  "defaultSets": 3,
+  "defaultRepsMin": 20,
+  "defaultRepsMax": 45,
+  "restSeconds": 90,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "calistenia",
+  "isIsometric": true
+}

@@ -1,11 +1,11 @@
 {
-  "id": "trainapp_hard_duty",
+  "id": "trainapp_light_duty",
   "category": "recommended",
-  "name": "TrainApp Hard Duty",
-  "description": "La misma TrainApp Duty (pecho/espalda + pierna x2, frecuencia 2) más un quinto día dedicado a hombro y brazos.",
+  "name": "TrainApp Light Duty",
+  "description": "La versión de 3 días de TrainApp Duty: pecho/espalda x2 y un solo día de pierna. Para quien está iniciando o tiene menos tiempo, general, balanceada, media intensidad.",
   "type": "PPL",
   "sport": null,
-  "order": 3,
+  "order": 1,
   "days": [
     {
       "dayNumber": 1,
@@ -183,141 +183,6 @@
         {
           "exerciseId": "fondos_lastrados",
           "name": "Fondos Lastrados",
-          "sets": 3,
-          "repsMin": 6,
-          "repsMax": 10,
-          "currentWeight": 0,
-          "restSeconds": 180,
-          "weightUnit": "kg",
-          "progressionStep": 2.5
-        }
-      ]
-    },
-    {
-      "dayNumber": 4,
-      "name": "Pierna 2",
-      "focus": "legs",
-      "exercises": [
-        {
-          "exerciseId": "sentadilla_hack",
-          "name": "Sentadilla Hack",
-          "sets": 3,
-          "repsMin": 6,
-          "repsMax": 10,
-          "currentWeight": 0,
-          "restSeconds": 240,
-          "weightUnit": "kg",
-          "progressionStep": 10
-        },
-        {
-          "exerciseId": "extension_cuadriceps",
-          "name": "Extensión de Cuádriceps",
-          "sets": 3,
-          "repsMin": 6,
-          "repsMax": 10,
-          "currentWeight": 0,
-          "restSeconds": 180,
-          "weightUnit": "kg",
-          "progressionStep": 10
-        },
-        {
-          "exerciseId": "curl_femoral_sentado",
-          "name": "Curl Femoral Sentado en Máquina",
-          "sets": 3,
-          "repsMin": 6,
-          "repsMax": 10,
-          "currentWeight": 0,
-          "restSeconds": 180,
-          "weightUnit": "kg",
-          "progressionStep": 2.5
-        },
-        {
-          "exerciseId": "hip_thrust",
-          "name": "Hip Thrust",
-          "sets": 3,
-          "repsMin": 6,
-          "repsMax": 10,
-          "currentWeight": 0,
-          "restSeconds": 180,
-          "weightUnit": "kg",
-          "progressionStep": 10
-        },
-        {
-          "exerciseId": "extension_pantorrila",
-          "name": "Extensión de Pantorrilla",
-          "sets": 3,
-          "repsMin": 6,
-          "repsMax": 10,
-          "currentWeight": 0,
-          "restSeconds": 180,
-          "weightUnit": "kg",
-          "progressionStep": 2.5
-        }
-      ]
-    },
-    {
-      "dayNumber": 5,
-      "name": "Hombro y Brazos",
-      "focus": "upper",
-      "exercises": [
-        {
-          "exerciseId": "press_militar",
-          "name": "Press Militar",
-          "sets": 3,
-          "repsMin": 6,
-          "repsMax": 10,
-          "currentWeight": 0,
-          "restSeconds": 180,
-          "weightUnit": "kg",
-          "progressionStep": 2.5
-        },
-        {
-          "exerciseId": "elevacion_lateral_mancuerna",
-          "name": "Elevación Lateral con Mancuerna",
-          "sets": 3,
-          "repsMin": 6,
-          "repsMax": 10,
-          "currentWeight": 0,
-          "restSeconds": 180,
-          "weightUnit": "kg",
-          "progressionStep": 1.25
-        },
-        {
-          "exerciseId": "curl_bayesiano",
-          "name": "Curl Bayesiano",
-          "sets": 3,
-          "repsMin": 6,
-          "repsMax": 10,
-          "currentWeight": 0,
-          "restSeconds": 180,
-          "weightUnit": "kg",
-          "progressionStep": 2.5
-        },
-        {
-          "exerciseId": "curl_barra",
-          "name": "Curl con Barra",
-          "sets": 3,
-          "repsMin": 6,
-          "repsMax": 10,
-          "currentWeight": 0,
-          "restSeconds": 180,
-          "weightUnit": "kg",
-          "progressionStep": 2.5
-        },
-        {
-          "exerciseId": "extension_triceps",
-          "name": "Extensión de Tríceps",
-          "sets": 3,
-          "repsMin": 6,
-          "repsMax": 10,
-          "currentWeight": 0,
-          "restSeconds": 180,
-          "weightUnit": "kg",
-          "progressionStep": 2.5
-        },
-        {
-          "exerciseId": "extension_katana",
-          "name": "Extensión Katana",
           "sets": 3,
           "repsMin": 6,
           "repsMax": 10,
