@@ -1,0 +1,12 @@
+{
+  "id": "burpees",
+  "name": "Burpees",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 10,
+  "defaultRepsMax": 15,
+  "restSeconds": 60,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "en_casa"
+}

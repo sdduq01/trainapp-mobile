@@ -194,6 +194,16 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
               setSheetState(() {}); // refresca el sheet para marcar el check
             }
 
+            // Deshace una selección hecha por error: quita el ejercicio del día.
+            void removeAndRefresh(Exercise ex) {
+              final idx = _days[dayIdx]
+                  .exercises
+                  .indexWhere((e) => e.exerciseId == ex.id);
+              if (idx != -1) _removeExerciseFromDay(dayIdx, idx);
+              existing.remove(ex.id);
+              setSheetState(() {});
+            }
+
             Future<void> createAndPick() async {
               final userId = FirebaseAuth.instance.currentUser?.uid;
               if (userId == null) {
@@ -307,7 +317,7 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
                                       )
                                     : const Icon(Icons.add_circle_outline),
                                 onTap: existing.contains(ex.id)
-                                    ? null
+                                    ? () => removeAndRefresh(ex)
                                     : () {
                                         existing.add(ex.id);
                                         addAndRefresh(ex);

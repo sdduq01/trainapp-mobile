@@ -1,0 +1,13 @@
+{
+  "id": "skipping_lateral_codo_a_rodilla",
+  "name": "Skipping Lateral Codo a Rodilla",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 30,
+  "defaultRepsMax": 60,
+  "restSeconds": 60,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "en_casa",
+  "isIsometric": true
+}

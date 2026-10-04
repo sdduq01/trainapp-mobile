@@ -1,0 +1,13 @@
+{
+  "id": "jumping_jacks",
+  "name": "Jumping Jacks",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 30,
+  "defaultRepsMax": 60,
+  "restSeconds": 60,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "en_casa",
+  "isIsometric": true
+}

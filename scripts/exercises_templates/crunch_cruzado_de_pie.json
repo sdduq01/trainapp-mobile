@@ -1,0 +1,12 @@
+{
+  "id": "crunch_cruzado_de_pie",
+  "name": "Crunch Cruzado de Pie",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 15,
+  "defaultRepsMax": 20,
+  "restSeconds": 60,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "en_casa"
+}

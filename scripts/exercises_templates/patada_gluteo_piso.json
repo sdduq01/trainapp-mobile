@@ -1,0 +1,12 @@
+{
+  "id": "patada_gluteo_piso",
+  "name": "Patada de Glúteo en el Piso",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 15,
+  "defaultRepsMax": 20,
+  "restSeconds": 60,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "en_casa"
+}

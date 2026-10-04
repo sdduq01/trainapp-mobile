@@ -1,0 +1,13 @@
+{
+  "id": "plancha_lateral",
+  "name": "Plancha Lateral",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 20,
+  "defaultRepsMax": 45,
+  "restSeconds": 45,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "en_casa",
+  "isIsometric": true
+}

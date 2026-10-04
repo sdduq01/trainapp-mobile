@@ -1,0 +1,12 @@
+{
+  "id": "flexiones_pica",
+  "name": "Flexiones en Pica",
+  "muscle": "push",
+  "defaultSets": 3,
+  "defaultRepsMin": 8,
+  "defaultRepsMax": 12,
+  "restSeconds": 60,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "en_casa"
+}

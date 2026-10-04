@@ -1,0 +1,12 @@
+{
+  "id": "crunch_bicicleta",
+  "name": "Crunch Bicicleta",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 20,
+  "defaultRepsMax": 30,
+  "restSeconds": 60,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "en_casa"
+}

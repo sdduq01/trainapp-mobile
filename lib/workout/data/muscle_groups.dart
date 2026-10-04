@@ -29,6 +29,7 @@ const Map<String, String> muscleGroupLabels = {
   'abdominales': 'Abdominales',
   'cardio': 'Cardio',
   'estiramiento': 'Estiramiento',
+  'en_casa': 'En Casa',
   'otros': 'Otros',
 };
 
@@ -52,6 +53,7 @@ const List<String> muscleGroupOrder = [
   'abdominales',
   'cardio',
   'estiramiento',
+  'en_casa',
   'otros',
 ];
 

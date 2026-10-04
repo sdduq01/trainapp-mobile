@@ -1,0 +1,13 @@
+{
+  "id": "skipping_con_aplauso",
+  "name": "Skipping con Aplauso",
+  "muscle": "legs",
+  "defaultSets": 3,
+  "defaultRepsMin": 30,
+  "defaultRepsMax": 60,
+  "restSeconds": 60,
+  "defaultWeightUnit": "kg",
+  "defaultProgressionStep": 1,
+  "muscleGroup": "en_casa",
+  "isIsometric": true
+}
