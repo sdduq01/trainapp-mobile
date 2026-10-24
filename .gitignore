@@ -120,3 +120,6 @@ app.*.symbols
 # Node (scripts/)
 node_modules/
 scripts/node_modules/
+
+# Portal web compilado (scripts/build_portal.sh)
+/hosting/gimnasio/

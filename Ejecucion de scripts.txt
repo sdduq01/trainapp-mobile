@@ -1,0 +1,8 @@
+Creación de gimnasio
+cd ~/trainapp-mobile/scripts
+node create_gym.js --name "TrainApp Gym" --owner tu_correo@ejemplo.com --logo /mnt/c/Users/sdduq/OneDrive/Desktop/trainapp_logo.png
+node create_gym.js --name "TrainApp Gym" --owner tu_correo@ejemplo.com --logo /mnt/c/Users/sdduq/OneDrive/Desktop/trainapp_logo.png --commit
+
+Asignación de usuario admin desde 
+cd ~/trainapp-mobile/scripts
+node set_admin.js --email trainappdev@gmail.com --commit && cd ..

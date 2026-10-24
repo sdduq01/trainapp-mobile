@@ -44,6 +44,12 @@ service cloud.firestore {
       return isActiveTrainerOf(uid) || isGymTrainerOf(uid);
     }
 
+    // Admin de TrainApp: custom claim que solo se asigna con el Admin SDK
+    // (`scripts/set_admin.js`).
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
     function isGymOwner(gymId) {
       return request.auth != null &&
         get(/databases/$(database)/documents/gyms/$(gymId)).data.ownerUid == request.auth.uid;
@@ -177,21 +183,57 @@ service cloud.firestore {
          request.auth.uid == resource.data.trainerUid);
     }
 
-    // Gimnasios: los crea el script admin `scripts/create_gym.js`. Nombre y
-    // logo no son sensibles: cualquier autenticado puede leer un gimnasio
-    // conociendo su id (los miembros lo necesitan para ver el logo). El dueño
-    // además lo ubica por query y solo cambia nombre y logo.
+    // Gimnasios: los crea un admin al aprobar una solicitud del portal (o el
+    // script `scripts/create_gym.js`). Nombre, logo y contacto no son
+    // sensibles: cualquier autenticado puede leer un gimnasio conociendo su id
+    // (los miembros lo necesitan para ver el logo). El dueño además lo ubica
+    // por query y edita solo sus datos públicos; `status` (y más adelante el
+    // cobro) queda fuera de su alcance.
     match /gyms/{gymId} {
       allow get: if request.auth != null;
-      allow list: if request.auth != null &&
-        resource.data.ownerUid == request.auth.uid;
+      allow list: if isAdmin() ||
+        (request.auth != null && resource.data.ownerUid == request.auth.uid);
       allow update: if request.auth != null &&
         resource.data.ownerUid == request.auth.uid &&
         request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['name', 'logoUrl']) &&
+          .hasOnly(['name', 'logoUrl', 'city', 'address', 'phone',
+                    'cancelWindowHours']) &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() > 0 &&
+        (!('cancelWindowHours' in request.resource.data) ||
+         (request.resource.data.cancelWindowHours is int &&
+          request.resource.data.cancelWindowHours >= 0 &&
+          request.resource.data.cancelWindowHours <= 72));
+      allow update: if isAdmin();
+      allow create: if isAdmin() &&
+        request.resource.data.ownerUid is string &&
         request.resource.data.name is string &&
         request.resource.data.name.size() > 0;
-      allow create, delete: if false;
+      allow delete: if false;
+    }
+
+    // Solicitudes de alta de gimnasio desde el portal: un doc por usuario
+    // (doc id = uid). El usuario la envía en `pending`, la edita mientras
+    // siga pendiente y la reenvía si fue rechazada; solo un admin la aprueba
+    // (junto con la creación del gimnasio) o la rechaza.
+    match /gym_requests/{uid} {
+      function isValidSubmission() {
+        return request.auth != null &&
+          request.auth.uid == uid &&
+          request.resource.data.status == 'pending' &&
+          request.resource.data.get('gymId', null) == null &&
+          request.resource.data.email == request.auth.token.email &&
+          request.resource.data.gymName is string &&
+          request.resource.data.gymName.size() > 0;
+      }
+
+      allow read: if isAdmin() ||
+        (request.auth != null && request.auth.uid == uid);
+      allow create: if isValidSubmission();
+      allow update: if isValidSubmission() &&
+        resource.data.status in ['pending', 'rejected'];
+      allow update: if isAdmin();
+      allow delete: if false;
     }
 
     // Pertenencia a un gimnasio: un doc por usuario (doc id = uid). Igual que

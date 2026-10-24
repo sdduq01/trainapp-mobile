@@ -453,6 +453,36 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _deleteAccount() async {
+    // Un gimnasio sin dueño quedaría sin quién lo administre: se cierra o
+    // transfiere antes (por ahora, escribiendo a soporte).
+    try {
+      final ownedGym = await GymService().getOwnedGym(_userId);
+      if (ownedGym != null) {
+        if (!mounted) return;
+        await showDialog<void>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('Administras un gimnasio'),
+            content: Text(
+              'Antes de eliminar tu cuenta hay que cerrar o transferir '
+              '"${ownedGym.name}". Escríbenos a trainappdev@gmail.com y te '
+              'ayudamos.',
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Entendido'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+    } catch (_) {
+      // Si no se pudo verificar, no se bloquea el borrado.
+    }
+    if (!mounted) return;
+
     final password = await _confirmDeleteAccount();
     if (password == null) return;
 

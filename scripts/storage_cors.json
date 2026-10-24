@@ -1,0 +1,11 @@
+[
+  {
+    "origin": [
+      "https://trainapp-prod.web.app",
+      "https://trainapp-prod.firebaseapp.com",
+      "http://localhost:5000"
+    ],
+    "method": ["GET"],
+    "maxAgeSeconds": 3600
+  }
+]

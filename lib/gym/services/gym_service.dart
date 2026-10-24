@@ -104,6 +104,31 @@ class GymService {
     await _gyms.doc(gymId).update({'name': name.trim()});
   }
 
+  /// Guarda los datos editables del gimnasio (portal, "Perfil del gimnasio").
+  Future<void> updateProfile(Gym gym) async {
+    await _gyms.doc(gym.id).update({
+      'name': gym.name.trim(),
+      'city': gym.city.trim(),
+      'address': gym.address.trim(),
+      'phone': gym.phone.trim(),
+      'cancelWindowHours': gym.cancelWindowHours,
+    });
+  }
+
+  /// Abre la galería (o el selector de archivos en la web) y sube la imagen
+  /// elegida como logo de [gym]. Devuelve la URL nueva, o null si el usuario
+  /// no eligió nada.
+  Future<String?> pickAndUploadLogo(Gym gym) async {
+    final image = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 512,
+      maxHeight: 512,
+      imageQuality: 85,
+    );
+    if (image == null) return null;
+    return uploadLogo(gym, image);
+  }
+
   /// Sube [image] como nuevo logo de [gym] y devuelve su URL. Cada logo va
   /// con un nombre nuevo para que la caché de imágenes de los teléfonos no
   /// siga mostrando el anterior; el anterior se borra.

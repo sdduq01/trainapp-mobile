@@ -1,7 +1,8 @@
 /**
- * Crea un gimnasio (`gyms/{gymId}`) con su dueño y, opcionalmente, su logo.
- * Desde la app el dueño invita entrenadores y atletas, y puede cambiar el
- * nombre y el logo; crear gimnasios solo se hace con este script.
+ * Crea un gimnasio (`gyms/{gymId}`) con su dueño y, opcionalmente, su logo,
+ * sin pasar por una solicitud del portal (lo normal es que el dueño la envíe
+ * desde /gimnasio y un admin la apruebe ahí). El dueño completa ciudad,
+ * dirección y teléfono desde el portal.
  *
  * Uso:
  *   node create_gym.js --name "Iron Gym" --owner dueno@ejemplo.com [--logo ./logo.png]
@@ -86,6 +87,11 @@ const MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
       name,
       ownerUid: user.uid,
       logoUrl,
+      city: '',
+      address: '',
+      phone: '',
+      cancelWindowHours: 2,
+      status: 'active',
       createdAt: FieldValue.serverTimestamp(),
     });
   }
