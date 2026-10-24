@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../account_deletion_service.dart';
 import '../models/user_profile.dart';
 import '../profile_service.dart';
+import '../../auth/auth_gate.dart';
 import '../../core/utils/legal_links.dart';
+import '../../gym/models/gym_member.dart';
+import '../../gym/services/gym_service.dart';
 import '../../onboarding/config/body_fat_options.dart';
 import '../../trainer/models/trainer_link.dart';
 import '../../trainer/services/trainer_link_service.dart';
@@ -40,11 +44,16 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _loading = true;
   bool _saving = false;
   bool _resettingData = false;
+  bool _deletingAccount = false;
 
   // Estado de "soy atleta de un entrenador": mi propio doc en trainer_links.
   TrainerLink? _trainerLink;
   bool _trainerLinkLoading = true;
   bool _trainerLinkBusy = false;
+
+  // Pertenencia a un gimnasio: mi propio doc en gym_members.
+  GymMember? _gymMembership;
+  bool _gymBusy = false;
 
   static const _goalLabels = {
     TrainingGoal.fatLoss: 'Perder grasa',
@@ -59,6 +68,7 @@ class _ProfilePageState extends State<ProfilePage> {
     super.initState();
     _load();
     _loadTrainerLink();
+    _loadGymMembership();
   }
 
   @override
@@ -133,6 +143,73 @@ class _ProfilePageState extends State<ProfilePage> {
       }
     } finally {
       if (mounted) setState(() => _trainerLinkBusy = false);
+    }
+  }
+
+  Future<void> _loadGymMembership() async {
+    try {
+      final membership = await GymService().getMembership(_userId);
+      if (mounted) setState(() => _gymMembership = membership);
+    } catch (_) {
+      // silencioso: la sección del gimnasio simplemente no aparece
+    }
+  }
+
+  Future<void> _acceptGym() async {
+    setState(() => _gymBusy = true);
+    try {
+      await GymService().acceptInvitation(_userId);
+      await _loadGymMembership();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al aceptar: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _gymBusy = false);
+    }
+  }
+
+  Future<void> _rejectOrLeaveGym() async {
+    final membership = _gymMembership!;
+    if (membership.isAccepted) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Salir del gimnasio'),
+          content: Text(
+            'Dejarás de pertenecer a ${membership.gymName}'
+            '${membership.isTrainer ? ' y perderás el acceso a sus atletas' : ' y sus entrenadores ya no verán tu rutina'}'
+            '. ¿Continuar?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Salir'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+
+    setState(() => _gymBusy = true);
+    try {
+      await GymService().deleteMembership(_userId);
+      await _loadGymMembership();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _gymBusy = false);
     }
   }
 
@@ -288,6 +365,113 @@ class _ProfilePageState extends State<ProfilePage> {
         setState(() => _resettingData = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error al reiniciar datos: $e')),
+        );
+      }
+    }
+  }
+
+  // ── Zona de peligro: eliminar la cuenta ───────────────────
+
+  /// Pide la contraseña como confirmación. Devuelve null si se cancela.
+  Future<String?> _confirmDeleteAccount() async {
+    final ctrl = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('¿Eliminar tu cuenta?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Esta acción no se puede deshacer. Se borrará para siempre:',
+              ),
+              const SizedBox(height: 8),
+              const Padding(
+                padding: EdgeInsets.only(left: 4),
+                child: Text(
+                  '• Tu cuenta de acceso (correo y contraseña)\n'
+                  '• Tu perfil y tu rutina activa\n'
+                  '• Tus ejercicios y rutinas personalizadas\n'
+                  '• Todo el historial de sesiones, PRs, progresión y apuntes\n'
+                  '• Tu vínculo con tu entrenador o con tus atletas',
+                  style: TextStyle(fontSize: 13),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Escribe tu contraseña para confirmar:',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: ctrl,
+                autofocus: true,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                onChanged: (_) => setDialogState(() {}),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: ctrl.text.isNotEmpty
+                  ? () => Navigator.pop(ctx, ctrl.text)
+                  : null,
+              child: const Text('Eliminar cuenta'),
+            ),
+          ],
+        ),
+      ),
+    );
+    ctrl.dispose();
+    return result;
+  }
+
+  String _deleteAccountError(Object e) {
+    if (e is FirebaseAuthException) {
+      switch (e.code) {
+        case 'wrong-password':
+        case 'invalid-credential':
+          return 'Contraseña incorrecta. No se eliminó nada.';
+        case 'too-many-requests':
+          return 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.';
+        case 'network-request-failed':
+          return 'Sin conexión. Revisa tu internet e inténtalo de nuevo.';
+      }
+    }
+    return 'Error al eliminar la cuenta: $e';
+  }
+
+  Future<void> _deleteAccount() async {
+    final password = await _confirmDeleteAccount();
+    if (password == null) return;
+
+    setState(() => _deletingAccount = true);
+    try {
+      await AccountDeletionService().deleteAccount(password: password);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tu cuenta fue eliminada')),
+      );
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const AuthGate()),
+        (_) => false,
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() => _deletingAccount = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_deleteAccountError(e))),
         );
       }
     }
@@ -624,6 +808,13 @@ class _ProfilePageState extends State<ProfilePage> {
                   onChanged: (v) => setState(() => _isTrainer = v),
                 ),
 
+                if (_gymMembership != null) ...[
+                  const SizedBox(height: 24),
+                  _sectionTitle('Gimnasio'),
+                  const SizedBox(height: 8),
+                  _buildGymCard(),
+                ],
+
                 if (!_trainerLinkLoading && _trainerLink != null) ...[
                   const SizedBox(height: 24),
                   _sectionTitle('Entrenador'),
@@ -665,7 +856,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
-                  onPressed: _resettingData ? null : _resetTrainingData,
+                  onPressed: _resettingData || _deletingAccount
+                      ? null
+                      : _resetTrainingData,
                   icon: _resettingData
                       ? const SizedBox(
                           height: 16,
@@ -677,6 +870,30 @@ class _ProfilePageState extends State<ProfilePage> {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.red,
                     side: const BorderSide(color: Colors.red),
+                    minimumSize: const Size.fromHeight(48),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Elimina tu cuenta y todos tus datos de TrainApp de forma '
+                  'permanente.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: _resettingData || _deletingAccount
+                      ? null
+                      : _deleteAccount,
+                  icon: _deletingAccount
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.person_remove_outlined),
+                  label: const Text('Eliminar mi cuenta'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.red,
                     minimumSize: const Size.fromHeight(48),
                   ),
                 ),
@@ -742,6 +959,62 @@ class _ProfilePageState extends State<ProfilePage> {
                     onPressed: _trainerLinkBusy ? null : _rejectOrRevokeTrainer,
                     style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
                     child: const Text('Revocar acceso'),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGymCard() {
+    final m = _gymMembership!;
+    final isPending = !m.isAccepted;
+    final String detail;
+    if (m.isTrainer) {
+      detail = isPending
+          ? 'Si aceptas, podrás ver, editar y lanzar las rutinas de los atletas del gimnasio.'
+          : 'Puedes ver, editar y lanzar las rutinas de los atletas del gimnasio desde "Mis atletas".';
+    } else {
+      detail = isPending
+          ? 'Si aceptas, los entrenadores del gimnasio podrán ver y editar tu rutina, '
+              'ver tu historial y registrar tus sesiones.'
+          : 'Los entrenadores del gimnasio pueden ver y editar tu rutina, ver tu '
+              'historial y registrar tus sesiones.';
+    }
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isPending
+                  ? '${m.gymName} te invita como ${m.roleLabel}'
+                  : 'Perteneces a ${m.gymName} como ${m.roleLabel}',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 4),
+            Text(detail, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                if (isPending) ...[
+                  FilledButton(
+                    onPressed: _gymBusy ? null : _acceptGym,
+                    child: const Text('Aceptar'),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: _gymBusy ? null : _rejectOrLeaveGym,
+                    child: const Text('Rechazar'),
+                  ),
+                ] else
+                  OutlinedButton(
+                    onPressed: _gymBusy ? null : _rejectOrLeaveGym,
+                    style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                    child: const Text('Salir del gimnasio'),
                   ),
               ],
             ),

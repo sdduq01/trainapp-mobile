@@ -15,9 +15,14 @@ class AthleteDetailPage extends StatefulWidget {
   final String athleteUid;
   final String athleteEmail;
 
+  /// Atleta del gimnasio (acceso por pertenencia, no por solicitud): no hay
+  /// vínculo personal que revocar, eso lo administra el dueño del gimnasio.
+  final bool viaGym;
+
   const AthleteDetailPage({
     required this.athleteUid,
     required this.athleteEmail,
+    this.viaGym = false,
     super.key,
   });
 
@@ -179,13 +184,15 @@ class _AthleteDetailPageState extends State<AthleteDetailPage> {
               onTap: () => _openHistory(context),
             ),
           ),
-          const SizedBox(height: 24),
-          OutlinedButton.icon(
-            onPressed: () => _revoke(context),
-            icon: const Icon(Icons.link_off),
-            label: const Text('Revocar acceso'),
-            style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
-          ),
+          if (!widget.viaGym) ...[
+            const SizedBox(height: 24),
+            OutlinedButton.icon(
+              onPressed: () => _revoke(context),
+              icon: const Icon(Icons.link_off),
+              label: const Text('Revocar acceso'),
+              style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+            ),
+          ],
         ],
       ),
     );

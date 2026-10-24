@@ -5,7 +5,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // true si quien hace la petición es el entrenador activo (accepted) de uid.
+    // true si quien hace la petición es el entrenador personal activo (accepted) de uid.
     function isActiveTrainerOf(uid) {
       return request.auth != null &&
         exists(/databases/$(database)/documents/trainer_links/$(uid)) &&
@@ -13,25 +13,62 @@ service cloud.firestore {
         get(/databases/$(database)/documents/trainer_links/$(uid)).data.status == 'accepted';
     }
 
-    // Perfil: el propio usuario. El entrenador activo solo lee (necesita la
-    // config de intensidad/calentamiento para registrar la sesión del atleta).
-    match /profiles/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
-      allow read: if isActiveTrainerOf(uid);
+    function gymMember(uid) {
+      return get(/databases/$(database)/documents/gym_members/$(uid)).data;
     }
 
-    // Rutina activa: el propio usuario, o su entrenador activo (accepted)
+    // true si quien hace la petición es entrenador de planta (aceptado) del
+    // gimnasio al que pertenece gymId.
+    function isGymTrainerIn(gymId) {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/gym_members/$(request.auth.uid)) &&
+        gymMember(request.auth.uid).gymId == gymId &&
+        gymMember(request.auth.uid).role == 'trainer' &&
+        gymMember(request.auth.uid).status == 'accepted';
+    }
+
+    // true si uid es atleta aceptado de un gimnasio y quien hace la petición
+    // es entrenador de planta aceptado del mismo gimnasio. El acceso viene de
+    // pertenecer al gimnasio, sin solicitud de entrenador.
+    function isGymTrainerOf(uid) {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/gym_members/$(uid)) &&
+        gymMember(uid).role == 'athlete' &&
+        gymMember(uid).status == 'accepted' &&
+        isGymTrainerIn(gymMember(uid).gymId);
+    }
+
+    // Quien puede entrenar a uid: su entrenador personal activo o un
+    // entrenador de planta de su gimnasio. Mismo alcance para ambos.
+    function isCoachOf(uid) {
+      return isActiveTrainerOf(uid) || isGymTrainerOf(uid);
+    }
+
+    function isGymOwner(gymId) {
+      return request.auth != null &&
+        get(/databases/$(database)/documents/gyms/$(gymId)).data.ownerUid == request.auth.uid;
+    }
+
+    // Perfil: el propio usuario. El entrenador (personal o del gimnasio) solo
+    // lee (necesita la config de intensidad/calentamiento para registrar la
+    // sesión del atleta).
+    match /profiles/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read: if isCoachOf(uid);
+    }
+
+    // Rutina activa: el propio usuario, o su entrenador (personal o del gimnasio)
     match /routines/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
-      allow read, write: if isActiveTrainerOf(uid);
+      allow read, write: if isCoachOf(uid);
     }
 
     // Macro ciclo activo del usuario ("Forjado por el Hierro"). El entrenador
-    // activo lee y avanza el conteo al registrar una sesión del atleta, pero
+    // lee y avanza el conteo al registrar una sesión del atleta, pero
     // no lo crea ni lo borra.
     match /macrocycles/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
-      allow read, update: if isActiveTrainerOf(userId);
+      allow read, update: if isCoachOf(userId);
     }
 
     // Catálogo de ejercicios: lectura autenticada; nadie escribe desde la app
@@ -54,17 +91,18 @@ service cloud.firestore {
     // Sesiones completadas: sessions/{uid}/logs/{sessionId}
     match /sessions/{uid}/logs/{sessionId} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
-      // El entrenador activo lee el historial y puede agregar sesiones que él
-      // registró (firmadas con recordedBy), pero no edita ni borra ninguna.
-      allow read: if isActiveTrainerOf(uid);
-      allow create: if isActiveTrainerOf(uid) &&
+      // El entrenador (personal o del gimnasio) lee el historial y puede
+      // agregar sesiones que él registró (firmadas con recordedBy), pero no
+      // edita ni borra ninguna.
+      allow read: if isCoachOf(uid);
+      allow create: if isCoachOf(uid) &&
         request.resource.data.recordedBy == request.auth.uid;
     }
 
-    // Eventos de progresión semanal. El entrenador activo solo agrega eventos.
+    // Eventos de progresión semanal. El entrenador solo agrega eventos.
     match /progressions/{userId}/logs/{logId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
-      allow create: if isActiveTrainerOf(userId);
+      allow create: if isCoachOf(userId);
     }
 
     // Plantillas de rutinas (catálogo): lectura autenticada; nadie escribe.
@@ -74,26 +112,41 @@ service cloud.firestore {
     }
 
     // Pesos de referencia (PRs) por ejercicio
-    // (el entrenador activo los actualiza al registrar una sesión del atleta).
+    // (el entrenador los actualiza al registrar una sesión del atleta).
     match /exercise_prs/{userId}/items/{exerciseId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
-      allow read, write: if isActiveTrainerOf(userId);
+      allow read, write: if isCoachOf(userId);
     }
 
     // Notas personales por ejercicio (ajustes de máquina, cues). El
-    // entrenador activo las ve y edita durante la sesión del atleta.
+    // entrenador las ve y edita durante la sesión del atleta.
     match /exercise_notes/{userId}/items/{exerciseId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
-      allow read, write: if isActiveTrainerOf(userId);
+      allow read, write: if isCoachOf(userId);
     }
 
-    // Directorio liviano email->uid para que un entrenador pueda ubicar a un
-    // atleta por email. Lectura abierta a cualquier autenticado (necesaria
-    // para el where('email','==', x)); el doc solo guarda el email para
-    // minimizar la exposición de datos.
-    match /user_directory/{uid} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == uid;
+    // Directorio email->uid para que un entrenador pueda ubicar a un atleta
+    // por email. El id del doc es el SHA-256 (hex) del email en minúsculas y
+    // el doc solo guarda el uid: se puede hacer `get` conociendo el email
+    // exacto, pero no `list`, así que nadie puede enumerar los correos.
+    match /user_directory/{emailHash} {
+      // `resource == null` deja que un email no registrado responda "no
+      // existe" en vez de permission-denied. Los docs del formato anterior
+      // (id = uid, con el email adentro) no se pueden leer.
+      allow get: if request.auth != null &&
+        (resource == null || resource.data.keys().hasOnly(['uid']));
+
+      // Cada quien solo registra su propio email, apuntando a su propio uid.
+      allow create, update: if request.auth != null &&
+        // toHexString() devuelve mayúsculas; el cliente genera el hash en minúsculas.
+        emailHash == hashing.sha256(request.auth.token.email.lower()).toHexString().lower() &&
+        request.resource.data.keys().hasOnly(['uid']) &&
+        request.resource.data.uid == request.auth.uid;
+
+      // El dueño borra su entrada (y la del formato anterior, id = uid).
+      allow delete: if request.auth != null &&
+        (emailHash == request.auth.uid ||
+         resource.data.uid == request.auth.uid);
     }
 
     // Relación entrenador-atleta: un doc por atleta (doc id = athleteUid).
@@ -122,6 +175,54 @@ service cloud.firestore {
       allow delete: if request.auth != null &&
         (request.auth.uid == athleteUid ||
          request.auth.uid == resource.data.trainerUid);
+    }
+
+    // Gimnasios: los crea el script admin `scripts/create_gym.js`. Nombre y
+    // logo no son sensibles: cualquier autenticado puede leer un gimnasio
+    // conociendo su id (los miembros lo necesitan para ver el logo). El dueño
+    // además lo ubica por query y solo cambia nombre y logo.
+    match /gyms/{gymId} {
+      allow get: if request.auth != null;
+      allow list: if request.auth != null &&
+        resource.data.ownerUid == request.auth.uid;
+      allow update: if request.auth != null &&
+        resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['name', 'logoUrl']) &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() > 0;
+      allow create, delete: if false;
+    }
+
+    // Pertenencia a un gimnasio: un doc por usuario (doc id = uid). Igual que
+    // trainer_links, "un solo gimnasio por persona" surge de que `create`
+    // solo es posible si el doc no existe; el dueño invita (pending) y solo
+    // el propio usuario pasa a accepted.
+    match /gym_members/{uid} {
+      // El propio usuario, el dueño del gimnasio y sus entrenadores de
+      // planta (que listan a los atletas con where gymId == X).
+      allow read: if request.auth != null &&
+        (request.auth.uid == uid ||
+         isGymOwner(resource.data.gymId) ||
+         isGymTrainerIn(resource.data.gymId));
+
+      allow create: if isGymOwner(request.resource.data.gymId) &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.role in ['trainer', 'athlete'] &&
+        request.resource.data.gymName is string &&
+        request.resource.data.email is string;
+
+      // El usuario acepta: pending -> accepted, sin cambiar gimnasio ni rol.
+      allow update: if request.auth != null &&
+        request.auth.uid == uid &&
+        resource.data.status == 'pending' &&
+        request.resource.data.status == 'accepted' &&
+        request.resource.data.gymId == resource.data.gymId &&
+        request.resource.data.role == resource.data.role;
+
+      // Rechazar/salir (el usuario) o retirar/cancelar (el dueño).
+      allow delete: if request.auth != null &&
+        (request.auth.uid == uid || isGymOwner(resource.data.gymId));
     }
   }
 }

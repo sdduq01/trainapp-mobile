@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/firebase/delete_collection.dart';
 import '../../core/firebase/firestore_instance.dart';
 import '../models/routine.dart';
 import 'routine_service.dart';
@@ -25,13 +26,13 @@ import 'routine_service.dart';
 class TrainingResetService {
   Future<void> resetAll(String userId) async {
     await Future.wait([
-      _deleteCollection(
+      deleteCollection(
           db.collection('sessions').doc(userId).collection('logs')),
-      _deleteCollection(
+      deleteCollection(
           db.collection('exercise_prs').doc(userId).collection('items')),
-      _deleteCollection(
+      deleteCollection(
           db.collection('progressions').doc(userId).collection('logs')),
-      _deleteCollection(
+      deleteCollection(
           db.collection('exercise_notes').doc(userId).collection('items')),
       _resetRoutineProgress(userId),
       _clearMilestones(userId),
@@ -42,22 +43,6 @@ class TrainingResetService {
 
   Future<void> _clearMacrocycle(String userId) async {
     await db.collection('macrocycles').doc(userId).delete();
-  }
-
-  Future<void> _deleteCollection(
-      CollectionReference<Map<String, dynamic>> col) async {
-    // Firestore limita los batch a 500 operaciones — se pagina por si acaso.
-    const pageSize = 300;
-    while (true) {
-      final snap = await col.limit(pageSize).get();
-      if (snap.docs.isEmpty) return;
-      final batch = db.batch();
-      for (final doc in snap.docs) {
-        batch.delete(doc.reference);
-      }
-      await batch.commit();
-      if (snap.docs.length < pageSize) return;
-    }
   }
 
   Future<void> _resetRoutineProgress(String userId) async {

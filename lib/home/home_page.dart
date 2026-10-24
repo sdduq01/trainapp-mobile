@@ -11,6 +11,11 @@ import '../workout/services/macrocycle_service.dart';
 import '../workout/services/progression_service.dart';
 import '../workout/services/routine_service.dart';
 import '../workout/services/session_service.dart';
+import '../gym/models/gym.dart';
+import '../gym/models/gym_member.dart';
+import '../gym/screens/gym_admin_page.dart';
+import '../gym/services/gym_service.dart';
+import '../gym/widgets/gym_logo.dart';
 import '../profile/profile_service.dart';
 import '../profile/screens/profile_page.dart';
 import '../trainer/screens/my_athletes_page.dart';
@@ -33,6 +38,9 @@ class _HomePageState extends State<HomePage> {
   MacrocycleProgress? _macro;
   bool _loading = true;
   bool _isTrainer = false;
+  GymMember? _gymMembership; // solo si está aceptada
+  Gym? _gym; // gimnasio al que pertenece (logo en el home)
+  Gym? _ownedGym; // gimnasio que administra
   int _chartKey = 0;
   final _user = FirebaseAuth.instance.currentUser;
 
@@ -41,6 +49,7 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _loadRoutine();
     _loadIsTrainer();
+    _loadGym();
     // Backfill del directorio email->uid para cuentas que se registraron
     // antes de que existiera (no bloquea la carga de la pantalla).
     if (_user != null) {
@@ -69,6 +78,31 @@ class _HomePageState extends State<HomePage> {
       if (mounted) setState(() => _isTrainer = profile?.isTrainer ?? false);
     } catch (_) {
       // silencioso: el ícono de entrenador simplemente no aparece
+    }
+  }
+
+  /// Pertenencia aceptada a un gimnasio (para el logo y el acceso de los
+  /// entrenadores de planta a "Mis atletas") y el gimnasio que administra.
+  Future<void> _loadGym() async {
+    try {
+      final service = GymService();
+      final results = await Future.wait([
+        service.getMembership(_user!.uid),
+        service.getOwnedGym(_user.uid),
+      ]);
+      var membership = results[0] as GymMember?;
+      if (membership != null && !membership.isAccepted) membership = null;
+      final gym =
+          membership == null ? null : await service.getGym(membership.gymId);
+      if (mounted) {
+        setState(() {
+          _gymMembership = membership;
+          _gym = gym;
+          _ownedGym = results[1] as Gym?;
+        });
+      }
+    } catch (_) {
+      // silencioso: sin logo ni íconos del gimnasio
     }
   }
 
@@ -277,11 +311,26 @@ class _HomePageState extends State<HomePage> {
                 setState(() { _loading = true; _chartKey++; });
                 await _loadRoutine();
               }
-              // El toggle "Modo entrenador" pudo cambiar en ProfilePage.
-              await _loadIsTrainer();
+              // El toggle "Modo entrenador" o la pertenencia a un gimnasio
+              // pudieron cambiar en ProfilePage.
+              await Future.wait([_loadIsTrainer(), _loadGym()]);
             },
           ),
-          if (_isTrainer)
+          if (_ownedGym != null)
+            IconButton(
+              icon: const Icon(Icons.store_outlined),
+              tooltip: 'Mi gimnasio',
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => GymAdminPage(gym: _ownedGym!),
+                  ),
+                );
+                await _loadGym(); // pudo cambiar el logo o el nombre
+              },
+            ),
+          if (_isTrainer || (_gymMembership?.isTrainer ?? false))
             IconButton(
               icon: const Icon(Icons.groups),
               tooltip: 'Mis atletas',
@@ -338,6 +387,7 @@ class _HomePageState extends State<HomePage> {
               ? const Center(child: Text('No tienes una rutina asignada aún.'))
               : _RoutineView(
                   routine: _routine!,
+                  gym: _gym,
                   macro: _macro,
                   chartKey: _chartKey,
                   onSessionCompleted: _onSessionCompleted,
@@ -348,12 +398,14 @@ class _HomePageState extends State<HomePage> {
 
 class _RoutineView extends StatelessWidget {
   final Routine routine;
+  final Gym? gym;
   final MacrocycleProgress? macro;
   final int chartKey;
   final VoidCallback onSessionCompleted;
 
   const _RoutineView({
     required this.routine,
+    required this.gym,
     required this.macro,
     required this.chartKey,
     required this.onSessionCompleted,
@@ -382,6 +434,13 @@ class _RoutineView extends StatelessWidget {
                 ],
               ),
             ),
+            if (gym != null) ...[
+              const SizedBox(width: 12),
+              Tooltip(
+                message: gym!.name,
+                child: GymLogo(url: gym!.logoUrl, size: 56),
+              ),
+            ],
           ],
         ),
         const SizedBox(height: 20),

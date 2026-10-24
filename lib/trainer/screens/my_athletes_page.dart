@@ -1,12 +1,16 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../gym/models/gym_member.dart';
+import '../../gym/services/gym_service.dart';
 import '../models/trainer_link.dart';
 import '../services/trainer_link_service.dart';
 import 'athlete_detail_page.dart';
 
 /// Pantalla del lado entrenador: atletas aceptados + solicitudes enviadas
-/// pendientes, y el botón para agregar un atleta nuevo por email.
+/// pendientes, y el botón para agregar un atleta nuevo por email. Si además
+/// es entrenador de planta de un gimnasio, también lista a los atletas del
+/// gimnasio (acceso por pertenencia, sin solicitud).
 class MyAthletesPage extends StatefulWidget {
   const MyAthletesPage({super.key});
 
@@ -18,6 +22,8 @@ class _MyAthletesPageState extends State<MyAthletesPage> {
   final _uid = FirebaseAuth.instance.currentUser!.uid;
   List<TrainerLink>? _accepted;
   List<TrainerLink>? _pending;
+  GymMember? _gymMembership;
+  List<GymMember> _gymAthletes = [];
   bool _sending = false;
 
   @override
@@ -27,13 +33,57 @@ class _MyAthletesPageState extends State<MyAthletesPage> {
   }
 
   Future<void> _load() async {
-    final links = await TrainerLinkService().getMyLinks(_uid);
+    final results = await Future.wait([
+      TrainerLinkService().getMyLinks(_uid),
+      _loadGymAthletes(),
+    ]);
+    final links = results[0]
+        as ({List<TrainerLink> accepted, List<TrainerLink> pending});
     if (mounted) {
       setState(() {
         _accepted = links.accepted;
         _pending = links.pending;
       });
     }
+  }
+
+  /// Atletas del gimnasio si soy entrenador de planta aceptado. Los que ya
+  /// son mis atletas personales no se repiten.
+  Future<void> _loadGymAthletes() async {
+    try {
+      final membership = await GymService().getMembership(_uid);
+      var athletes = <GymMember>[];
+      if (membership != null && membership.isAccepted && membership.isTrainer) {
+        athletes = await GymService().getAcceptedAthletes(membership.gymId);
+        athletes.removeWhere((a) => a.uid == _uid);
+      }
+      if (mounted) {
+        setState(() {
+          _gymMembership = membership;
+          _gymAthletes = athletes;
+        });
+      }
+    } catch (_) {
+      // silencioso: la sección del gimnasio simplemente no aparece
+    }
+  }
+
+  Future<void> _openAthlete(
+    String athleteUid,
+    String athleteEmail, {
+    bool viaGym = false,
+  }) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AthleteDetailPage(
+          athleteUid: athleteUid,
+          athleteEmail: athleteEmail,
+          viaGym: viaGym,
+        ),
+      ),
+    );
+    _load(); // pudo haber revocado el acceso desde ahí
   }
 
   Future<void> _addAthlete() async {
@@ -95,6 +145,30 @@ class _MyAthletesPageState extends State<MyAthletesPage> {
     await _load();
   }
 
+  List<Widget> _buildGymAthletes() {
+    final personal = _accepted!.map((l) => l.athleteUid).toSet();
+    final athletes =
+        _gymAthletes.where((a) => !personal.contains(a.uid)).toList();
+    if (athletes.isEmpty) {
+      return const [
+        Text('El gimnasio todavía no tiene otros atletas.',
+            style: TextStyle(color: Colors.grey)),
+      ];
+    }
+    return [
+      for (final athlete in athletes)
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.fitness_center),
+            title: Text(athlete.email),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () =>
+                _openAthlete(athlete.uid, athlete.email, viaGym: true),
+          ),
+        ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final loading = _accepted == null || _pending == null;
@@ -123,20 +197,20 @@ class _MyAthletesPageState extends State<MyAthletesPage> {
                       leading: const Icon(Icons.person),
                       title: Text(link.athleteEmail),
                       trailing: const Icon(Icons.chevron_right),
-                      onTap: () async {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => AthleteDetailPage(
-                              athleteUid: link.athleteUid,
-                              athleteEmail: link.athleteEmail,
-                            ),
-                          ),
-                        );
-                        _load(); // pudo haber revocado el acceso desde ahí
-                      },
+                      onTap: () =>
+                          _openAthlete(link.athleteUid, link.athleteEmail),
                     ),
                   ),
+                if (_gymMembership != null &&
+                    _gymMembership!.isAccepted &&
+                    _gymMembership!.isTrainer) ...[
+                  const SizedBox(height: 24),
+                  Text('Atletas de ${_gymMembership!.gymName}',
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  ..._buildGymAthletes(),
+                ],
                 const SizedBox(height: 24),
                 const Text('Solicitudes enviadas',
                     style:
