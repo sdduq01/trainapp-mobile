@@ -12,7 +12,10 @@
 const { onDocumentWritten } = require('firebase-functions/v2/firestore');
 const { defineSecret }      = require('firebase-functions/params');
 const logger                = require('firebase-functions/logger');
+const { onSchedule }        = require('firebase-functions/v2/scheduler');
+const { initializeApp }     = require('firebase-admin/app');
 const nodemailer            = require('nodemailer');
+const classes               = require('./classes');
 
 // La base `trainapp` está en southamerica-east1: los triggers de Firestore
 // deben correr en la misma región.
@@ -23,6 +26,9 @@ const ADMIN_EMAIL = 'trainappdev@gmail.com';
 const PORTAL_URL  = 'https://trainapp-prod.web.app/gimnasio';
 
 const GMAIL_APP_PASSWORD = defineSecret('GMAIL_APP_PASSWORD');
+
+const app = initializeApp();
+const db  = () => classes.getFirestore(app, DATABASE_ID);
 
 const escapeHtml = s =>
   String(s ?? '').replace(/[&<>"']/g, c =>
@@ -88,5 +94,39 @@ exports.notifyGymRequest = onDocumentWritten(
       // No se reintenta: la solicitud igual queda visible en el portal.
       logger.error('No se pudo enviar el correo de solicitud', { uid: event.params.uid, err: err.message });
     }
+  },
+);
+
+/**
+ * Clases grupales: al crear, editar o borrar un horario semanal, ajusta sus
+ * clases de los próximos 14 días (ver `classes.js`).
+ */
+exports.syncGymSchedule = onDocumentWritten(
+  {
+    document: 'gyms/{gymId}/schedules/{scheduleId}',
+    database: DATABASE_ID,
+    region: REGION,
+  },
+  async event => {
+    const { gymId, scheduleId } = event.params;
+    const schedule = event.data?.after?.data() ?? null;
+    const counts = await classes.syncSchedule(db(), gymId, scheduleId, schedule);
+    logger.info('Horario sincronizado', { gymId, scheduleId, ...counts });
+  },
+);
+
+/**
+ * Clases grupales: cada madrugada (hora de Bogotá) genera el día nuevo que
+ * entra en la ventana de 14 días para todos los horarios activos.
+ */
+exports.generateGymClasses = onSchedule(
+  {
+    schedule: 'every day 03:00',
+    timeZone: 'America/Bogota',
+    region: REGION,
+  },
+  async () => {
+    const created = await classes.syncAllSchedules(db());
+    logger.info('Clases generadas', { created });
   },
 );

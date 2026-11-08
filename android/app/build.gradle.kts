@@ -69,3 +69,8 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // WindowCompat.enableEdgeToEdge en MainActivity.
+    implementation("androidx.core:core:1.18.0")
+}

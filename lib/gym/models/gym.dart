@@ -11,6 +11,7 @@ class Gym {
   final String city;
   final String address;
   final String phone;
+  final String? websiteUrl;
 
   /// Horas antes de una clase hasta las que un atleta puede cancelar.
   final int cancelWindowHours;
@@ -28,6 +29,7 @@ class Gym {
     this.phone = '',
     this.cancelWindowHours = kDefaultCancelWindowHours,
     this.status = 'active',
+    this.websiteUrl,
   });
 
   factory Gym.fromMap(String id, Map<String, dynamic> m) => Gym(
@@ -41,6 +43,7 @@ class Gym {
         cancelWindowHours: (m['cancelWindowHours'] as num?)?.toInt() ??
             kDefaultCancelWindowHours,
         status: m['status'] as String? ?? 'active',
+        websiteUrl: m['websiteUrl'] as String?,
       );
 
   Gym copyWith({
@@ -50,6 +53,7 @@ class Gym {
     String? address,
     String? phone,
     int? cancelWindowHours,
+    String? websiteUrl,
   }) =>
       Gym(
         id: id,
@@ -61,5 +65,6 @@ class Gym {
         phone: phone ?? this.phone,
         cancelWindowHours: cancelWindowHours ?? this.cancelWindowHours,
         status: status,
+        websiteUrl: websiteUrl ?? this.websiteUrl,
       );
 }

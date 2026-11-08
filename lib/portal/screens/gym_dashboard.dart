@@ -6,19 +6,25 @@ import '../../gym/widgets/gym_logo.dart';
 import '../../gym/widgets/gym_members_panel.dart';
 import '../widgets/portal_scaffold.dart';
 import 'admin_requests_section.dart';
+import 'gym_classes_section.dart';
 import 'gym_profile_section.dart';
 
-/// Panel del dueño del gimnasio (Miembros, Perfil) y, para el admin de
-/// TrainApp, las solicitudes de alta. Menú lateral en pantallas anchas e
+/// Panel del dueño del gimnasio (Miembros, Clases, Perfil), del entrenador
+/// de planta (solo Clases) y, para el admin de TrainApp, las solicitudes de
+/// alta. Menú lateral en pantallas anchas e
 /// inferior en el celular.
 class GymDashboard extends StatefulWidget {
   final Gym? gym;
   final bool isAdmin;
+
+  /// false para el entrenador de planta: solo ve Clases.
+  final bool isOwner;
   final ValueChanged<Gym> onGymChanged;
 
   const GymDashboard({
     required this.gym,
     required this.isAdmin,
+    this.isOwner = true,
     required this.onGymChanged,
     super.key,
   });
@@ -27,23 +33,27 @@ class GymDashboard extends StatefulWidget {
   State<GymDashboard> createState() => _GymDashboardState();
 }
 
-enum _Section { members, profile, requests }
+enum _Section { members, classes, profile, requests }
 
 class _GymDashboardState extends State<GymDashboard> {
   int _index = 0;
 
   List<_Section> get _sections => [
-        if (widget.gym != null) ...[_Section.members, _Section.profile],
+        if (widget.gym != null && widget.isOwner) _Section.members,
+        if (widget.gym != null) _Section.classes,
+        if (widget.gym != null && widget.isOwner) _Section.profile,
         if (widget.isAdmin) _Section.requests,
       ];
 
   static const _icons = {
     _Section.members: Icons.groups_outlined,
+    _Section.classes: Icons.event_note_outlined,
     _Section.profile: Icons.store_outlined,
     _Section.requests: Icons.admin_panel_settings_outlined,
   };
   static const _labels = {
     _Section.members: 'Miembros',
+    _Section.classes: 'Clases',
     _Section.profile: 'Perfil',
     _Section.requests: 'Solicitudes',
   };
@@ -53,6 +63,8 @@ class _GymDashboardState extends State<GymDashboard> {
     switch (section) {
       case _Section.members:
         return _MembersSection(key: ValueKey(gym!.id), gym: gym);
+      case _Section.classes:
+        return GymClassesSection(key: ValueKey('classes_${gym!.id}'), gym: gym);
       case _Section.profile:
         return GymProfileSection(gym: gym!, onSaved: widget.onGymChanged);
       case _Section.requests:

@@ -14,6 +14,7 @@ import '../workout/services/session_service.dart';
 import '../gym/models/gym.dart';
 import '../gym/models/gym_member.dart';
 import '../gym/screens/gym_admin_page.dart';
+import '../gym/screens/gym_classes_page.dart';
 import '../gym/services/gym_service.dart';
 import '../gym/widgets/gym_logo.dart';
 import '../profile/profile_service.dart';
@@ -25,6 +26,7 @@ import '../workout/screens/workout_session_page.dart';
 import '../workout/screens/history_page.dart';
 import '../workout/screens/routine_catalog_page.dart';
 import 'weekly_progress_chart.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -388,6 +390,7 @@ class _HomePageState extends State<HomePage> {
               : _RoutineView(
                   routine: _routine!,
                   gym: _gym,
+                  gymAthlete: !(_gymMembership?.isTrainer ?? true),
                   macro: _macro,
                   chartKey: _chartKey,
                   onSessionCompleted: _onSessionCompleted,
@@ -399,6 +402,9 @@ class _HomePageState extends State<HomePage> {
 class _RoutineView extends StatelessWidget {
   final Routine routine;
   final Gym? gym;
+  /// true si es atleta del gimnasio (se inscribe a clases); false si es
+  /// entrenador de planta (solo las ve).
+  final bool gymAthlete;
   final MacrocycleProgress? macro;
   final int chartKey;
   final VoidCallback onSessionCompleted;
@@ -406,6 +412,7 @@ class _RoutineView extends StatelessWidget {
   const _RoutineView({
     required this.routine,
     required this.gym,
+    required this.gymAthlete,
     required this.macro,
     required this.chartKey,
     required this.onSessionCompleted,
@@ -436,9 +443,79 @@ class _RoutineView extends StatelessWidget {
             ),
             if (gym != null) ...[
               const SizedBox(width: 12),
-              Tooltip(
-                message: gym!.name,
-                child: GymLogo(url: gym!.logoUrl, size: 56),
+              Column(
+                children: [
+                  Tooltip(
+                    message: gym!.websiteUrl?.trim().isNotEmpty == true
+                        ? '${gym!.name} · Página web'
+                        : '${gym!.name} · Clases grupales',
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () async {
+                        final websiteUrl = gym!.websiteUrl?.trim()            ;
+            
+                        // Si tiene página web, abrirla en el navegador externo.
+                        if (websiteUrl != null && websiteUrl.isNotEmpty) {
+                          final uri = Uri.tryParse(websiteUrl)            ;
+            
+                          if (uri != null &&
+                              (uri.scheme == 'https' || uri.scheme == 'http') &&
+                              uri.host.isNotEmpty) {
+                            await launchUrl(
+                              uri,
+                              mode: LaunchMode.externalApplication,
+                            );
+                          }
+                          return;
+                                    }
+            
+                        // Si no tiene página web, conservar el comportamiento anterior.
+                        if (!context.mounted) return            ;
+            
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => GymClassesPage(
+                              gym: gym!,
+                              canEnroll: gymAthlete,
+                            ),
+                          ),
+                        );
+                      },
+                      child: GymLogo(
+                        url: gym!.logoUrl,
+                        size: 56,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(6),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => GymClassesPage(
+                          gym: gym!,
+                          canEnroll: gymAthlete,
+                        ),
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      child: Text(
+                        'Clases',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ],

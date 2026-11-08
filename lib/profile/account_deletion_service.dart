@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -14,6 +15,7 @@ import '../trainer/services/user_directory_service.dart';
 /// - "Mis ejercicios" y "Mis rutinas" (`custom_exercises`, `custom_routines`)
 /// - Rutina activa y macro ciclo (`routines`, `macrocycles`)
 /// - Vínculos de entrenador, como atleta y como entrenador (`trainer_links`)
+/// - Inscripciones a clases grupales futuras (libera los cupos)
 /// - Pertenencia a un gimnasio (`gym_members`)
 /// - Entrada del directorio por email (`user_directory`) y perfil (`profiles`)
 /// - Los drafts de sesión guardados en el dispositivo
@@ -34,6 +36,9 @@ class AccountDeletionService {
     await user.reauthenticateWithCredential(
       EmailAuthProvider.credential(email: email!, password: password),
     );
+
+    // Primero, para no dejar cupos ocupados si algo posterior falla.
+    await _leaveClasses(uid);
 
     await Future.wait([
       deleteCollection(db.collection('sessions').doc(uid).collection('logs')),
@@ -59,6 +64,31 @@ class AccountDeletionService {
     await _clearLocalDrafts();
 
     await user.delete();
+  }
+
+  /// Cancela las inscripciones a clases futuras para liberar los cupos. Las
+  /// que ya pasaron la ventana de cancelación del gimnasio no se pueden
+  /// cancelar y se dejan (el gimnasio las ve en su lista).
+  Future<void> _leaveClasses(String uid) async {
+    try {
+      final now = Timestamp.now();
+      final mine = await db
+          .collectionGroup('enrollments')
+          .where('uid', isEqualTo: uid)
+          .where('startsAt', isGreaterThan: now)
+          .get();
+      await Future.wait([
+        for (final doc in mine.docs)
+          (db.batch()
+                ..delete(doc.reference)
+                ..update(doc.reference.parent.parent!,
+                    {'enrolledCount': FieldValue.increment(-1)}))
+              .commit()
+              .catchError((_) {}),
+      ]);
+    } catch (_) {
+      // silencioso: no debe impedir borrar la cuenta
+    }
   }
 
   Future<void> _deleteTrainerLinks(String uid) async {

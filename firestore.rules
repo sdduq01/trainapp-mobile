@@ -212,6 +212,150 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ── Clases grupales ──────────────────────────────────────────────────
+    // Staff = dueño o entrenador de planta aceptado. Los horarios
+    // (`schedules`) los administra el staff y una Cloud Function genera con
+    // ellos las clases de los próximos 14 días. Los atletas aceptados ven las
+    // clases y se inscriben; de los inscritos solo ven el conteo.
+
+    function isGymStaff(gymId) {
+      return isGymOwner(gymId) || isGymTrainerIn(gymId);
+    }
+
+    function isGymAthleteIn(gymId) {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/gym_members/$(request.auth.uid)) &&
+        gymMember(request.auth.uid).gymId == gymId &&
+        gymMember(request.auth.uid).role == 'athlete' &&
+        gymMember(request.auth.uid).status == 'accepted';
+    }
+
+    function isGymMemberIn(gymId) {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/gym_members/$(request.auth.uid)) &&
+        gymMember(request.auth.uid).gymId == gymId &&
+        gymMember(request.auth.uid).status == 'accepted';
+    }
+
+    match /gyms/{gymId}/schedules/{scheduleId} {
+      function isValidSchedule() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['name', 'description', 'instructor',
+            'weekdays', 'startTime', 'durationMin', 'capacity', 'active',
+            'updatedAt']) &&
+          d.name is string && d.name.size() > 0 && d.name.size() <= 80 &&
+          d.description is string && d.instructor is string &&
+          d.weekdays is list && d.weekdays.size() > 0 &&
+          d.weekdays.hasOnly([1, 2, 3, 4, 5, 6, 7]) &&
+          d.startTime is string &&
+          d.startTime.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$') &&
+          d.durationMin is int && d.durationMin >= 5 && d.durationMin <= 600 &&
+          d.capacity is int && d.capacity >= 1 && d.capacity <= 500 &&
+          d.active is bool;
+      }
+
+      allow read: if isGymStaff(gymId);
+      allow create, update: if isGymStaff(gymId) && isValidSchedule();
+      allow delete: if isGymStaff(gymId);
+    }
+
+    match /gyms/{gymId}/classes/{classId} {
+      function isValidClass() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['name', 'description', 'instructor',
+            'startsAt', 'durationMin', 'capacity', 'enrolledCount', 'status',
+            'scheduleId', 'edited']) &&
+          d.name is string && d.name.size() > 0 && d.name.size() <= 80 &&
+          d.description is string && d.instructor is string &&
+          d.startsAt is timestamp &&
+          d.durationMin is int && d.durationMin >= 5 && d.durationMin <= 600 &&
+          d.capacity is int && d.capacity >= 1 && d.capacity <= 500 &&
+          d.enrolledCount is int && d.enrolledCount >= 0 &&
+          d.capacity >= d.enrolledCount &&
+          d.status in ['scheduled', 'cancelled'] &&
+          (d.scheduleId == null || d.scheduleId is string) &&
+          d.edited is bool;
+      }
+
+      function myEnrollment() {
+        return /databases/$(database)/documents/gyms/$(gymId)/classes/$(classId)/enrollments/$(request.auth.uid);
+      }
+
+      function onlyCountChanges(delta) {
+        return request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['enrolledCount']) &&
+          request.resource.data.enrolledCount == resource.data.enrolledCount + delta;
+      }
+
+      // Inscribirse: clase vigente, con cupo, dentro de los próximos 14 días
+      // (con un día de margen) y junto con la creación de la inscripción.
+      function isEnrolling() {
+        return isGymAthleteIn(gymId) &&
+          onlyCountChanges(1) &&
+          request.resource.data.enrolledCount <= resource.data.capacity &&
+          resource.data.status == 'scheduled' &&
+          resource.data.startsAt > request.time &&
+          resource.data.startsAt < request.time + duration.value(15, 'd') &&
+          !exists(myEnrollment()) && existsAfter(myEnrollment());
+      }
+
+      // Cancelar la inscripción propia antes de la ventana del gimnasio.
+      function isUnenrolling() {
+        return request.auth != null &&
+          onlyCountChanges(-1) &&
+          resource.data.status == 'scheduled' &&
+          request.time < resource.data.startsAt - duration.value(
+            get(/databases/$(database)/documents/gyms/$(gymId)).data
+              .get('cancelWindowHours', 2), 'h') &&
+          exists(myEnrollment()) && !existsAfter(myEnrollment());
+      }
+
+      allow read: if isGymStaff(gymId) || isGymMemberIn(gymId);
+      // El staff crea clases sueltas (sin inscritos), edita y cancela
+      // cualquiera; solo borra las que no tienen inscritos.
+      allow create: if isGymStaff(gymId) && isValidClass() &&
+        request.resource.data.enrolledCount == 0;
+      allow update: if isGymStaff(gymId) && isValidClass();
+      allow update: if isEnrolling() || isUnenrolling();
+      allow delete: if isGymStaff(gymId) && resource.data.enrolledCount == 0;
+
+      // Inscripciones: un doc por atleta (doc id = uid). El atleta ve la suya;
+      // el staff ve la lista y puede retirar a alguien (descontando el cupo
+      // con su propio update de la clase).
+      match /enrollments/{uid} {
+        function classDoc() {
+          return /databases/$(database)/documents/gyms/$(gymId)/classes/$(classId);
+        }
+
+        allow read: if isGymStaff(gymId) ||
+          (request.auth != null && request.auth.uid == uid);
+
+        allow create: if request.auth != null && request.auth.uid == uid &&
+          isGymAthleteIn(gymId) &&
+          request.resource.data.keys().hasOnly(['uid', 'gymId', 'classId',
+              'startsAt', 'email', 'enrolledAt']) &&
+          request.resource.data.uid == uid &&
+          request.resource.data.gymId == gymId &&
+          request.resource.data.classId == classId &&
+          request.resource.data.startsAt == get(classDoc()).data.startsAt &&
+          request.resource.data.email == request.auth.token.email &&
+          getAfter(classDoc()).data.enrolledCount ==
+            get(classDoc()).data.enrolledCount + 1;
+
+        allow delete: if request.auth != null && request.auth.uid == uid &&
+          getAfter(classDoc()).data.enrolledCount ==
+            get(classDoc()).data.enrolledCount - 1;
+        allow delete: if isGymStaff(gymId);
+      }
+    }
+
+    // "Mis clases": el atleta consulta sus inscripciones en todos los
+    // gimnasios con una consulta de grupo filtrada por su uid.
+    match /{path=**}/enrollments/{enrollmentId} {
+      allow read: if request.auth != null &&
+        resource.data.uid == request.auth.uid;
+    }
+
     // Solicitudes de alta de gimnasio desde el portal: un doc por usuario
     // (doc id = uid). El usuario la envía en `pending`, la edita mientras
     // siga pendiente y la reenvía si fue rechazada; solo un admin la aprueba

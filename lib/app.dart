@@ -18,6 +18,14 @@ class TrainApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
+      // La app se dibuja de borde a borde (ver MainActivity). Este margen
+      // global evita que listas, botones y hojas inferiores queden debajo
+      // de la barra de navegación del sistema; el AppBar ya maneja la de
+      // estado. El fondo pinta la franja con el color de las pantallas.
+      builder: (context, child) => ColoredBox(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: SafeArea(top: false, child: child!),
+      ),
       home: const AuthGate(),
       routes: {
         '/onboarding/step1': (_) => const OnboardingStep1Page(),

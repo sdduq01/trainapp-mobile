@@ -16,7 +16,7 @@ const _kPlayStoreUrl =
 
 /// Decide qué ve quien entra al portal:
 /// - dueño de un gimnasio o admin → panel
-/// - entrenador de planta → aviso (las clases llegan en la fase 2)
+/// - entrenador de planta → panel solo con Clases
 /// - con solicitud de alta → estado de la solicitud
 /// - atleta o sin gimnasio → "este portal es para gimnasios" + inscribir uno
 class PortalHome extends StatefulWidget {
@@ -35,6 +35,7 @@ class _PortalHomeState extends State<PortalHome> {
   Gym? _ownedGym;
   GymMember? _membership;
   GymRequest? _request;
+  Gym? _trainerGym; // gimnasio donde es entrenador de planta
   bool _showRequestForm = false;
 
   @override
@@ -54,8 +55,14 @@ class _PortalHomeState extends State<PortalHome> {
         GymService().getMembership(uid),
         GymRequestService().getMyRequest(uid),
       ]);
+      final membership = results[2] as GymMember?;
+      final trainerGym =
+          membership != null && membership.isAccepted && membership.isTrainer
+              ? await GymService().getGym(membership.gymId)
+              : null;
       if (!mounted) return;
       setState(() {
+        _trainerGym = trainerGym;
         _isAdmin = (results[0] as IdTokenResult).claims?['admin'] == true;
         _ownedGym = results[1] as Gym?;
         _membership = results[2] as GymMember?;
@@ -94,6 +101,15 @@ class _PortalHomeState extends State<PortalHome> {
         gym: _ownedGym,
         isAdmin: _isAdmin,
         onGymChanged: (gym) => setState(() => _ownedGym = gym),
+      );
+    }
+
+    if (_trainerGym != null) {
+      return GymDashboard(
+        gym: _trainerGym,
+        isAdmin: false,
+        isOwner: false,
+        onGymChanged: (_) {},
       );
     }
 
