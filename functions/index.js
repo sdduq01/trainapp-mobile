@@ -14,7 +14,6 @@ const { defineSecret }      = require('firebase-functions/params');
 const logger                = require('firebase-functions/logger');
 const { onSchedule }        = require('firebase-functions/v2/scheduler');
 const { initializeApp }     = require('firebase-admin/app');
-const { getAuth }           = require('firebase-admin/auth');
 const nodemailer            = require('nodemailer');
 const classes               = require('./classes');
 const premium               = require('./premium');
@@ -198,13 +197,9 @@ exports.startTrial = onDocumentWritten(
       return;
     }
     if (after.status) return; // ya procesada (la escribió esta misma función)
-    let email = null;
-    try {
-      email = (await getAuth(app).getUser(uid)).email ?? null;
-    } catch (err) {
-      logger.warn('Prueba gratis: usuario no encontrado', { uid, err: err.message });
-    }
-    const result = await premium.startTrial(db(), uid, email);
+    // El correo lo manda la app y las reglas exigen que sea el del token de
+    // la sesión (sin firebase-admin/auth, que no carga en el CLI empaquetado).
+    const result = await premium.startTrial(db(), uid, after.email || null);
     logger.info('Prueba gratis', result);
   },
 );

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../core/firebase/firestore_instance.dart';
 import 'premium_service.dart';
@@ -56,7 +57,14 @@ class TrialService {
   /// premium). Devuelve el estado final, o `pending` si tarda demasiado.
   Future<Trial> start(String uid,
       {Duration timeout = const Duration(seconds: 20)}) async {
-    await _doc(uid).set({'requestedAt': FieldValue.serverTimestamp()});
+    // Las reglas exigen que el correo sea el de la sesión: con él la función
+    // verifica que la prueba sea una sola por persona.
+    final email = FirebaseAuth.instance.currentUser?.email;
+    if (email == null) throw Exception('Tu cuenta no tiene correo.');
+    await _doc(uid).set({
+      'requestedAt': FieldValue.serverTimestamp(),
+      'email': email,
+    });
     final completer = Completer<Trial>();
     late final StreamSubscription<dynamic> sub;
     sub = _doc(uid).snapshots().listen((snap) async {

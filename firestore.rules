@@ -428,8 +428,10 @@ service cloud.firestore {
     match /trial_requests/{uid} {
       allow read, delete: if request.auth != null && request.auth.uid == uid;
       allow create: if request.auth != null && request.auth.uid == uid &&
-        request.resource.data.keys().hasOnly(['requestedAt']) &&
-        request.resource.data.requestedAt == request.time;
+        request.resource.data.keys().hasOnly(['requestedAt', 'email']) &&
+        request.resource.data.requestedAt == request.time &&
+        request.auth.token.email is string &&
+        request.resource.data.email == request.auth.token.email;
       allow update: if false;
     }
     match /trial_emails/{hash} {
