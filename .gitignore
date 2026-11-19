@@ -123,3 +123,6 @@ scripts/node_modules/
 
 # Portal web compilado (scripts/build_portal.sh)
 /hosting/gimnasio/
+
+# Metadatos de descarga de Windows (WSL)
+*:Zone.Identifier
