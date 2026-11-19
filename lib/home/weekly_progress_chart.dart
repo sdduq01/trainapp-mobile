@@ -1,6 +1,9 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../core/utils/iso_week.dart';
+import '../premium/premium_widgets.dart';
 import '../workout/models/workout_session.dart';
 import '../workout/services/progression_service.dart';
 import '../workout/services/session_service.dart';
@@ -9,9 +12,14 @@ class WeeklyProgressChart extends StatefulWidget {
   final int plannedDaysPerWeek;
   final int totalRoutineExercises;
 
+  /// Sin premium: se muestra con datos de ejemplo, difuminada y sin
+  /// interacción; al tocarla explica cómo obtener el premium.
+  final bool locked;
+
   const WeeklyProgressChart({
     required this.plannedDaysPerWeek,
     required this.totalRoutineExercises,
+    this.locked = false,
     super.key,
   });
 
@@ -20,7 +28,7 @@ class WeeklyProgressChart extends StatefulWidget {
 }
 
 class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
-  final _userId = FirebaseAuth.instance.currentUser!.uid;
+  late final _userId = FirebaseAuth.instance.currentUser!.uid;
   final _scrollCtrl = ScrollController();
 
   List<_WeekStat>? _stats;
@@ -47,11 +55,35 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
 
   static int _isoYear(DateTime date) => IsoWeek.year(date);
 
+  /// Datos de ejemplo para la vista bloqueada: no consulta nada del usuario.
+  static List<_WeekStat> _demoStats(int currentWeek, int planned) {
+    const pattern = [1.0, 0.75, 1.0, 1.0, 0.5, 1.0, 0.75, 1.0];
+    const progs = [2, 1, 3, 2, 0, 4, 1, 3];
+    return List.generate(currentWeek, (i) {
+      final k = i % pattern.length;
+      return _WeekStat(
+        week: i + 1,
+        done: (planned * pattern[k]).round(),
+        planned: planned,
+        progressions: progs[k],
+      );
+    });
+  }
+
   Future<void> _load() async {
     final now = DateTime.now();
     final currentYear = _isoYear(now);
     final currentWeek = _weekNumber(now);
     final planned = widget.plannedDaysPerWeek;
+
+    if (widget.locked) {
+      setState(() {
+        _stats = _demoStats(currentWeek, planned);
+        _streak = 3;
+      });
+      _scrollToCurrent(currentWeek);
+      return;
+    }
 
     List<WorkoutSession> sessions = const [];
     try {
@@ -105,6 +137,10 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
       _streak = streak;
     });
 
+    _scrollToCurrent(currentWeek);
+  }
+
+  void _scrollToCurrent(int currentWeek) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_scrollCtrl.hasClients) return;
       final target = (currentWeek - 5) * _itemWidth;
@@ -118,6 +154,45 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
 
   @override
   Widget build(BuildContext context) {
+    final chart = _buildContent(context);
+    if (!widget.locked) return chart;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () =>
+          showPremiumRequired(context, feature: 'El progreso semanal'),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          IgnorePointer(
+            child: ImageFiltered(
+              imageFilter: ImageFilter.blur(sigmaX: 2.5, sigmaY: 2.5),
+              child: Opacity(opacity: 0.6, child: chart),
+            ),
+          ),
+          Card(
+            elevation: 2,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const PremiumBadge(),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Tu consistencia y progresión\nsemana a semana',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

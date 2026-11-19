@@ -17,10 +17,11 @@ import '../gym/screens/gym_admin_page.dart';
 import '../gym/screens/gym_classes_page.dart';
 import '../gym/services/gym_service.dart';
 import '../gym/widgets/gym_logo.dart';
+import '../onboarding/tutorial/coach_marks.dart';
+import '../onboarding/tutorial/tutorial_service.dart';
 import '../premium/duty_picker.dart';
 import '../premium/free_tier.dart';
 import '../premium/premium_service.dart';
-import '../premium/premium_widgets.dart';
 import '../profile/profile_service.dart';
 import '../profile/screens/profile_page.dart';
 import '../trainer/screens/my_athletes_page.dart';
@@ -28,6 +29,7 @@ import '../trainer/services/user_directory_service.dart';
 import '../workout/screens/edit_routine_page.dart';
 import '../workout/screens/workout_session_page.dart';
 import '../workout/screens/history_page.dart';
+import '../workout/widgets/exercise_demo.dart';
 import '../workout/screens/routine_catalog_page.dart';
 import 'weekly_progress_chart.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -49,6 +51,19 @@ class _HomePageState extends State<HomePage> {
   Gym? _ownedGym; // gimnasio que administra
   int _chartKey = 0;
   bool _pickingDuty = false;
+
+  // Tutorial del primer uso: elementos que se resaltan.
+  final _kProfile = GlobalKey();
+  final _kGymAdmin = GlobalKey();
+  final _kAthletes = GlobalKey();
+  final _kHistory = GlobalKey();
+  final _kCatalog = GlobalKey();
+  final _kEdit = GlobalKey();
+  final _kLogout = GlobalKey();
+  final _kFirstDay = GlobalKey();
+  final _kChart = GlobalKey();
+  final _kGym = GlobalKey();
+  bool _tutorialRunning = false;
   final _user = FirebaseAuth.instance.currentUser;
   final _premium = PremiumService.instance.isPremium;
 
@@ -81,19 +96,24 @@ class _HomePageState extends State<HomePage> {
     if (!_premium.value) _enforceFreeTier();
   }
 
-  /// Sin premium solo se entrena con las rutinas TrainApp: si la activa es
+  /// Sin premium solo se entrena con las rutinas Recomendadas: si la activa es
   /// otra (usuarios de antes, o el gimnasio le quitó el premium), se le pide
   /// elegir una. Consulta el premium al servidor antes de decidir.
   Future<void> _enforceFreeTier() async {
     final routine = _routine;
-    if (_pickingDuty || routine == null || FreeTier.isFreeRoutine(routine)) {
-      return;
-    }
-    final premium = await PremiumService.instance.fetch(_user!.uid);
-    if (premium || !mounted) return;
+    if (_pickingDuty || routine == null) return;
     _pickingDuty = true;
-    final chosen = await showDutyPicker(context, _user.uid);
-    _pickingDuty = false;
+    Routine? chosen;
+    try {
+      if (await FreeTier.isFreeRoutine(routine)) return;
+      final premium = await PremiumService.instance.fetch(_user!.uid);
+      if (premium || !mounted) return;
+      chosen = await showDutyPicker(context, _user.uid);
+    } catch (_) {
+      return; // sin conexión: se revisa la próxima vez
+    } finally {
+      _pickingDuty = false;
+    }
     if (chosen != null && mounted) {
       setState(() {
         _routine = chosen;
@@ -101,6 +121,96 @@ class _HomePageState extends State<HomePage> {
         _chartKey++;
       });
     }
+  }
+
+  /// La primera vez que se entra al inicio (o tras "Ver el tutorial de
+  /// nuevo" en el perfil) recorre los botones y menús principales.
+  Future<void> _maybeStartTutorial() async {
+    final user = _user;
+    if (user == null || _tutorialRunning || _pickingDuty || _routine == null) {
+      return;
+    }
+    _tutorialRunning = true;
+    final premium = _premium.value;
+    // Espera a que el gimnasio y los íconos terminen de cargar.
+    await TutorialService.runOnce(context, TutorialScreen.home,
+        delay: const Duration(milliseconds: 600), () => [
+      CoachMarkStep(
+        target: _kFirstDay,
+        title: 'Tus días de entrenamiento',
+        body: 'Esta es tu rutina, organizada por días. Toca un día para ver '
+            'sus ejercicios y pesos, y pulsa "Iniciar sesión" para entrenar: '
+            'la app te guía serie por serie, con temporizador de descanso.',
+      ),
+      CoachMarkStep(
+        target: _kGym,
+        title: 'Tu gimnasio',
+        body: 'Toca el logo para ir a la página de tu gimnasio y "Clases" '
+            'para ver e inscribirte a sus clases grupales.',
+      ),
+      CoachMarkStep(
+        target: _kChart,
+        title: 'Tu progreso semanal',
+        body: premium
+            ? 'Cada barra es una semana: cuántos días entrenaste frente a los '
+                'que planeaste. Una barra dorada es una semana con muchas '
+                'progresiones; arriba ves tu racha.'
+            : 'Aquí verás cuántos días entrenas cada semana, tu racha y tus '
+                'semanas de progresión. Es una función premium: puedes '
+                'probarla gratis 7 días desde tu perfil.',
+      ),
+      CoachMarkStep(
+        target: _kCatalog,
+        circle: true,
+        title: 'Catálogo de rutinas',
+        body: 'Cambia de rutina cuando quieras: recomendadas, por deporte, '
+            'macro ciclos, ediciones limitadas o las tuyas personalizadas.',
+      ),
+      CoachMarkStep(
+        target: _kEdit,
+        circle: true,
+        title: 'Editar rutina',
+        body: 'Ajusta tus días y ejercicios: agrega, quita o reemplaza, y '
+            'define cómo progresa cada ejercicio.',
+      ),
+      CoachMarkStep(
+        target: _kHistory,
+        circle: true,
+        title: 'Historial',
+        body: 'Todas tus sesiones registradas: fechas, ejercicios, series y '
+            'pesos que levantaste.',
+      ),
+      CoachMarkStep(
+        target: _kAthletes,
+        circle: true,
+        title: 'Mis atletas',
+        body: 'Como entrenador, aquí ves a tus atletas: editas sus rutinas, '
+            'revisas su historial y registras sus sesiones.',
+      ),
+      CoachMarkStep(
+        target: _kGymAdmin,
+        circle: true,
+        title: 'Mi gimnasio',
+        body: 'Administra tu gimnasio: miembros y su premium, clases, '
+            'facturación y el perfil del gimnasio.',
+      ),
+      CoachMarkStep(
+        target: _kProfile,
+        circle: true,
+        title: 'Tu perfil',
+        body: 'Tus datos, tu plan (y la prueba premium gratis), la progresión '
+            'automática, los extras de entrenamiento, tu gimnasio y tu '
+            'entrenador. Desde aquí puedes volver a ver este tutorial.',
+      ),
+      CoachMarkStep(
+        target: _kLogout,
+        circle: true,
+        title: 'Cerrar sesión',
+        body: 'Sales de tu cuenta en este dispositivo. Tus datos quedan '
+            'guardados en la nube.',
+      ),
+    ]);
+    _tutorialRunning = false;
   }
 
   Future<void> _loadRoutine() async {
@@ -113,7 +223,8 @@ class _HomePageState extends State<HomePage> {
     }
     if (mounted) {
       setState(() { _routine = routine; _macro = macro; _loading = false; });
-      _enforceFreeTier();
+      await _enforceFreeTier();
+      _maybeStartTutorial();
     }
   }
 
@@ -345,6 +456,7 @@ class _HomePageState extends State<HomePage> {
         title: const Text('TrainApp'),
         actions: [
           IconButton(
+            key: _kProfile,
             icon: const Icon(Icons.person_outline),
             tooltip: 'Mi perfil',
             onPressed: () async {
@@ -359,10 +471,13 @@ class _HomePageState extends State<HomePage> {
               // El toggle "Modo entrenador" o la pertenencia a un gimnasio
               // pudieron cambiar en ProfilePage.
               await Future.wait([_loadIsTrainer(), _loadGym()]);
+              // Pudo pedir "Ver el tutorial de nuevo".
+              _maybeStartTutorial();
             },
           ),
           if (_ownedGym != null)
             IconButton(
+              key: _kGymAdmin,
               icon: const Icon(Icons.store_outlined),
               tooltip: 'Mi gimnasio',
               onPressed: () async {
@@ -379,6 +494,7 @@ class _HomePageState extends State<HomePage> {
           if ((_isTrainer && _premium.value) ||
               (_gymMembership?.isTrainer ?? false))
             IconButton(
+              key: _kAthletes,
               icon: const Icon(Icons.groups),
               tooltip: 'Mis atletas',
               onPressed: () => Navigator.push(
@@ -387,6 +503,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           IconButton(
+            key: _kHistory,
             icon: const Icon(Icons.history),
             tooltip: 'Historial',
             onPressed: () => Navigator.push(
@@ -395,6 +512,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           IconButton(
+            key: _kCatalog,
             icon: const Icon(Icons.menu_book),
             tooltip: 'Catálogo de rutinas',
             onPressed: () async {
@@ -410,12 +528,15 @@ class _HomePageState extends State<HomePage> {
           ),
           if (_routine != null)
             IconButton(
+              key: _kEdit,
               icon: const Icon(Icons.edit_outlined),
               tooltip: 'Editar rutina',
               onPressed: _openEdit,
             ),
           IconButton(
+            key: _kLogout,
             icon: const Icon(Icons.logout),
+            tooltip: 'Cerrar sesión',
             onPressed: () async {
               PremiumService.instance.stop();
               await AuthService().signOut();
@@ -441,6 +562,9 @@ class _HomePageState extends State<HomePage> {
                   macro: _macro,
                   chartKey: _chartKey,
                   onSessionCompleted: _onSessionCompleted,
+                  firstDayKey: _kFirstDay,
+                  chartTargetKey: _kChart,
+                  gymKey: _kGym,
                 ),
     );
   }
@@ -457,7 +581,15 @@ class _RoutineView extends StatelessWidget {
   final int chartKey;
   final VoidCallback onSessionCompleted;
 
+  // Elementos que resalta el tutorial.
+  final GlobalKey firstDayKey;
+  final GlobalKey chartTargetKey;
+  final GlobalKey gymKey;
+
   const _RoutineView({
+    required this.firstDayKey,
+    required this.chartTargetKey,
+    required this.gymKey,
     required this.routine,
     required this.gym,
     required this.gymAthlete,
@@ -493,6 +625,7 @@ class _RoutineView extends StatelessWidget {
             if (gym != null) ...[
               const SizedBox(width: 12),
               Column(
+                key: gymKey,
                 children: [
                   Tooltip(
                     message: gym!.websiteUrl?.trim().isNotEmpty == true
@@ -576,30 +709,26 @@ class _RoutineView extends StatelessWidget {
           const SizedBox(height: 16),
         ],
 
-        for (final day in routine.days) ...[
-          _DayCard(day: day, onSessionCompleted: onSessionCompleted),
+        for (final (i, day) in routine.days.indexed) ...[
+          KeyedSubtree(
+            key: i == 0 ? firstDayKey : null,
+            child: _DayCard(day: day, onSessionCompleted: onSessionCompleted),
+          ),
           const SizedBox(height: 12),
         ],
 
         const Divider(height: 32),
-        if (premium)
-          WeeklyProgressChart(
-            key: ValueKey(chartKey),
+        KeyedSubtree(
+          key: chartTargetKey,
+          child: WeeklyProgressChart(
+            // El premium cambia la key: la gráfica se recarga con datos reales.
+            key: ValueKey('$chartKey-$premium'),
             plannedDaysPerWeek: routine.days.length,
             totalRoutineExercises:
                 routine.days.fold(0, (sum, d) => sum + d.exercises.length),
-          )
-        else
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.insights, color: kPremiumColor),
-              title: const Text('Progreso semanal'),
-              subtitle: const Text('Tu consistencia y progresión semana a semana.'),
-              trailing: const PremiumBadge(),
-              onTap: () => showPremiumRequired(context,
-                  feature: 'El progreso semanal'),
-            ),
+            locked: !premium,
           ),
+        ),
         const SizedBox(height: 16),
       ],
     );
@@ -733,16 +862,23 @@ class _DayCard extends StatelessWidget {
               subtitle: Text(
                 '${ex.sets} series · ${ex.repsMin}–${ex.repsMax} reps · ${ex.restSeconds}s descanso',
               ),
-              trailing: ex.currentWeight > 0
-                  ? Text(
-                      '${_trimDouble(ex.currentWeight)} ${ex.weightUnit}',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    )
-                  : Text('— ${ex.weightUnit}',
-                      style: const TextStyle(color: Colors.grey)),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ex.currentWeight > 0
+                      ? Text(
+                          '${_trimDouble(ex.currentWeight)} ${ex.weightUnit}',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        )
+                      : Text('— ${ex.weightUnit}',
+                          style: const TextStyle(color: Colors.grey)),
+                  ExerciseDemoButton(
+                      exerciseId: ex.exerciseId, exerciseName: ex.name),
+                ],
+              ),
             ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),

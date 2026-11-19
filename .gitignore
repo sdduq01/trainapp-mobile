@@ -120,6 +120,10 @@ app.*.symbols
 # Node (scripts/)
 node_modules/
 scripts/node_modules/
+# Demostraciones generadas (scripts/build_exercise_demos.js)
+scripts/exercise_demos/out/
+scripts/exercise_demos/.cache/
+scripts/exercise_demos/revision.png
 
 # Portal web compilado (scripts/build_portal.sh)
 /hosting/gimnasio/

@@ -37,6 +37,32 @@ class Gym {
     this.billingExempt = false,
   });
 
+  /// Máximo de caracteres de la página web (igual que en firestore.rules).
+  static const int kMaxWebsiteLength = 300;
+
+  /// Normaliza la página web que escribe el dueño: vacío → '' (sin página);
+  /// sin esquema se le antepone https://. Devuelve null si no es una URL
+  /// http(s) válida.
+  static String? normalizeWebsite(String input) {
+    var text = input.trim();
+    if (text.isEmpty) return '';
+    if (!text.contains('://')) text = 'https://$text';
+    final uri = Uri.tryParse(text);
+    if (uri == null ||
+        (uri.scheme != 'https' && uri.scheme != 'http') ||
+        !uri.host.contains('.') ||
+        text.length > kMaxWebsiteLength) {
+      return null;
+    }
+    return text;
+  }
+
+  /// Validador de formulario para la página web (opcional).
+  static String? validateWebsite(String? v) =>
+      normalizeWebsite(v ?? '') == null
+          ? 'Escribe una dirección válida, p. ej. https://migimnasio.com'
+          : null;
+
   factory Gym.fromMap(String id, Map<String, dynamic> m) => Gym(
         id: id,
         name: m['name'] as String? ?? '',

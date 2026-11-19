@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
 import '../account_deletion_service.dart';
 import '../models/user_profile.dart';
@@ -7,12 +7,19 @@ import '../profile_service.dart';
 import '../../auth/auth_gate.dart';
 import '../../core/utils/legal_links.dart';
 import '../../gym/models/gym_member.dart';
+import '../../gym/models/gym.dart';
+import '../../gym/models/gym_request.dart';
+import '../../gym/screens/gym_admin_page.dart';
 import '../../gym/services/gym_service.dart';
+import '../../gym/services/gym_request_service.dart';
+import '../../portal/screens/gym_request_page.dart';
 import '../../onboarding/config/body_fat_options.dart';
+import '../../onboarding/tutorial/tutorial_service.dart';
 import '../../premium/duty_picker.dart';
 import '../../premium/free_tier.dart';
 import '../../premium/premium_service.dart';
 import '../../premium/premium_widgets.dart';
+import '../../premium/trial_offer.dart';
 import '../../trainer/models/trainer_link.dart';
 import '../../trainer/services/trainer_link_service.dart';
 import '../../workout/services/routine_generator.dart';
@@ -64,6 +71,11 @@ class _ProfilePageState extends State<ProfilePage> {
   GymMember? _gymMembership;
   bool _gymBusy = false;
 
+  // "Registrar mi gimnasio": gimnasio que administro o mi solicitud.
+  bool _ownGymLoaded = false;
+  Gym? _ownedGym;
+  GymRequest? _gymRequest;
+
   static const _goalLabels = {
     TrainingGoal.fatLoss: 'Perder grasa',
     TrainingGoal.muscleGain: 'Ganar masa muscular',
@@ -78,6 +90,7 @@ class _ProfilePageState extends State<ProfilePage> {
     _load();
     _loadTrainerLink();
     _loadGymMembership();
+    _loadOwnGym();
   }
 
   @override
@@ -172,6 +185,96 @@ class _ProfilePageState extends State<ProfilePage> {
     } catch (_) {
       // silencioso: la sección del gimnasio simplemente no aparece
     }
+  }
+
+  Future<void> _loadOwnGym() async {
+    try {
+      final results = await Future.wait([
+        GymService().getOwnedGym(_userId),
+        GymRequestService().getMyRequest(_userId),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _ownedGym = results[0] as Gym?;
+        _gymRequest = results[1] as GymRequest?;
+        _ownGymLoaded = true;
+      });
+    } catch (_) {
+      // silencioso: la sección simplemente no aparece
+    }
+  }
+
+  Future<void> _openGymRequest() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (ctx) => GymRequestPage(
+          user: user,
+          existing: _gymRequest,
+          inApp: true,
+          onSubmitted: () {
+            Navigator.pop(ctx);
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Solicitud enviada. La revisaremos pronto.'),
+            ));
+          },
+        ),
+      ),
+    );
+    _loadOwnGym();
+  }
+
+  Future<void> _openOwnGym() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(builder: (_) => GymAdminPage(gym: _ownedGym!)),
+    );
+    _loadOwnGym(); // pudo cambiar el nombre o el logo
+  }
+
+  Widget _buildOwnGymCard() {
+    final gym = _ownedGym;
+    final req = _gymRequest;
+    final (IconData icon, String title, String subtitle, VoidCallback onTap) =
+        gym != null
+            ? (
+                Icons.storefront,
+                'Administras ${gym.name}',
+                'Miembros, premium, clases, facturación y perfil del gimnasio.',
+                _openOwnGym,
+              )
+            : switch (req?.status) {
+                GymRequestStatus.pending => (
+                    Icons.hourglass_top,
+                    'Solicitud en revisión',
+                    '${req!.gymName}. Toca para ver o editar tu solicitud.',
+                    _openGymRequest,
+                  ),
+                GymRequestStatus.rejected => (
+                    Icons.info_outline,
+                    'Solicitud no aprobada',
+                    'Toca para ver el motivo, corregirla y reenviarla.',
+                    _openGymRequest,
+                  ),
+                _ => (
+                    Icons.add_business_outlined,
+                    'Registrar mi gimnasio',
+                    '¿Tienes un gimnasio? Inscríbelo en TrainApp para '
+                        'administrar a tus atletas y activarles el premium.',
+                    _openGymRequest,
+                  ),
+              };
+    return Card(
+      child: ListTile(
+        leading: Icon(icon),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: onTap,
+      ),
+    );
   }
 
   Future<void> _acceptGym() async {
@@ -787,6 +890,11 @@ class _ProfilePageState extends State<ProfilePage> {
                 _sectionTitle('Plan'),
                 const SizedBox(height: 8),
                 _buildPlanCard(),
+                TrialOffer(
+                  uid: _userId,
+                  premium: _premium,
+                  onActivated: () => setState(() => _premium = true),
+                ),
 
                 const SizedBox(height: 24),
                 _sectionTitle('Progresión'),
@@ -875,6 +983,13 @@ class _ProfilePageState extends State<ProfilePage> {
                   _buildGymCard(),
                 ],
 
+                if (_ownGymLoaded) ...[
+                  const SizedBox(height: 24),
+                  _sectionTitle('Mi gimnasio'),
+                  const SizedBox(height: 8),
+                  _buildOwnGymCard(),
+                ],
+
                 if (!_trainerLinkLoading && _trainerLink != null) ...[
                   const SizedBox(height: 24),
                   _sectionTitle('Entrenador'),
@@ -895,6 +1010,23 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                         )
                       : const Text('Guardar cambios'),
+                ),
+
+                const SizedBox(height: 24),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.lightbulb_outline),
+                    title: const Text('Ver los tutoriales de nuevo'),
+                    subtitle: const Text(
+                      'Vuelven a aparecer en el inicio, el entrenamiento y la edición de rutinas.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () async {
+                      await TutorialService().resetAll();
+                      if (context.mounted) Navigator.pop(context);
+                    },
+                  ),
                 ),
 
                 const SizedBox(height: 40),
@@ -1121,6 +1253,16 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  static String _formatTrialEnd(DateTime? d) {
+    if (d == null) return '';
+    const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+        'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    final l = d.toLocal();
+    final hh = l.hour.toString().padLeft(2, '0');
+    final mm = l.minute.toString().padLeft(2, '0');
+    return '${l.day} de ${months[l.month - 1]} a las $hh:$mm';
+  }
+
   Widget _buildPlanCard() {
     final gym = _gymMembership;
     final viaGym = gym != null && gym.isAccepted;
@@ -1132,9 +1274,11 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         title: Text(_premium ? 'Premium' : 'Gratis'),
         subtitle: Text(
-          _premium
+          _premium && PremiumService.instance.source == 'trial'
+              ? 'Prueba gratis hasta el ${_formatTrialEnd(PremiumService.instance.expiresAt)}.'
+              : _premium
               ? (viaGym ? 'Activado por ${gym.gymName}.' : 'Activado por tu gimnasio.')
-              : 'Rutinas TrainApp Light Duty, Duty y Hard Duty y tus últimas '
+              : 'Todas las rutinas Recomendadas y tus últimas '
                   '${FreeTier.historySessions} sesiones. $kPremiumHowTo',
           style: const TextStyle(fontSize: 12),
         ),

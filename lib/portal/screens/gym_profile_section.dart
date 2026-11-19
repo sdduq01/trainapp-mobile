@@ -25,13 +25,14 @@ class _GymProfileSectionState extends State<GymProfileSection> {
   late final _cityCtrl = TextEditingController(text: widget.gym.city);
   late final _addressCtrl = TextEditingController(text: widget.gym.address);
   late final _phoneCtrl = TextEditingController(text: widget.gym.phone);
+  late final _websiteCtrl = TextEditingController(text: widget.gym.websiteUrl);
   late int _cancelWindowHours = widget.gym.cancelWindowHours;
   bool _saving = false;
   bool _uploading = false;
 
   @override
   void dispose() {
-    for (final c in [_nameCtrl, _cityCtrl, _addressCtrl, _phoneCtrl]) {
+    for (final c in [_nameCtrl, _cityCtrl, _addressCtrl, _phoneCtrl, _websiteCtrl]) {
       c.dispose();
     }
     super.dispose();
@@ -63,6 +64,7 @@ class _GymProfileSectionState extends State<GymProfileSection> {
       city: _cityCtrl.text.trim(),
       address: _addressCtrl.text.trim(),
       phone: _phoneCtrl.text.trim(),
+      websiteUrl: Gym.normalizeWebsite(_websiteCtrl.text) ?? '',
       cancelWindowHours: _cancelWindowHours,
     );
     setState(() => _saving = true);
@@ -146,6 +148,19 @@ class _GymProfileSectionState extends State<GymProfileSection> {
                 controller: _phoneCtrl,
                 keyboardType: TextInputType.phone,
                 decoration: const InputDecoration(labelText: 'Teléfono'),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _websiteCtrl,
+                keyboardType: TextInputType.url,
+                decoration: const InputDecoration(
+                  labelText: 'Página web (opcional)',
+                  hintText: 'https://migimnasio.com',
+                  helperText:
+                      'Al tocar tu logo en la app, tus atletas abren esta página.',
+                  helperMaxLines: 2,
+                ),
+                validator: Gym.validateWebsite,
               ),
               const SizedBox(height: 20),
               DropdownButtonFormField<int>(

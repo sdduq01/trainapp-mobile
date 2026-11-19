@@ -5,6 +5,7 @@ import '../models/onboarding_data.dart';
 import '../../premium/duty_picker.dart';
 import '../../premium/free_tier.dart';
 import '../../premium/premium_service.dart';
+import '../../premium/trial_offer.dart';
 import '../../profile/models/user_profile.dart';
 import '../../profile/profile_service.dart';
 import '../../home/home_page.dart';
@@ -190,7 +191,17 @@ class _OnboardingStep2PageState extends State<OnboardingStep2Page> {
               onChanged: (v) => setState(() => _experienceMonths = v),
             ),
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
+
+            // Con la prueba activa, la rutina se genera a la medida del
+            // perfil en lugar de arrancar con una TrainApp.
+            if (FirebaseAuth.instance.currentUser != null)
+              TrialOffer(
+                uid: FirebaseAuth.instance.currentUser!.uid,
+                premium: false,
+              ),
+
+            const SizedBox(height: 16),
 
             FilledButton(
               onPressed: _isValid ? () => _finish(previousData) : null,

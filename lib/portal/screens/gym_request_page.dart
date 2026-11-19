@@ -1,9 +1,13 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../gym/models/gym.dart';
 import '../../gym/models/gym_request.dart';
 import '../../gym/services/gym_request_service.dart';
 import '../widgets/portal_scaffold.dart';
+
+/// Portal web del gimnasio (donde se administra una vez aprobado).
+const String kGymPortalUrl = 'https://trainapp-prod.web.app/gimnasio';
 
 /// Formulario "Inscribe tu gimnasio" y estado de la solicitud. Mientras está
 /// en revisión se puede editar; si se rechaza, muestra el motivo y permite
@@ -16,11 +20,16 @@ class GymRequestPage extends StatefulWidget {
   /// Volver sin enviar (solo cuando todavía no hay solicitud).
   final VoidCallback? onCancel;
 
+  /// Abierta desde el perfil de la app (no desde el portal web): barra con
+  /// "volver" y textos que remiten al portal web.
+  final bool inApp;
+
   const GymRequestPage({
     required this.user,
     required this.existing,
     required this.onSubmitted,
     this.onCancel,
+    this.inApp = false,
     super.key,
   });
 
@@ -35,6 +44,8 @@ class _GymRequestPageState extends State<GymRequestPage> {
   late final _cityCtrl = TextEditingController(text: widget.existing?.city);
   late final _addressCtrl = TextEditingController(text: widget.existing?.address);
   late final _phoneCtrl = TextEditingController(text: widget.existing?.phone);
+  late final _websiteCtrl =
+      TextEditingController(text: widget.existing?.websiteUrl);
 
   /// Con una solicitud pendiente se muestra el resumen; "Editar" abre el form.
   late bool _editing = widget.existing == null ||
@@ -43,7 +54,7 @@ class _GymRequestPageState extends State<GymRequestPage> {
 
   @override
   void dispose() {
-    for (final c in [_gymNameCtrl, _contactCtrl, _cityCtrl, _addressCtrl, _phoneCtrl]) {
+    for (final c in [_gymNameCtrl, _contactCtrl, _cityCtrl, _addressCtrl, _phoneCtrl, _websiteCtrl]) {
       c.dispose();
     }
     super.dispose();
@@ -60,6 +71,7 @@ class _GymRequestPageState extends State<GymRequestPage> {
         city: _cityCtrl.text.trim(),
         address: _addressCtrl.text.trim(),
         phone: _phoneCtrl.text.trim(),
+        websiteUrl: Gym.normalizeWebsite(_websiteCtrl.text) ?? '',
         email: widget.user.email ?? '',
         status: GymRequestStatus.pending,
         createdAt: widget.existing?.createdAt ?? DateTime.now(),
@@ -82,18 +94,23 @@ class _GymRequestPageState extends State<GymRequestPage> {
   @override
   Widget build(BuildContext context) {
     final existing = widget.existing;
-    return PortalScaffold(
-      body: PortalPage(
-        maxWidth: 560,
-        children: [
-          if (existing != null) ...[
-            _StatusBanner(request: existing),
-            const SizedBox(height: 24),
-          ],
-          if (_editing) _buildForm() else _buildSummary(existing!),
+    final page = PortalPage(
+      maxWidth: 560,
+      children: [
+        if (existing != null) ...[
+          _StatusBanner(request: existing, inApp: widget.inApp),
+          const SizedBox(height: 24),
         ],
-      ),
+        if (_editing) _buildForm() else _buildSummary(existing!),
+      ],
     );
+    if (widget.inApp) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Registrar mi gimnasio')),
+        body: page,
+      );
+    }
+    return PortalScaffold(body: page);
   }
 
   Widget _buildSummary(GymRequest r) {
@@ -121,6 +138,7 @@ class _GymRequestPageState extends State<GymRequestPage> {
             row('Ciudad', r.city),
             row('Dirección', r.address),
             row('Teléfono', r.phone),
+            if (r.websiteUrl.isNotEmpty) row('Página web', r.websiteUrl),
             row('Email', r.email),
             if (r.status == GymRequestStatus.pending) ...[
               const SizedBox(height: 12),
@@ -149,10 +167,15 @@ class _GymRequestPageState extends State<GymRequestPage> {
               const Text('Inscribe tu gimnasio',
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
-              const Text(
-                'Revisaremos tus datos y activaremos tu gimnasio. Luego podrás '
-                'invitar a tus entrenadores y atletas desde aquí.',
-                style: TextStyle(color: Colors.grey),
+              Text(
+                widget.inApp
+                    ? 'Revisaremos tus datos y activaremos tu gimnasio. Luego '
+                        'lo administras desde la app (Inicio → Mi gimnasio) o '
+                        'desde $kGymPortalUrl con esta misma cuenta: invitas '
+                        'a tus entrenadores y atletas y les activas el premium.'
+                    : 'Revisaremos tus datos y activaremos tu gimnasio. Luego '
+                        'podrás invitar a tus entrenadores y atletas desde aquí.',
+                style: const TextStyle(color: Colors.grey),
               ),
               const SizedBox(height: 20),
               TextFormField(
@@ -189,6 +212,19 @@ class _GymRequestPageState extends State<GymRequestPage> {
                 validator: _required,
               ),
               const SizedBox(height: 12),
+              TextFormField(
+                controller: _websiteCtrl,
+                keyboardType: TextInputType.url,
+                decoration: const InputDecoration(
+                  labelText: 'Página web (opcional)',
+                  hintText: 'https://migimnasio.com',
+                  helperText:
+                      'El logo de tu gimnasio en la app de tus atletas enlazará aquí.',
+                  helperMaxLines: 2,
+                ),
+                validator: Gym.validateWebsite,
+              ),
+              const SizedBox(height: 12),
               Text('Email de la cuenta: ${widget.user.email ?? ''}',
                   style: const TextStyle(fontSize: 12, color: Colors.grey)),
               const SizedBox(height: 20),
@@ -223,8 +259,9 @@ class _GymRequestPageState extends State<GymRequestPage> {
 
 class _StatusBanner extends StatelessWidget {
   final GymRequest request;
+  final bool inApp;
 
-  const _StatusBanner({required this.request});
+  const _StatusBanner({required this.request, this.inApp = false});
 
   @override
   Widget build(BuildContext context) {
@@ -234,7 +271,10 @@ class _StatusBanner extends StatelessWidget {
           Icons.hourglass_top,
           Colors.orange,
           'Solicitud en revisión',
-          'Cuando la aprobemos, al volver a entrar al portal verás el panel de tu gimnasio.',
+          inApp
+              ? 'Cuando la aprobemos, administra tu gimnasio desde Mi perfil '
+                  'o Inicio → Mi gimnasio, o en $kGymPortalUrl.'
+              : 'Cuando la aprobemos, al volver a entrar al portal verás el panel de tu gimnasio.',
         ),
       GymRequestStatus.rejected => (
           Icons.info_outline,
@@ -248,7 +288,10 @@ class _StatusBanner extends StatelessWidget {
           Icons.check_circle_outline,
           Colors.green,
           'Solicitud aprobada',
-          'Tu gimnasio está activo. Recarga la página para entrar al panel.',
+          inApp
+              ? 'Tu gimnasio está activo. Adminístralo desde Inicio → Mi '
+                  'gimnasio o en $kGymPortalUrl.'
+              : 'Tu gimnasio está activo. Recarga la página para entrar al panel.',
         ),
     };
     return Container(

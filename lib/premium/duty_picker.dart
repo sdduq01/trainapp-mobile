@@ -4,22 +4,10 @@ import '../workout/models/routine.dart';
 import '../workout/models/routine_template.dart';
 import '../workout/services/macrocycle_service.dart';
 import '../workout/services/routine_service.dart';
-import '../workout/services/routine_template_service.dart';
 import 'free_tier.dart';
 
-/// Las tres rutinas gratis, en el orden Light → Duty → Hard.
-Future<List<RoutineTemplate>> loadFreeTemplates() async {
-  final service = RoutineTemplateService();
-  final found = await Future.wait([
-    for (final id in [
-      FreeTier.lightDutyId,
-      FreeTier.dutyId,
-      FreeTier.hardDutyId,
-    ])
-      service.getById(id),
-  ]);
-  return found.whereType<RoutineTemplate>().toList();
-}
+/// Las rutinas gratis (todas las Recomendadas), en el orden del catálogo.
+Future<List<RoutineTemplate>> loadFreeTemplates() => FreeTier.freeTemplates();
 
 /// Activa la plantilla [template] como rutina de [uid] (con sus PRs) y
 /// abandona el macro ciclo si había uno.
@@ -106,8 +94,8 @@ class _DutyPickerDialogState extends State<_DutyPickerDialog> {
                   children: [
                     const Text(
                       'Tu rutina actual es premium. Sin premium puedes '
-                      'entrenar con una de las rutinas TrainApp; tus pesos '
-                      'registrados se mantienen.',
+                      'entrenar con cualquiera de las rutinas Recomendadas; '
+                      'tus pesos registrados se mantienen.',
                     ),
                     const SizedBox(height: 12),
                     for (final t in items)

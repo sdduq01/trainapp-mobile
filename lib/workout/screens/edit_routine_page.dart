@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../onboarding/tutorial/coach_marks.dart';
+import '../../onboarding/tutorial/tutorial_service.dart';
 import '../data/macrocycle_forjado.dart';
 import '../data/muscle_groups.dart';
 import '../models/routine.dart';
@@ -28,6 +30,79 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
   void initState() {
     super.initState();
     _routine = widget.routine;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _startTutorial());
+  }
+
+  // ── Tutorial de primer uso ─────────────────────────────────
+  final _kTutSave = GlobalKey();
+  final _kTutDay = GlobalKey();
+  final _kTutAddExercise = GlobalKey();
+  final _kTutDeleteDay = GlobalKey();
+  final _kTutExercise = GlobalKey();
+  final _kTutEditExercise = GlobalKey();
+  final _kTutRemoveExercise = GlobalKey();
+  final _kTutDrag = GlobalKey();
+  final _kTutAddDay = GlobalKey();
+
+  void _startTutorial() {
+    if (!mounted) return;
+    TutorialService.runOnce(context, TutorialScreen.editRoutine, () => [
+          CoachMarkStep(
+            target: _kTutDay,
+            title: 'Cada día de tu rutina',
+            body: 'Tu rutina está dividida en días; aquí editas los '
+                'ejercicios de cada uno.',
+          ),
+          CoachMarkStep(
+            target: _kTutAddExercise,
+            title: 'Agregar ejercicio',
+            body: 'Busca por grupo muscular y suma ejercicios a este día. '
+                'Con premium también puedes agregar cardio, estiramientos y '
+                'crear tus propios ejercicios.',
+          ),
+          CoachMarkStep(
+            target: _kTutExercise,
+            title: 'Un ejercicio',
+            body: 'Series, repeticiones, descanso y cuánto sube el peso cuando '
+                'progresas.',
+          ),
+          CoachMarkStep(
+            target: _kTutEditExercise,
+            circle: true,
+            title: 'Editar ejercicio',
+            body: 'Cambia series, repeticiones, descanso, unidad de peso y '
+                'el tipo de progresión.',
+          ),
+          CoachMarkStep(
+            target: _kTutRemoveExercise,
+            circle: true,
+            title: 'Quitar ejercicio',
+            body: 'Lo saca de este día. Tus registros anteriores se conservan.',
+          ),
+          CoachMarkStep(
+            target: _kTutDrag,
+            circle: true,
+            title: 'Reordenar',
+            body: 'Mantén presionado un ejercicio y arrástralo para cambiar el '
+                'orden en que los haces.',
+          ),
+          CoachMarkStep(
+            target: _kTutDeleteDay,
+            circle: true,
+            title: 'Eliminar día',
+            body: 'Quita el día completo de tu rutina.',
+          ),
+          CoachMarkStep(
+            target: _kTutAddDay,
+            title: 'Agregar día',
+            body: 'Suma un día nuevo con su nombre y enfoque.',
+          ),
+          CoachMarkStep(
+            target: _kTutSave,
+            title: 'Guardar',
+            body: 'Nada cambia en tu rutina hasta que guardas.',
+          ),
+        ]);
   }
 
   // ── Mutaciones de rutina ─────────────────────────────────
@@ -196,6 +271,7 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
                   ),
                 )
               : TextButton(
+                  key: _kTutSave,
                   onPressed: _save,
                   child: const Text('Guardar'),
                 ),
@@ -213,6 +289,7 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: OutlinedButton.icon(
+                key: _kTutAddDay,
                 onPressed: _showAddDayDialog,
                 icon: const Icon(Icons.add),
                 label: const Text('Agregar día'),
@@ -223,7 +300,9 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
             );
           }
           final day = _routine.days[dayIdx];
+          final first = dayIdx == 0;
           return Card(
+            key: first ? _kTutDay : null,
             margin: const EdgeInsets.only(bottom: 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -242,12 +321,14 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
                         ),
                       ),
                       TextButton.icon(
+                        key: first ? _kTutAddExercise : null,
                         onPressed: () => _showAddExerciseSheet(dayIdx),
                         icon: const Icon(Icons.add, size: 18),
                         label: const Text('Agregar'),
                       ),
                       if (!_structureLocked)
                         IconButton(
+                          key: first ? _kTutDeleteDay : null,
                           icon: const Icon(
                             Icons.delete_outline,
                             color: Colors.red,
@@ -274,9 +355,10 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
                   },
                   itemBuilder: (_, exIdx) {
                     final ex = day.exercises[exIdx];
+                    final tut = first && exIdx == 0;
                     return ListTile(
                       key: ValueKey('${dayIdx}_$exIdx'),
-                      title: Text(ex.name),
+                      title: Text(ex.name, key: tut ? _kTutExercise : null),
                       subtitle: Text(
                         '${ex.sets} series · ${ex.repsMin}–${ex.repsMax} reps'
                         ' · ${ex.restSeconds}s descanso'
@@ -286,14 +368,19 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
+                            key: tut ? _kTutEditExercise : null,
                             icon: const Icon(Icons.edit_outlined, size: 20),
+                            tooltip: 'Editar ejercicio',
                             onPressed: () => _showEditDialog(dayIdx, exIdx),
                           ),
                           IconButton(
+                            key: tut ? _kTutRemoveExercise : null,
                             icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                            tooltip: 'Quitar ejercicio',
                             onPressed: () => _removeExercise(dayIdx, exIdx),
                           ),
-                          const Icon(Icons.drag_handle, color: Colors.grey),
+                          Icon(Icons.drag_handle,
+                              key: tut ? _kTutDrag : null, color: Colors.grey),
                         ],
                       ),
                     );

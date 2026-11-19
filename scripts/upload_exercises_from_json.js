@@ -232,9 +232,17 @@ async function main() {
     process.exit(0);
   }
 
+  // Al reemplazar se conservan los campos de la demostración (los escribe
+  // scripts/build_exercise_demos.js, no vienen en el JSON).
+  const demoFields = new Map(snap.docs.map(d => {
+    const data = d.data();
+    return [d.id, Object.fromEntries(
+      Object.entries(data).filter(([k]) => k.startsWith('demo')))];
+  }));
   const batch = db.batch();
   for (const t of toWrite) {
-    batch.set(db.collection(COLLECTION).doc(t.docId), t.data);
+    batch.set(db.collection(COLLECTION).doc(t.docId),
+      { ...t.data, ...(demoFields.get(t.docId) || {}) });
   }
   await batch.commit();
 

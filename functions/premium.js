@@ -23,10 +23,21 @@
  *   (`gyms/{gymId}/invoices/{yyyyMM}`), que vence el día 5. Los gimnasios
  *   con `billingExempt: true` (solo lo pone un admin) no se facturan.
  *
+ * - Prueba gratis: 7 días de premium, una sola vez por email. La app crea
+ *   `trial_requests/{uid}`; `startTrial` la activa (status 'active', endsAt)
+ *   o la rechaza (status 'rejected', reason 'used') si el email ya la usó
+ *   (`trial_emails/{sha256(email)}`, que se conserva aunque se borre la
+ *   cuenta). El premium del gimnasio tiene prioridad sobre la prueba. Con
+ *   prueba, `entitlements` lleva `expiresAt` y reglas y app lo respetan;
+ *   `expireTrials` lo limpia cada hora.
+ *
  * Colombia no tiene horario de verano: hora de Bogotá = UTC-5 siempre.
  */
 
+const crypto = require('crypto');
 const { Timestamp } = require('firebase-admin/firestore');
+
+const TRIAL_DAYS = 7;
 
 const PRICE_PER_ATHLETE = 4000; // COP por atleta premium al mes
 const DUE_DAY = 5;              // la factura vence al terminar este día
@@ -102,19 +113,20 @@ function isBillableInMonth(billing, year, month0) {
 
 // ── Cálculo del premium ──────────────────────────────────────────────────
 
-/** Qué debería tener [uid] según su gimnasio. Lee dentro de [tx]. */
-async function desiredEntitlement(tx, db, uid) {
-  const [memberSnap, ownedSnap] = await Promise.all([
+/** Qué debería tener [uid] según su gimnasio o su prueba. Lee dentro de [tx]. */
+async function desiredEntitlement(tx, db, uid, now = new Date()) {
+  const [memberSnap, ownedSnap, trialSnap] = await Promise.all([
     tx.get(db.doc(`gym_members/${uid}`)),
     tx.get(db.collection('gyms').where('ownerUid', '==', uid).limit(1)),
+    tx.get(db.doc(`trial_requests/${uid}`)),
   ]);
 
-  let result = { premium: false, source: null, gymId: null, billable: false };
+  let result = { premium: false, source: null, gymId: null, billable: false, expiresAt: null };
 
   if (!ownedSnap.empty) {
     const gym = ownedSnap.docs[0];
     if (gym.data().status !== 'suspended') {
-      result = { premium: true, source: 'gym_owner', gymId: gym.id, billable: false };
+      result = { premium: true, source: 'gym_owner', gymId: gym.id, billable: false, expiresAt: null };
     }
   }
 
@@ -124,13 +136,23 @@ async function desiredEntitlement(tx, db, uid) {
       const gymSnap = await tx.get(db.doc(`gyms/${m.gymId}`));
       const active = gymSnap.exists && gymSnap.data().status !== 'suspended';
       if (active && m.role === 'trainer' && !result.premium) {
-        result = { premium: true, source: 'gym_trainer', gymId: m.gymId, billable: false };
+        result = { premium: true, source: 'gym_trainer', gymId: m.gymId, billable: false, expiresAt: null };
       } else if (active && m.role === 'athlete' && m.premium === true) {
         result = {
           premium: true, source: 'gym_athlete', gymId: m.gymId, billable: true,
-          email: m.email || '',
+          email: m.email || '', expiresAt: null,
         };
       }
+    }
+  }
+
+  if (!result.premium && trialSnap.exists) {
+    const t = trialSnap.data();
+    if (t.status === 'active' && t.endsAt && t.endsAt.toMillis() > now.getTime()) {
+      result = {
+        premium: true, source: 'trial', gymId: null, billable: false,
+        expiresAt: t.endsAt,
+      };
     }
   }
   return result;
@@ -145,7 +167,7 @@ async function recomputeEntitlement(db, uid, now = new Date()) {
     const entRef = db.doc(`entitlements/${uid}`);
     const entSnap = await tx.get(entRef);
     const prev = entSnap.exists ? entSnap.data() : null;
-    const want = await desiredEntitlement(tx, db, uid);
+    const want = await desiredEntitlement(tx, db, uid, now);
 
     const prevBillingGym = prev?.billingGymId ?? null;
     const newBillingGym = want.billable ? want.gymId : null;
@@ -197,7 +219,8 @@ async function recomputeEntitlement(db, uid, now = new Date()) {
       prev.premium !== want.premium ||
       (prev.source ?? null) !== want.source ||
       (prev.gymId ?? null) !== want.gymId ||
-      prevBillingGym !== newBillingGym;
+      prevBillingGym !== newBillingGym ||
+      (prev.expiresAt?.toMillis?.() ?? null) !== (want.expiresAt?.toMillis?.() ?? null);
     if (!changed || (!prev && !want.premium)) {
       return { uid, premium: want.premium, changed: false };
     }
@@ -207,6 +230,7 @@ async function recomputeEntitlement(db, uid, now = new Date()) {
       source: want.source,
       gymId: want.gymId,
       billingGymId: newBillingGym,
+      expiresAt: want.expiresAt ?? null,
       updatedAt: nowTs,
     });
     return { uid, premium: want.premium, changed: true };
@@ -220,6 +244,55 @@ async function recomputeGym(db, gymId, ownerUids, now = new Date()) {
   const results = [];
   for (const uid of uids) results.push(await recomputeEntitlement(db, uid, now));
   return results;
+}
+
+// ── Prueba gratis ────────────────────────────────────────────────────────
+
+const emailHash = email =>
+  crypto.createHash('sha256').update(String(email).trim().toLowerCase()).digest('hex');
+
+/**
+ * Procesa `trial_requests/{uid}` recién creado: lo activa por TRIAL_DAYS o lo
+ * rechaza si el email ya usó su prueba (o no hay email). Idempotente: solo
+ * actúa sobre solicitudes sin `status`.
+ */
+async function startTrial(db, uid, email, now = new Date()) {
+  const reqRef = db.doc(`trial_requests/${uid}`);
+  const result = await db.runTransaction(async tx => {
+    const reqSnap = await tx.get(reqRef);
+    if (!reqSnap.exists || reqSnap.data().status) return { uid, status: 'skipped' };
+    const nowTs = Timestamp.fromDate(now);
+    if (!email) {
+      tx.update(reqRef, { status: 'rejected', reason: 'no_email', processedAt: nowTs });
+      return { uid, status: 'rejected' };
+    }
+    const emailRef = db.doc(`trial_emails/${emailHash(email)}`);
+    const emailSnap = await tx.get(emailRef);
+    if (emailSnap.exists) {
+      tx.update(reqRef, { status: 'rejected', reason: 'used', processedAt: nowTs });
+      return { uid, status: 'rejected' };
+    }
+    const endsAt = Timestamp.fromMillis(now.getTime() + TRIAL_DAYS * 24 * 3600 * 1000);
+    tx.set(emailRef, { usedAt: nowTs });
+    tx.update(reqRef, { status: 'active', startedAt: nowTs, endsAt, processedAt: nowTs });
+    return { uid, status: 'active' };
+  });
+  if (result.status === 'active') await recomputeEntitlement(db, uid, now);
+  return result;
+}
+
+/** Marca como vencidas las pruebas terminadas y recalcula su premium. */
+async function expireTrials(db, now = new Date()) {
+  const snap = await db.collection('trial_requests')
+    .where('endsAt', '<=', Timestamp.fromDate(now)).get();
+  let expired = 0;
+  for (const d of snap.docs) {
+    if (d.data().status !== 'active') continue;
+    await d.ref.update({ status: 'expired' });
+    await recomputeEntitlement(db, d.id, now);
+    expired++;
+  }
+  return expired;
 }
 
 // ── Facturación ──────────────────────────────────────────────────────────
@@ -295,4 +368,8 @@ module.exports = {
   recomputeEntitlement,
   recomputeGym,
   generateInvoices,
+  TRIAL_DAYS,
+  emailHash,
+  startTrial,
+  expireTrials,
 };

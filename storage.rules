@@ -18,6 +18,14 @@ service firebase.storage {
       allow delete: if request.auth != null && request.auth.uid == ownerUid;
     }
 
+    // Demostraciones de ejercicios (scripts/build_exercise_demos.js): las
+    // sube un admin con el SDK; las ve cualquiera (la app las muestra en la
+    // sesión, el inicio y el selector de ejercicios).
+    match /exercise_demos/{file} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }

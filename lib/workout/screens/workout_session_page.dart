@@ -7,6 +7,8 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/widgets/trainapp_brand.dart';
+import '../../onboarding/tutorial/coach_marks.dart';
+import '../../onboarding/tutorial/tutorial_service.dart';
 import '../../premium/premium_service.dart';
 import '../../profile/models/user_profile.dart';
 import '../../profile/profile_service.dart';
@@ -21,6 +23,7 @@ import '../services/progression_logic.dart';
 import '../services/progression_service.dart';
 import '../services/routine_service.dart';
 import '../services/session_service.dart';
+import '../widgets/exercise_demo.dart';
 import 'edit_session_exercises_page.dart';
 
 class WorkoutSessionPage extends StatefulWidget {
@@ -383,6 +386,13 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
     _loadNotes();
     _loadLastSets();
     _loadIntensityConfig();
+    // Las demostraciones del día, descargadas de una vez.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ExerciseDemoService.instance
+            .prefetch(context, _day.exercises.map((e) => e.exerciseId));
+      }
+    });
   }
 
   Future<void> _loadLastSets() async {
@@ -447,6 +457,102 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
       _refillControllers();
     });
     await _tryRestoreDraft();
+    _startTutorial();
+  }
+
+  // ── Tutorial de primer uso ─────────────────────────────────
+  final _kTutHeader = GlobalKey();
+  final _kTutNote = GlobalKey();
+  final _kTutDemo = GlobalKey();
+  final _kTutLast = GlobalKey();
+  final _kTutSet = GlobalKey();
+  final _kTutComplete = GlobalKey();
+  final _kTutSendToEnd = GlobalKey();
+  final _kTutEdit = GlobalKey();
+  final _kTutProgress = GlobalKey();
+  final _kTutRestTimer = GlobalKey();
+  final _kTutSkipRest = GlobalKey();
+
+  void _startTutorial() {
+    if (!mounted || _resting) return;
+    TutorialService.runOnce(context, TutorialScreen.session, () => [
+          CoachMarkStep(
+            target: _kTutProgress,
+            title: 'Tu avance',
+            body: 'Esta barra se llena con cada serie que completas en la '
+                'sesión.',
+          ),
+          CoachMarkStep(
+            target: _kTutHeader,
+            title: 'El ejercicio actual',
+            body: 'Nombre, número de series, rango de repeticiones y '
+                'descanso entre series. Vas un ejercicio a la vez.',
+          ),
+          CoachMarkStep(
+            target: _kTutDemo,
+            title: 'Cómo se hace',
+            body: 'Una animación con la posición inicial y final del '
+                'ejercicio. Tócala para plegarla si no la necesitas.',
+          ),
+          CoachMarkStep(
+            target: _kTutNote,
+            title: 'Notas del ejercicio',
+            body: 'Anota lo que quieras recordar: ajuste de la máquina, '
+                'agarre, técnica. La nota te aparece cada vez que lo hagas.',
+          ),
+          CoachMarkStep(
+            target: _kTutLast,
+            title: 'Tu última vez',
+            body: 'Lo que levantaste la sesión anterior en este ejercicio, '
+                'para que sepas qué superar.',
+          ),
+          CoachMarkStep(
+            target: _kTutSet,
+            title: 'La serie que vas a hacer',
+            body: 'Viene con el peso y las repeticiones sugeridas. Si hiciste '
+                'otra cosa, corrígelas antes de completarla: con eso la app '
+                'calcula tu progresión. Con RIR activo, te indica cuántas '
+                'repeticiones dejar en reserva.',
+          ),
+          CoachMarkStep(
+            target: _kTutComplete,
+            title: 'Completar serie',
+            body: 'Registra la serie y arranca el descanso. En la última serie '
+                'del último ejercicio, termina y guarda la sesión.',
+          ),
+          CoachMarkStep(
+            target: _kTutSendToEnd,
+            title: '¿Máquina ocupada?',
+            body: 'Manda este ejercicio al final de la sesión y sigue con el '
+                'siguiente.',
+          ),
+          CoachMarkStep(
+            target: _kTutEdit,
+            circle: true,
+            title: 'Cambiar lo que falta',
+            body: 'Reemplaza, quita o reordena los ejercicios que te quedan '
+                'hoy, y decide si el cambio queda también en tu rutina.',
+          ),
+        ]);
+  }
+
+  void _startRestTutorial() {
+    TutorialService.runOnce(context, TutorialScreen.sessionRest,
+        delay: const Duration(milliseconds: 300), () => [
+          CoachMarkStep(
+            target: _kTutRestTimer,
+            circle: true,
+            title: 'Descanso',
+            body: 'Cuenta el descanso del ejercicio y suena una alarma al '
+                'terminar, aunque la app esté en segundo plano. Luego puedes '
+                'pedir 30 s más o continuar.',
+          ),
+          CoachMarkStep(
+            target: _kTutSkipRest,
+            title: 'Saltar descanso',
+            body: 'Si ya estás listo, sigue con la próxima serie sin esperar.',
+          ),
+        ]);
   }
 
   SetTarget _currentTarget() {
@@ -631,6 +737,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
     _afterRest = onDone;
     setState(() { _resting = true; _restExpired = false; });
     _startCountdown(seconds);
+    _startRestTutorial();
   }
 
   void _postponeRest() {
@@ -1473,6 +1580,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
               : Text('Día ${day.dayNumber} · ${day.name}'),
           actions: [
             IconButton(
+              key: _kTutEdit,
               icon: const Icon(Icons.edit_outlined),
               tooltip: 'Editar ejercicios restantes',
               onPressed: _saving ? null : _showEditRemainingExercisesSheet,
@@ -1570,6 +1678,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
           ),
           const SizedBox(height: 32),
           Stack(
+            key: _kTutRestTimer,
             alignment: Alignment.center,
             children: [
               SizedBox(
@@ -1592,6 +1701,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
           ),
           const SizedBox(height: 40),
           OutlinedButton(
+            key: _kTutSkipRest,
             onPressed: _skipRest,
             child: const Text('Saltar descanso'),
           ),
@@ -1607,6 +1717,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
     return Column(
       children: [
         LinearProgressIndicator(
+          key: _kTutProgress,
           value: _totalSets > 0 ? _completedSets / _totalSets : 0,
           minHeight: 4,
         ),
@@ -1616,28 +1727,42 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Ejercicio ${_exerciseIndex + 1} de $totalEx',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                Column(
+                  key: _kTutHeader,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ejercicio ${_exerciseIndex + 1} de $totalEx',
+                      style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      ex.name,
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      ex.isIsometric
+                          ? '${ex.sets} series · ${ex.repsMin}–${ex.repsMax} s · ${ex.restSeconds}s descanso'
+                          : '${ex.sets} series · ${ex.repsMin}–${ex.repsMax} reps · ${ex.restSeconds}s descanso',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  ex.name,
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
+                KeyedSubtree(
+                  key: _kTutDemo,
+                  child: ExerciseDemoPanel(
+                    key: ValueKey('demo_${ex.exerciseId}'),
+                    exerciseId: ex.exerciseId,
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  ex.isIsometric
-                      ? '${ex.sets} series · ${ex.repsMin}–${ex.repsMax} s · ${ex.restSeconds}s descanso'
-                      : '${ex.sets} series · ${ex.repsMin}–${ex.repsMax} reps · ${ex.restSeconds}s descanso',
-                  style: TextStyle(color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 16),
 
                 _NoteCard(
+                  key: _kTutNote,
                   note: _notes[ex.exerciseId],
                   onTap: _editNote,
                 ),
@@ -1645,6 +1770,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
                 if (_lastSets[ex.exerciseId]?.isNotEmpty ?? false) ...[
                   const SizedBox(height: 12),
                   _LastSessionCard(
+                    key: _kTutLast,
                     sets: _lastSets[ex.exerciseId]!,
                     currentSetNumber:
                         _warmupSetIndex != null ? null : _setIndex + 1,
@@ -1666,6 +1792,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
                 ],
 
                 _ActiveSetCard(
+                  key: _kTutSet,
                   setNumber: _warmupSetIndex != null
                       ? _warmupSetIndex! + 1
                       : _setIndex + 1,
@@ -1685,6 +1812,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
 
                 const SizedBox(height: 28),
                 SizedBox(
+                  key: _kTutComplete,
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
@@ -1704,6 +1832,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
                 if (_canSendToEnd) ...[
                   const SizedBox(height: 8),
                   SizedBox(
+                    key: _kTutSendToEnd,
                     width: double.infinity,
                     child: TextButton.icon(
                       onPressed: _sendExerciseToEnd,
@@ -1792,7 +1921,7 @@ class _NoteCard extends StatelessWidget {
   final String? note;
   final VoidCallback onTap;
 
-  const _NoteCard({required this.note, required this.onTap});
+  const _NoteCard({required this.note, required this.onTap, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -1905,6 +2034,7 @@ class _LastSessionCard extends StatelessWidget {
     required this.sets,
     required this.currentSetNumber,
     this.isIsometric = false,
+    super.key,
   });
 
   static String _trimDouble(double v) =>
@@ -2014,6 +2144,7 @@ class _ActiveSetCard extends StatelessWidget {
     this.isoElapsed = 0,
     this.onStartIsoTimer,
     this.onStopIsoTimer,
+    super.key,
   });
 
   @override

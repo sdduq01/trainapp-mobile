@@ -11,6 +11,10 @@ class GymRequest {
   final String phone;
   final String contactName;
   final String email;
+
+  /// Página web (opcional): el logo del gimnasio en la app de los atletas
+  /// enlaza a ella.
+  final String websiteUrl;
   final GymRequestStatus status;
   final String? gymId;
   final String? rejectionReason;
@@ -27,6 +31,7 @@ class GymRequest {
     required this.email,
     required this.status,
     required this.createdAt,
+    this.websiteUrl = '',
     this.gymId,
     this.rejectionReason,
     this.reviewedAt,
@@ -39,6 +44,7 @@ class GymRequest {
         'phone': phone,
         'contactName': contactName,
         'email': email,
+        'websiteUrl': websiteUrl,
         'status': status.name,
         'gymId': gymId,
         'rejectionReason': rejectionReason,
@@ -54,6 +60,7 @@ class GymRequest {
         phone: m['phone'] as String? ?? '',
         contactName: m['contactName'] as String? ?? '',
         email: m['email'] as String? ?? '',
+        websiteUrl: m['websiteUrl'] as String? ?? '',
         status: GymRequestStatus.values.firstWhere(
           (s) => s.name == m['status'],
           orElse: () => GymRequestStatus.pending,

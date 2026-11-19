@@ -149,6 +149,9 @@ class _AdminRequestsSectionState extends State<AdminRequestsSection> {
                     Text('${r.contactName} · ${r.email} · ${r.phone}'),
                     Text('${r.address}, ${r.city}',
                         style: const TextStyle(color: Colors.grey)),
+                    if (r.websiteUrl.isNotEmpty)
+                      Text(r.websiteUrl,
+                          style: const TextStyle(color: Colors.grey)),
                     Text(
                       'Enviada el ${r.createdAt.day}/${r.createdAt.month}/${r.createdAt.year}',
                       style: const TextStyle(fontSize: 12, color: Colors.grey),

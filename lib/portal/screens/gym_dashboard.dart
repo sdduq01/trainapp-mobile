@@ -23,11 +23,16 @@ class GymDashboard extends StatefulWidget {
   final bool isOwner;
   final ValueChanged<Gym> onGymChanged;
 
+  /// Abierto desde la app (Inicio → Mi gimnasio): barra normal con "volver"
+  /// en lugar de la barra del portal con "Salir".
+  final bool inApp;
+
   const GymDashboard({
     required this.gym,
     required this.isAdmin,
     this.isOwner = true,
     required this.onGymChanged,
+    this.inApp = false,
     super.key,
   });
 
@@ -84,17 +89,24 @@ class _GymDashboardState extends State<GymDashboard> {
     }
   }
 
+  Widget _scaffold({required Widget body}) => widget.inApp
+      ? Scaffold(
+          appBar: AppBar(title: Text(widget.gym?.name ?? 'Mi gimnasio')),
+          body: body,
+        )
+      : PortalScaffold(body: body);
+
   @override
   Widget build(BuildContext context) {
     final sections = _sections;
     final index = _index.clamp(0, sections.length - 1);
     final content = _content(sections[index]);
 
-    if (sections.length == 1) return PortalScaffold(body: content);
+    if (sections.length == 1) return _scaffold(body: content);
 
     final wide = MediaQuery.sizeOf(context).width >= 720;
     if (wide) {
-      return PortalScaffold(
+      return _scaffold(
         body: Row(
           children: [
             NavigationRail(
@@ -115,7 +127,7 @@ class _GymDashboardState extends State<GymDashboard> {
         ),
       );
     }
-    return PortalScaffold(
+    return _scaffold(
       body: Column(
         children: [
           Expanded(child: content),

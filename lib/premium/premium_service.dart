@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
 import '../core/firebase/firestore_instance.dart';
@@ -7,7 +8,8 @@ import '../core/firebase/firestore_instance.dart';
 /// Premium del usuario, leído de `entitlements/{uid}`. Ese doc lo escribe
 /// solo una Cloud Function (`functions/premium.js`): el premium lo otorga el
 /// gimnasio del usuario (dueño y entrenadores de planta lo tienen siempre;
-/// los atletas, cuando el dueño se lo activa).
+/// los atletas, cuando el dueño se lo activa) o la prueba gratis de 7 días,
+/// que trae `expiresAt`.
 class PremiumService {
   PremiumService._();
   static final PremiumService instance = PremiumService._();
@@ -15,8 +17,38 @@ class PremiumService {
   /// Premium del usuario con sesión iniciada, actualizado en vivo.
   final ValueNotifier<bool> isPremium = ValueNotifier(false);
 
+  /// Origen del premium actual ('gym_owner', 'gym_trainer', 'gym_athlete',
+  /// 'trial') y su vencimiento (solo la prueba vence).
+  String? source;
+  DateTime? expiresAt;
+
   StreamSubscription<dynamic>? _sub;
+  Timer? _expiryTimer;
   String? _uid;
+
+  /// ¿El doc de entitlements da premium ahora mismo?
+  static bool premiumFrom(Map<String, dynamic>? data, [DateTime? now]) {
+    if (data?['premium'] != true) return false;
+    final exp = (data!['expiresAt'] as Timestamp?)?.toDate();
+    return exp == null || exp.isAfter(now ?? DateTime.now());
+  }
+
+  void _apply(Map<String, dynamic>? data) {
+    _expiryTimer?.cancel();
+    final premium = premiumFrom(data);
+    source = premium ? data!['source'] as String? : null;
+    expiresAt = premium ? (data!['expiresAt'] as Timestamp?)?.toDate() : null;
+    isPremium.value = premium;
+    final exp = expiresAt;
+    if (exp != null) {
+      // La prueba vence aunque el servidor tarde en limpiar el doc.
+      _expiryTimer = Timer(exp.difference(DateTime.now()), () {
+        source = null;
+        expiresAt = null;
+        isPremium.value = false;
+      });
+    }
+  }
 
   /// Empieza a escuchar el premium de [uid] (idempotente).
   void start(String uid) {
@@ -24,7 +56,7 @@ class PremiumService {
     _sub?.cancel();
     _uid = uid;
     _sub = db.collection('entitlements').doc(uid).snapshots().listen(
-      (doc) => isPremium.value = doc.data()?['premium'] == true,
+      (doc) => _apply(doc.data()),
       onError: (_) {}, // sin acceso o sin red: se queda con el último valor
     );
   }
@@ -33,7 +65,10 @@ class PremiumService {
   void stop() {
     _sub?.cancel();
     _sub = null;
+    _expiryTimer?.cancel();
     _uid = null;
+    source = null;
+    expiresAt = null;
     isPremium.value = false;
   }
 
@@ -42,9 +77,8 @@ class PremiumService {
   Future<bool> fetch(String uid) async {
     try {
       final doc = await db.collection('entitlements').doc(uid).get();
-      final premium = doc.data()?['premium'] == true;
-      if (uid == _uid) isPremium.value = premium;
-      return premium;
+      if (uid == _uid) _apply(doc.data());
+      return premiumFrom(doc.data());
     } catch (_) {
       return uid == _uid ? isPremium.value : false;
     }

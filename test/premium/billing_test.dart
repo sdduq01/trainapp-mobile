@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:trainapp_mobile/gym/models/billing.dart';
 import 'package:trainapp_mobile/premium/free_tier.dart';
 import 'package:trainapp_mobile/workout/models/routine.dart';
+import 'package:trainapp_mobile/workout/models/routine_template.dart';
 
 BillingAthlete athlete({
   required DateTime freeFrom,
@@ -99,12 +100,22 @@ void main() {
           templateId: templateId,
         );
 
-    test('solo las tres TrainApp son gratis', () {
-      expect(FreeTier.isFreeRoutine(routine('x', templateId: 'trainapp_duty')), isTrue);
-      expect(FreeTier.isFreeRoutine(routine('x', templateId: 'ppl_clasico')), isFalse);
-      // Rutinas viejas sin templateId: por nombre.
-      expect(FreeTier.isFreeRoutine(routine('TrainApp Hard Duty')), isTrue);
-      expect(FreeTier.isFreeRoutine(routine('PPL generado')), isFalse);
+    RoutineTemplate template(String id, String category) => RoutineTemplate(
+          id: id,
+          category: category,
+          name: id,
+          description: '',
+          type: 'PPL',
+          days: const [],
+        );
+
+    test('todas las Recomendadas son gratis, el resto premium', () {
+      expect(FreeTier.isFreeTemplate(template('trainapp_duty', 'recommended')), isTrue);
+      expect(FreeTier.isFreeTemplate(template('rec_calistenia_3dias', 'recommended')), isTrue);
+      expect(FreeTier.isFreeTemplate(template('sport_futbol_3dias', 'sport')), isFalse);
+      expect(FreeTier.isFreeTemplate(template('rec_metodo_hercules', 'limited')), isFalse);
+      // Top Secret se gana con el macro ciclo: no pide premium.
+      expect(FreeTier.isFreeTemplate(template('secreta', 'secret')), isTrue);
     });
 
     test('rutina gratis según días por semana', () {

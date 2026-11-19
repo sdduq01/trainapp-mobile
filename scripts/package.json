@@ -6,6 +6,7 @@
     "seed-exercises": "node seed_exercises.js"
   },
   "dependencies": {
-    "firebase-admin": "^12.0.0"
+    "firebase-admin": "^12.0.0",
+    "sharp": "^0.34.5"
   }
 }

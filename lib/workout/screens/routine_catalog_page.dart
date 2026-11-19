@@ -41,44 +41,17 @@ class RoutineCatalogPage extends StatelessWidget {
             ],
           ),
         ),
-        // Sin premium solo se usan las rutinas TrainApp (en Recomendadas);
-        // el resto de pestañas muestra el aviso premium.
-        body: PremiumBuilder(
-          builder: (_, premium) => TabBarView(
-            children: [
-              const _TemplateListTab(category: 'recommended', emptyMsg: 'Aún no hay rutinas recomendadas.'),
-              premium
-                  ? const _TemplateListTab(category: 'sport', emptyMsg: 'Aún no hay rutinas por deporte.')
-                  : const PremiumLockedPanel(
-                      title: 'Rutinas por deporte',
-                      description: 'Rutinas pensadas para complementar tu deporte.',
-                    ),
-              premium
-                  ? const _TopSecretTab()
-                  : const PremiumLockedPanel(
-                      title: 'Top Secret',
-                      description: 'Las rutinas ocultas que se ganan completando un macro ciclo.',
-                    ),
-              premium
-                  ? const _MacroTab()
-                  : const PremiumLockedPanel(
-                      title: 'Macro ciclos',
-                      description: 'Un año de entrenamiento por fases con "Forjado por el Hierro".',
-                    ),
-              premium
-                  ? const _TemplateListTab(category: 'limited', emptyMsg: 'Aún no hay rutinas de edición limitada.')
-                  : const PremiumLockedPanel(
-                      title: 'Edición limitada',
-                      description: 'Rutinas especiales que no están en el resto del catálogo.',
-                    ),
-              premium
-                  ? const _CustomTab()
-                  : const PremiumLockedPanel(
-                      title: 'Rutinas personalizadas',
-                      description: 'Arma tus propias rutinas y ejercicios.',
-                    ),
-            ],
-          ),
+        // Sin premium todas las pestañas se ven: las rutinas que no son
+        // gratis muestran un botón "Premium" en lugar de activarse.
+        body: const TabBarView(
+          children: [
+            _TemplateListTab(category: 'recommended', emptyMsg: 'Aún no hay rutinas recomendadas.'),
+            _TemplateListTab(category: 'sport', emptyMsg: 'Aún no hay rutinas por deporte.'),
+            _TopSecretTab(),
+            _MacroTab(),
+            _TemplateListTab(category: 'limited', emptyMsg: 'Aún no hay rutinas de edición limitada.'),
+            _CustomTab(),
+          ],
         ),
       ),
     );
@@ -191,7 +164,7 @@ class _TemplateCard extends StatelessWidget {
               alignment: Alignment.centerRight,
               child: PremiumBuilder(
                 builder: (context, premium) =>
-                    premium || FreeTier.isFreeTemplate(template.id)
+                    premium || FreeTier.isFreeTemplate(template)
                         ? FilledButton.icon(
                             icon: const Icon(Icons.check),
                             label: const Text('Usar esta rutina'),
@@ -481,7 +454,23 @@ class _MacroTabState extends State<_MacroTab> with AutomaticKeepAliveClientMixin
 
   void _reload() => setState(() => _future = _load());
 
+  Widget _startButton() => FilledButton.icon(
+        icon: _activating
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white),
+              )
+            : const Icon(Icons.local_fire_department),
+        label: const Text('Iniciar la forja'),
+        onPressed: _activating ? null : _start,
+      );
+
   Future<void> _start() async {
+    if (!PremiumService.instance.isPremium.value) {
+      return showPremiumRequired(context, feature: 'El macro ciclo');
+    }
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -697,17 +686,17 @@ class _MacroTabState extends State<_MacroTab> with AutomaticKeepAliveClientMixin
                         else
                           Align(
                             alignment: Alignment.centerRight,
-                            child: FilledButton.icon(
-                              icon: _activating
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2, color: Colors.white),
-                                    )
-                                  : const Icon(Icons.local_fire_department),
-                              label: const Text('Iniciar la forja'),
-                              onPressed: _activating ? null : _start,
+                            child: PremiumBuilder(
+                              builder: (context, premium) => premium
+                                  ? _startButton()
+                                  : OutlinedButton.icon(
+                                      icon: const Icon(Icons.workspace_premium,
+                                          color: kPremiumColor),
+                                      label: const Text('Premium'),
+                                      onPressed: () => showPremiumRequired(
+                                          context,
+                                          feature: 'El macro ciclo'),
+                                    ),
                             ),
                           ),
                       ],
@@ -881,8 +870,16 @@ class _CustomTabState extends State<_CustomTab>
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             subtitle: const Text('Empieza desde cero. Define días y ejercicios.'),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: PremiumBuilder(
+              builder: (_, premium) => premium
+                  ? const Icon(Icons.chevron_right)
+                  : const PremiumBadge(),
+            ),
             onTap: () async {
+              if (!PremiumService.instance.isPremium.value) {
+                return showPremiumRequired(context,
+                    feature: 'Crear rutinas personalizadas');
+              }
               final activated = await Navigator.push<bool>(
                 context,
                 MaterialPageRoute(builder: (_) => const CustomRoutineBuilderPage()),
@@ -1006,7 +1003,7 @@ class _CustomTabState extends State<_CustomTab>
 // ═══════════════════════════════════════════════════════════════════════════
 
 Future<void> _activateTemplate(BuildContext context, RoutineTemplate t) {
-  if (!FreeTier.isFreeTemplate(t.id) && !PremiumService.instance.isPremium.value) {
+  if (!FreeTier.isFreeTemplate(t) && !PremiumService.instance.isPremium.value) {
     return showPremiumRequired(context, feature: 'La rutina "${t.name}"');
   }
   return _activateRoutine(context, name: t.name, build: (uid) => t.toRoutine(uid));

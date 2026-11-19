@@ -8,7 +8,9 @@ const Color kPremiumColor = Color(0xFFB8860B);
 /// cobra ni se enlaza a un pago (políticas de Play): lo activa el gimnasio.
 const String kPremiumHowTo =
     'El premium de TrainApp lo activa tu gimnasio. Pídele a tu gimnasio que '
-    'te lo active desde su panel de TrainApp.';
+    'te lo active desde su panel de TrainApp. Si tu gimnasio aún no tiene '
+    'TrainApp, que nos escriban a trainappdev@gmail.com para más información y '
+    'activarlo.';
 
 /// Reconstruye [builder] cada vez que cambia el premium del usuario.
 class PremiumBuilder extends StatelessWidget {

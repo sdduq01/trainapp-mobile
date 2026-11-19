@@ -7,6 +7,7 @@ import '../data/muscle_groups.dart';
 import '../models/exercise.dart';
 import '../services/exercise_service.dart';
 import 'create_exercise_dialog.dart';
+import 'exercise_demo.dart';
 
 /// Carga el catálogo de ejercicios (filtrado por los toggles de
 /// cardio/estiramiento del perfil) y muestra el sheet de selección en dos
@@ -225,6 +226,11 @@ Future<Exercise?> showAddExerciseSheet(
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
+                                if (!isCustom)
+                                  ExerciseDemoButton(
+                                    exerciseId: ex.id,
+                                    exerciseName: ex.name,
+                                  ),
                                 if (isCustom && userId != null)
                                   IconButton(
                                     icon: const Icon(

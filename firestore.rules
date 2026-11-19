@@ -58,9 +58,17 @@ service cloud.firestore {
     // Premium: lo calcula una Cloud Function en `entitlements/{uid}` (dueño o
     // entrenador de planta de un gimnasio activo, o atleta al que su gimnasio
     // se lo activó).
+    // Con prueba gratis el doc trae `expiresAt`: vale hasta ese instante
+    // aunque la función horaria aún no lo haya limpiado.
     function isPremium(uid) {
       return exists(/databases/$(database)/documents/entitlements/$(uid)) &&
-        get(/databases/$(database)/documents/entitlements/$(uid)).data.premium == true;
+        entitlementOf(uid).premium == true &&
+        (entitlementOf(uid).get('expiresAt', null) == null ||
+         entitlementOf(uid).expiresAt > request.time);
+    }
+
+    function entitlementOf(uid) {
+      return get(/databases/$(database)/documents/entitlements/$(uid)).data;
     }
 
     // Premium de cada usuario. Solo lo escribe el servidor; lo leen el propio
@@ -226,9 +234,14 @@ service cloud.firestore {
         resource.data.ownerUid == request.auth.uid &&
         request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(['name', 'logoUrl', 'city', 'address', 'phone',
-                    'cancelWindowHours']) &&
+                    'cancelWindowHours', 'websiteUrl']) &&
         request.resource.data.name is string &&
         request.resource.data.name.size() > 0 &&
+        (!('websiteUrl' in request.resource.data) ||
+         (request.resource.data.websiteUrl is string &&
+          request.resource.data.websiteUrl.size() <= 300 &&
+          (request.resource.data.websiteUrl == '' ||
+           request.resource.data.websiteUrl.matches('https?://.+')))) &&
         (!('cancelWindowHours' in request.resource.data) ||
          (request.resource.data.cancelWindowHours is int &&
           request.resource.data.cancelWindowHours >= 0 &&
@@ -408,6 +421,21 @@ service cloud.firestore {
     // (doc id = uid). El usuario la envía en `pending`, la edita mientras
     // siga pendiente y la reenvía si fue rechazada; solo un admin la aprueba
     // (junto con la creación del gimnasio) o la rechaza.
+    // Prueba gratis de 7 días: el usuario la pide creando su doc (una vez);
+    // la función `startTrial` la activa o la rechaza. Puede borrarla al
+    // eliminar su cuenta. `trial_emails` (hash del email, para que sea una
+    // sola por persona) es solo del servidor.
+    match /trial_requests/{uid} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['requestedAt']) &&
+        request.resource.data.requestedAt == request.time;
+      allow update: if false;
+    }
+    match /trial_emails/{hash} {
+      allow read, write: if false;
+    }
+
     match /gym_requests/{uid} {
       function isValidSubmission() {
         return request.auth != null &&

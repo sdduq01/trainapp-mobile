@@ -109,10 +109,6 @@ class GymService {
     await _members.doc(uid).delete();
   }
 
-  Future<void> renameGym(String gymId, String name) async {
-    await _gyms.doc(gymId).update({'name': name.trim()});
-  }
-
   /// Guarda los datos editables del gimnasio (portal, "Perfil del gimnasio").
   Future<void> updateProfile(Gym gym) async {
     await _gyms.doc(gym.id).update({
@@ -120,6 +116,7 @@ class GymService {
       'city': gym.city.trim(),
       'address': gym.address.trim(),
       'phone': gym.phone.trim(),
+      'websiteUrl': gym.websiteUrl?.trim() ?? '',
       'cancelWindowHours': gym.cancelWindowHours,
     });
   }

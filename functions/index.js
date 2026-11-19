@@ -14,6 +14,7 @@ const { defineSecret }      = require('firebase-functions/params');
 const logger                = require('firebase-functions/logger');
 const { onSchedule }        = require('firebase-functions/v2/scheduler');
 const { initializeApp }     = require('firebase-admin/app');
+const { getAuth }           = require('firebase-admin/auth');
 const nodemailer            = require('nodemailer');
 const classes               = require('./classes');
 const premium               = require('./premium');
@@ -61,6 +62,7 @@ exports.notifyGymRequest = onDocumentWritten(
       ['Teléfono', after.phone],
       ['Ciudad', after.city],
       ['Dirección', after.address],
+      ['Página web', after.websiteUrl || '—'],
     ];
 
     const transporter = nodemailer.createTransport({
@@ -175,6 +177,48 @@ exports.syncGymEntitlements = onDocumentWritten(
       gymId: event.params.gymId,
       changed: results.filter(r => r.changed).length,
     });
+  },
+);
+
+/**
+ * Prueba gratis: al crear `trial_requests/{uid}` la activa (o la rechaza si
+ * el email ya la usó); al borrarla (p. ej. al eliminar la cuenta) recalcula.
+ */
+exports.startTrial = onDocumentWritten(
+  {
+    document: 'trial_requests/{uid}',
+    database: DATABASE_ID,
+    region: REGION,
+  },
+  async event => {
+    const uid = event.params.uid;
+    const after = event.data?.after?.data() ?? null;
+    if (!after) {
+      await premium.recomputeEntitlement(db(), uid);
+      return;
+    }
+    if (after.status) return; // ya procesada (la escribió esta misma función)
+    let email = null;
+    try {
+      email = (await getAuth(app).getUser(uid)).email ?? null;
+    } catch (err) {
+      logger.warn('Prueba gratis: usuario no encontrado', { uid, err: err.message });
+    }
+    const result = await premium.startTrial(db(), uid, email);
+    logger.info('Prueba gratis', result);
+  },
+);
+
+/** Prueba gratis: cada hora cierra las pruebas vencidas. */
+exports.expireTrials = onSchedule(
+  {
+    schedule: '0 * * * *',
+    timeZone: 'America/Bogota',
+    region: REGION,
+  },
+  async () => {
+    const expired = await premium.expireTrials(db());
+    if (expired) logger.info('Pruebas vencidas', { expired });
   },
 );
 

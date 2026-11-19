@@ -52,6 +52,7 @@ class GymRequestService {
       'city': request.city,
       'address': request.address,
       'phone': request.phone,
+      'websiteUrl': request.websiteUrl,
       'cancelWindowHours': Gym.kDefaultCancelWindowHours,
       'status': 'active',
       'createdAt': FieldValue.serverTimestamp(),
