@@ -37,13 +37,6 @@ class RoutineService {
       );
     }).toList();
 
-    return Routine(
-      userId: routine.userId,
-      type: routine.type,
-      name: routine.name,
-      weekNumber: routine.weekNumber,
-      createdAt: routine.createdAt,
-      days: hydratedDays,
-    );
+    return routine.copyWith(days: hydratedDays);
   }
 }

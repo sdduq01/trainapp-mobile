@@ -5,13 +5,15 @@ import '../../gym/models/gym_member.dart';
 import '../../gym/widgets/gym_logo.dart';
 import '../../gym/widgets/gym_members_panel.dart';
 import '../widgets/portal_scaffold.dart';
+import 'admin_billing_section.dart';
 import 'admin_requests_section.dart';
+import 'gym_billing_section.dart';
 import 'gym_classes_section.dart';
 import 'gym_profile_section.dart';
 
-/// Panel del dueño del gimnasio (Miembros, Clases, Perfil), del entrenador
-/// de planta (solo Clases) y, para el admin de TrainApp, las solicitudes de
-/// alta. Menú lateral en pantallas anchas e
+/// Panel del dueño del gimnasio (Miembros, Clases, Facturación, Perfil), del
+/// entrenador de planta (solo Clases) y, para el admin de TrainApp, las
+/// solicitudes de alta y los cobros. Menú lateral en pantallas anchas e
 /// inferior en el celular.
 class GymDashboard extends StatefulWidget {
   final Gym? gym;
@@ -33,7 +35,7 @@ class GymDashboard extends StatefulWidget {
   State<GymDashboard> createState() => _GymDashboardState();
 }
 
-enum _Section { members, classes, profile, requests }
+enum _Section { members, classes, billing, profile, requests, adminBilling }
 
 class _GymDashboardState extends State<GymDashboard> {
   int _index = 0;
@@ -41,21 +43,27 @@ class _GymDashboardState extends State<GymDashboard> {
   List<_Section> get _sections => [
         if (widget.gym != null && widget.isOwner) _Section.members,
         if (widget.gym != null) _Section.classes,
+        if (widget.gym != null && widget.isOwner) _Section.billing,
         if (widget.gym != null && widget.isOwner) _Section.profile,
         if (widget.isAdmin) _Section.requests,
+        if (widget.isAdmin) _Section.adminBilling,
       ];
 
   static const _icons = {
     _Section.members: Icons.groups_outlined,
     _Section.classes: Icons.event_note_outlined,
+    _Section.billing: Icons.receipt_long_outlined,
     _Section.profile: Icons.store_outlined,
     _Section.requests: Icons.admin_panel_settings_outlined,
+    _Section.adminBilling: Icons.payments_outlined,
   };
   static const _labels = {
     _Section.members: 'Miembros',
     _Section.classes: 'Clases',
+    _Section.billing: 'Facturación',
     _Section.profile: 'Perfil',
     _Section.requests: 'Solicitudes',
+    _Section.adminBilling: 'Cobros',
   };
 
   Widget _content(_Section section) {
@@ -65,10 +73,14 @@ class _GymDashboardState extends State<GymDashboard> {
         return _MembersSection(key: ValueKey(gym!.id), gym: gym);
       case _Section.classes:
         return GymClassesSection(key: ValueKey('classes_${gym!.id}'), gym: gym);
+      case _Section.billing:
+        return GymBillingSection(key: ValueKey('billing_${gym!.id}'), gym: gym);
       case _Section.profile:
         return GymProfileSection(gym: gym!, onSaved: widget.onGymChanged);
       case _Section.requests:
         return const AdminRequestsSection();
+      case _Section.adminBilling:
+        return const AdminBillingSection();
     }
   }
 
@@ -109,6 +121,10 @@ class _GymDashboardState extends State<GymDashboard> {
           Expanded(child: content),
           NavigationBar(
             selectedIndex: index,
+            // Con muchas secciones los nombres no caben en el celular.
+            labelBehavior: sections.length > 4
+                ? NavigationDestinationLabelBehavior.onlyShowSelected
+                : NavigationDestinationLabelBehavior.alwaysShow,
             onDestinationSelected: (i) => setState(() => _index = i),
             destinations: [
               for (final s in sections)
@@ -178,6 +194,11 @@ class _MembersSectionState extends State<_MembersSection> {
             Chip(
               avatar: const Icon(Icons.person, size: 18),
               label: Text('${count(false)} atletas'),
+            ),
+            Chip(
+              avatar: const Icon(Icons.workspace_premium, size: 18),
+              label: Text(
+                  '${members?.where((m) => m.hasPremium).length ?? 0} con premium'),
             ),
             if (pending > 0)
               Chip(

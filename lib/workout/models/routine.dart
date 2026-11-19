@@ -123,6 +123,10 @@ class Routine {
   final DateTime createdAt;
   final List<RoutineDay> days;
 
+  /// Id de la plantilla del catálogo de la que salió (null si es generada,
+  /// personalizada o anterior a este campo). Decide si es una rutina gratis.
+  final String? templateId;
+
   Routine({
     required this.userId,
     required this.type,
@@ -130,7 +134,19 @@ class Routine {
     required this.weekNumber,
     required this.createdAt,
     required this.days,
+    this.templateId,
   });
+
+  /// Copia conservando la plantilla de origen.
+  Routine copyWith({String? type, List<RoutineDay>? days}) => Routine(
+        userId: userId,
+        type: type ?? this.type,
+        name: name,
+        weekNumber: weekNumber,
+        createdAt: createdAt,
+        days: days ?? this.days,
+        templateId: templateId,
+      );
 
   Map<String, dynamic> toMap() => {
         'userId': userId,
@@ -139,6 +155,7 @@ class Routine {
         'weekNumber': weekNumber,
         'createdAt': createdAt.toIso8601String(),
         'days': days.map((d) => d.toMap()).toList(),
+        if (templateId != null) 'templateId': templateId,
       };
 
   factory Routine.fromMap(String userId, Map<String, dynamic> m) => Routine(
@@ -150,5 +167,6 @@ class Routine {
         days: (m['days'] as List)
             .map((d) => RoutineDay.fromMap(d as Map<String, dynamic>))
             .toList(),
+        templateId: m['templateId'] as String?,
       );
 }

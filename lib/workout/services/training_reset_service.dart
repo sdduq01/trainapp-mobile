@@ -65,6 +65,7 @@ class TrainingResetService {
       weekNumber: routine.weekNumber,
       createdAt: DateTime.now(),
       days: resetDays,
+      templateId: routine.templateId,
     ));
   }
 

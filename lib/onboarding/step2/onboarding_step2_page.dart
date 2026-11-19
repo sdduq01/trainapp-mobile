@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/onboarding_data.dart';
+import '../../premium/duty_picker.dart';
+import '../../premium/free_tier.dart';
+import '../../premium/premium_service.dart';
 import '../../profile/models/user_profile.dart';
 import '../../profile/profile_service.dart';
 import '../../home/home_page.dart';
 import '../../workout/services/routine_generator.dart';
 import '../../workout/services/routine_service.dart';
+import '../../workout/services/routine_template_service.dart';
 
 class OnboardingStep2Page extends StatefulWidget {
   const OnboardingStep2Page({super.key});
@@ -54,9 +58,18 @@ class _OnboardingStep2PageState extends State<OnboardingStep2Page> {
 
       await ProfileService().saveProfile(profile);
 
-      // Generar rutina automáticamente según el perfil
-      final routine = RoutineGenerator.generate(profile);
-      await RoutineService().saveRoutine(routine);
+      // Con premium se genera la rutina según el perfil; sin premium (lo
+      // normal en una cuenta nueva) arranca con la TrainApp de sus días.
+      final premium = await PremiumService.instance.fetch(user.uid);
+      final template = premium
+          ? null
+          : await RoutineTemplateService()
+              .getById(FreeTier.templateIdForDays(_trainingDays));
+      if (template != null) {
+        await activateFreeTemplate(user.uid, template);
+      } else {
+        await RoutineService().saveRoutine(RoutineGenerator.generate(profile));
+      }
 
       saved = true;
     } catch (e) {

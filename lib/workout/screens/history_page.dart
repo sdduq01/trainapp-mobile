@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../premium/free_tier.dart';
+import '../../premium/premium_service.dart';
+import '../../premium/premium_widgets.dart';
 import '../models/workout_session.dart';
 import '../services/session_service.dart';
 
@@ -26,6 +29,11 @@ class _HistoryPageState extends State<HistoryPage> {
 
   List<WorkoutSession>? _sessions;
 
+  // Sin premium: solo las últimas sesiones y sin el resumen semanal. El
+  // entrenador que ve el historial de un atleta lo ve completo.
+  bool _limited = false;
+  int _hiddenSessions = 0;
+
   @override
   void initState() {
     super.initState();
@@ -33,8 +41,21 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Future<void> _load() async {
-    final sessions = await SessionService().getSessionsForUser(_userId);
-    if (mounted) setState(() => _sessions = sessions);
+    var sessions = await SessionService().getSessionsForUser(_userId);
+    final limited = widget.athleteUid == null &&
+        !await PremiumService.instance.fetch(_userId);
+    var hidden = 0;
+    if (limited && sessions.length > FreeTier.historySessions) {
+      hidden = sessions.length - FreeTier.historySessions;
+      sessions = sessions.take(FreeTier.historySessions).toList();
+    }
+    if (mounted) {
+      setState(() {
+        _sessions = sessions;
+        _limited = limited;
+        _hiddenSessions = hidden;
+      });
+    }
   }
 
   static String _formatDate(DateTime d) {
@@ -125,8 +146,34 @@ class _HistoryPageState extends State<HistoryPage> {
         ),
         body: TabBarView(
           children: [
-            _buildSummary(_buildWeeklySummaries(sessions)),
-            _buildTable(_buildRows(sessions)),
+            _limited
+                ? const PremiumLockedPanel(
+                    title: 'Resumen semanal',
+                    description: 'Volumen, ejercicios y sesiones de cada '
+                        'semana de entrenamiento.',
+                  )
+                : _buildSummary(_buildWeeklySummaries(sessions)),
+            _limited
+                ? Column(
+                    children: [
+                      Material(
+                        color: kPremiumColor.withValues(alpha: 0.12),
+                        child: ListTile(
+                          dense: true,
+                          leading: const Icon(Icons.workspace_premium,
+                              color: kPremiumColor),
+                          title: Text(
+                            'Ves tus últimas ${FreeTier.historySessions} sesiones'
+                            '${_hiddenSessions > 0 ? ' ($_hiddenSessions más con premium)' : ''}.',
+                          ),
+                          onTap: () => showPremiumRequired(context,
+                              feature: 'El historial completo'),
+                        ),
+                      ),
+                      Expanded(child: _buildTable(_buildRows(sessions))),
+                    ],
+                  )
+                : _buildTable(_buildRows(sessions)),
           ],
         ),
       ),

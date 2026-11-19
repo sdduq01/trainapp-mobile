@@ -27,6 +27,10 @@ class UserProfile {
   final bool cardioEnabled;     // muestra el grupo "Cardio" en los selectores de ejercicio
   final bool forjadoHierroCompletado; // completó el macro ciclo → desbloquea Top Secret
   final bool isTrainer; // activó el modo entrenador (puede tener atletas)
+  /// Sobrecarga progresiva automática (premium). Apagada, el peso de cada
+  /// ejercicio queda en el que el atleta registre; el tipo de progresión se
+  /// sigue eligiendo en cada ejercicio.
+  final bool autoProgressionEnabled;
 
   UserProfile({
     required this.uid,
@@ -45,7 +49,23 @@ class UserProfile {
     this.cardioEnabled = false,
     this.forjadoHierroCompletado = false,
     this.isTrainer = false,
+    this.autoProgressionEnabled = true,
   });
+
+  /// Las preferencias que de verdad aplican según [premium]: sin premium se
+  /// apagan las funciones premium, pero lo guardado no se toca (vuelve si le
+  /// reactivan el premium).
+  UserProfile effectiveFor({required bool premium}) {
+    if (premium) return this;
+    return copyWith(
+      intensityEnabled: false,
+      warmupEnabled: false,
+      stretchingEnabled: false,
+      cardioEnabled: false,
+      isTrainer: false,
+      autoProgressionEnabled: false,
+    );
+  }
 
   int? get age {
     if (birthDate == null) return null;
@@ -92,6 +112,7 @@ class UserProfile {
       forjadoHierroCompletado:
           data['forjadoHierroCompletado'] as bool? ?? false,
       isTrainer: data['isTrainer'] as bool? ?? false,
+      autoProgressionEnabled: data['autoProgressionEnabled'] as bool? ?? true,
     );
   }
 
@@ -112,6 +133,7 @@ class UserProfile {
       'cardioEnabled': cardioEnabled,
       'forjadoHierroCompletado': forjadoHierroCompletado,
       'isTrainer': isTrainer,
+      'autoProgressionEnabled': autoProgressionEnabled,
     };
   }
 
@@ -131,6 +153,7 @@ class UserProfile {
     bool? cardioEnabled,
     bool? forjadoHierroCompletado,
     bool? isTrainer,
+    bool? autoProgressionEnabled,
   }) {
     return UserProfile(
       uid: uid,
@@ -151,6 +174,8 @@ class UserProfile {
       forjadoHierroCompletado:
           forjadoHierroCompletado ?? this.forjadoHierroCompletado,
       isTrainer: isTrainer ?? this.isTrainer,
+      autoProgressionEnabled:
+          autoProgressionEnabled ?? this.autoProgressionEnabled,
     );
   }
 }

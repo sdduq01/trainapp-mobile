@@ -17,6 +17,10 @@ import '../gym/screens/gym_admin_page.dart';
 import '../gym/screens/gym_classes_page.dart';
 import '../gym/services/gym_service.dart';
 import '../gym/widgets/gym_logo.dart';
+import '../premium/duty_picker.dart';
+import '../premium/free_tier.dart';
+import '../premium/premium_service.dart';
+import '../premium/premium_widgets.dart';
 import '../profile/profile_service.dart';
 import '../profile/screens/profile_page.dart';
 import '../trainer/screens/my_athletes_page.dart';
@@ -44,20 +48,58 @@ class _HomePageState extends State<HomePage> {
   Gym? _gym; // gimnasio al que pertenece (logo en el home)
   Gym? _ownedGym; // gimnasio que administra
   int _chartKey = 0;
+  bool _pickingDuty = false;
   final _user = FirebaseAuth.instance.currentUser;
+  final _premium = PremiumService.instance.isPremium;
 
   @override
   void initState() {
     super.initState();
+    _premium.addListener(_onPremiumChanged);
     _loadRoutine();
     _loadIsTrainer();
     _loadGym();
     // Backfill del directorio email->uid para cuentas que se registraron
     // antes de que existiera (no bloquea la carga de la pantalla).
     if (_user != null) {
+      PremiumService.instance.start(_user.uid);
       UserDirectoryService()
           .ensureDirectoryEntry(_user.uid, _user.email)
           .catchError((_) {});
+    }
+  }
+
+  @override
+  void dispose() {
+    _premium.removeListener(_onPremiumChanged);
+    super.dispose();
+  }
+
+  void _onPremiumChanged() {
+    if (!mounted) return;
+    setState(() {}); // íconos y gráfica dependen del premium
+    if (!_premium.value) _enforceFreeTier();
+  }
+
+  /// Sin premium solo se entrena con las rutinas TrainApp: si la activa es
+  /// otra (usuarios de antes, o el gimnasio le quitó el premium), se le pide
+  /// elegir una. Consulta el premium al servidor antes de decidir.
+  Future<void> _enforceFreeTier() async {
+    final routine = _routine;
+    if (_pickingDuty || routine == null || FreeTier.isFreeRoutine(routine)) {
+      return;
+    }
+    final premium = await PremiumService.instance.fetch(_user!.uid);
+    if (premium || !mounted) return;
+    _pickingDuty = true;
+    final chosen = await showDutyPicker(context, _user.uid);
+    _pickingDuty = false;
+    if (chosen != null && mounted) {
+      setState(() {
+        _routine = chosen;
+        _macro = null;
+        _chartKey++;
+      });
     }
   }
 
@@ -71,6 +113,7 @@ class _HomePageState extends State<HomePage> {
     }
     if (mounted) {
       setState(() { _routine = routine; _macro = macro; _loading = false; });
+      _enforceFreeTier();
     }
   }
 
@@ -332,7 +375,9 @@ class _HomePageState extends State<HomePage> {
                 await _loadGym(); // pudo cambiar el logo o el nombre
               },
             ),
-          if (_isTrainer || (_gymMembership?.isTrainer ?? false))
+          // El modo entrenador es premium (los de planta siempre lo tienen).
+          if ((_isTrainer && _premium.value) ||
+              (_gymMembership?.isTrainer ?? false))
             IconButton(
               icon: const Icon(Icons.groups),
               tooltip: 'Mis atletas',
@@ -372,6 +417,7 @@ class _HomePageState extends State<HomePage> {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
+              PremiumService.instance.stop();
               await AuthService().signOut();
               if (context.mounted) {
                 Navigator.of(context).pushAndRemoveUntil(
@@ -391,6 +437,7 @@ class _HomePageState extends State<HomePage> {
                   routine: _routine!,
                   gym: _gym,
                   gymAthlete: !(_gymMembership?.isTrainer ?? true),
+                  premium: _premium.value,
                   macro: _macro,
                   chartKey: _chartKey,
                   onSessionCompleted: _onSessionCompleted,
@@ -405,6 +452,7 @@ class _RoutineView extends StatelessWidget {
   /// true si es atleta del gimnasio (se inscribe a clases); false si es
   /// entrenador de planta (solo las ve).
   final bool gymAthlete;
+  final bool premium;
   final MacrocycleProgress? macro;
   final int chartKey;
   final VoidCallback onSessionCompleted;
@@ -413,6 +461,7 @@ class _RoutineView extends StatelessWidget {
     required this.routine,
     required this.gym,
     required this.gymAthlete,
+    required this.premium,
     required this.macro,
     required this.chartKey,
     required this.onSessionCompleted,
@@ -533,12 +582,24 @@ class _RoutineView extends StatelessWidget {
         ],
 
         const Divider(height: 32),
-        WeeklyProgressChart(
-          key: ValueKey(chartKey),
-          plannedDaysPerWeek: routine.days.length,
-          totalRoutineExercises:
-              routine.days.fold(0, (sum, d) => sum + d.exercises.length),
-        ),
+        if (premium)
+          WeeklyProgressChart(
+            key: ValueKey(chartKey),
+            plannedDaysPerWeek: routine.days.length,
+            totalRoutineExercises:
+                routine.days.fold(0, (sum, d) => sum + d.exercises.length),
+          )
+        else
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.insights, color: kPremiumColor),
+              title: const Text('Progreso semanal'),
+              subtitle: const Text('Tu consistencia y progresión semana a semana.'),
+              trailing: const PremiumBadge(),
+              onTap: () => showPremiumRequired(context,
+                  feature: 'El progreso semanal'),
+            ),
+          ),
         const SizedBox(height: 16),
       ],
     );

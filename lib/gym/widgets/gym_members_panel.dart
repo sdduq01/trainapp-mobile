@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../premium/premium_widgets.dart';
 import '../models/gym.dart';
 import '../models/gym_member.dart';
 import '../services/gym_service.dart';
 
 /// Entrenadores de planta y atletas de un gimnasio (aceptados e invitaciones
-/// pendientes), con invitar por email y retirar. Lo usan la pantalla
+/// pendientes), con invitar por email, retirar y activar el premium de cada
+/// atleta. Lo usan la pantalla
 /// "Mi gimnasio" de la app y el portal web. No hace scroll propio: va dentro
 /// del ListView de quien lo contiene.
 class GymMembersPanel extends StatefulWidget {
@@ -99,6 +101,49 @@ class _GymMembersPanelState extends State<GymMembersPanel> {
     }
   }
 
+  Future<void> _togglePremium(GymMember member, bool premium) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        icon: Icon(
+          premium ? Icons.workspace_premium : Icons.remove_circle_outline,
+          color: premium ? kPremiumColor : null,
+        ),
+        title: Text(premium ? 'Activar premium' : 'Quitar premium'),
+        content: Text(
+          premium
+              ? '${member.email} tendrá todas las funciones premium de '
+                  'TrainApp.\n\nEl mes en que se le activa por primera vez '
+                  'es gratis. Desde el día 1 del mes siguiente se factura '
+                  '\$4.000 al mes, proporcional a los días que lo tenga.'
+              : '${member.email} pasará a la versión gratis.\n\nSi este mes '
+                  'ya se le facturaba, solo se cobran los días que lo tuvo.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(premium ? 'Activar' : 'Quitar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _busy = true);
+    try {
+      await GymService().setPremium(member.uid, premium);
+      await _load();
+    } catch (e) {
+      if (mounted) _showMessage('No se pudo cambiar el premium: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final members = _members;
@@ -140,6 +185,14 @@ class _GymMembersPanelState extends State<GymMembersPanel> {
           emptyText: 'Todavía no hay atletas.',
           members: members.where((m) => !m.isTrainer).toList(),
           onRemove: _remove,
+          athletes: true,
+          onTogglePremium: _busy ? null : _togglePremium,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Premium activo: ${members.where((m) => m.hasPremium).length} '
+          'atletas. Los entrenadores de planta tienen premium sin costo.',
+          style: const TextStyle(color: Colors.grey, fontSize: 12),
         ),
       ],
     );
@@ -152,12 +205,20 @@ class _MemberSection extends StatelessWidget {
   final List<GymMember> members;
   final ValueChanged<GymMember> onRemove;
 
+  /// Solo atletas: activa/desactiva su premium (null = deshabilitado).
+  final void Function(GymMember member, bool premium)? onTogglePremium;
+
   const _MemberSection({
     required this.title,
     required this.emptyText,
     required this.members,
     required this.onRemove,
+    this.onTogglePremium,
+    this.athletes = false,
   });
+
+  /// Sección de atletas (muestra el premium de cada uno).
+  final bool athletes;
 
   @override
   Widget build(BuildContext context) {
@@ -180,11 +241,31 @@ class _MemberSection extends StatelessWidget {
                     : Icons.hourglass_top,
               ),
               title: Text(m.email),
-              subtitle: m.isAccepted ? null : const Text('Invitación pendiente'),
-              trailing: IconButton(
-                icon: const Icon(Icons.close),
-                tooltip: m.isAccepted ? 'Retirar' : 'Cancelar invitación',
-                onPressed: () => onRemove(m),
+              subtitle: !m.isAccepted
+                  ? const Text('Invitación pendiente')
+                  : athletes
+                      ? Text(m.hasPremium ? 'Premium' : 'Gratis')
+                      : null,
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (athletes && m.isAccepted)
+                    Tooltip(
+                      message: m.hasPremium ? 'Quitar premium' : 'Activar premium',
+                      child: Switch(
+                        value: m.hasPremium,
+                        activeThumbColor: kPremiumColor,
+                        onChanged: onTogglePremium == null
+                            ? null
+                            : (v) => onTogglePremium!(m, v),
+                      ),
+                    ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    tooltip: m.isAccepted ? 'Retirar' : 'Cancelar invitación',
+                    onPressed: () => onRemove(m),
+                  ),
+                ],
               ),
             ),
           ),

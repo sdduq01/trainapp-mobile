@@ -7,6 +7,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/widgets/trainapp_brand.dart';
+import '../../premium/premium_service.dart';
 import '../../profile/models/user_profile.dart';
 import '../../profile/profile_service.dart';
 import '../data/macrocycle_forjado.dart';
@@ -67,6 +68,10 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
   // Configuración de intensidad cargada del perfil.
   bool _intensityEnabled = false;
   int _failureCadence = UserProfile.kFailureCadenceDefault;
+
+  // Sobrecarga progresiva automática (premium). Apagada, el peso queda en el
+  // que el atleta registre.
+  bool _autoProgression = false;
 
   // Calentamiento: series de aproximación automáticas antes del peso de
   // trabajo. null = no está calentando (o el calentamiento terminó).
@@ -419,12 +424,16 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
     final results = await Future.wait([
       ProfileService().getProfile(_userId),
       RoutineService().getRoutine(_userId),
+      PremiumService.instance.fetch(_userId),
     ]);
-    final profile = results[0] as UserProfile?;
+    // Sin premium se ignoran RIR, calentamiento y progresión automática.
+    final profile = (results[0] as UserProfile?)
+        ?.effectiveFor(premium: results[2] as bool);
     final routine = results[1] as Routine?;
     if (!mounted) return;
     setState(() {
       if (profile != null) {
+        _autoProgression = profile.autoProgressionEnabled;
         _intensityEnabled = profile.intensityEnabled;
         _failureCadence = profile.failureWeekCadence;
         _warmupEnabled = profile.warmupEnabled;
@@ -477,7 +486,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
 
       case ProgressionType.pyramid:
         final hitMax = prevReps >= ex.repsMax;
-        final newWeight = hitMax
+        final newWeight = hitMax && _autoProgression
             ? prevWeight + ex.progressionStep
             : prevWeight;
         final rir =
@@ -492,7 +501,9 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
         );
 
       case ProgressionType.reversePyramid:
-        final newWeight = prevWeight - ex.progressionStep;
+        final newWeight = _autoProgression
+            ? prevWeight - ex.progressionStep
+            : prevWeight;
         final reps = ex.repsMin + _setIndex;
         final rir =
             ProgressionLogic.reversePyramidRirMap(ex.sets)[_setIndex];
@@ -877,14 +888,8 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
     final days = routine.days
         .map((d) => d.dayNumber == newDay4.dayNumber ? newDay4 : d)
         .toList();
-    final swapped = await RoutineService().hydrateWithPRs(Routine(
-      userId: routine.userId,
-      type: routine.type,
-      name: routine.name,
-      weekNumber: routine.weekNumber,
-      createdAt: routine.createdAt,
-      days: days,
-    ));
+    final swapped =
+        await RoutineService().hydrateWithPRs(routine.copyWith(days: days));
     await RoutineService().saveRoutine(swapped);
   }
 
@@ -1076,6 +1081,16 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
     if (weights.isEmpty) return null;
     final maxWeightUsed = weights.reduce((a, b) => a > b ? a : b);
 
+    // Sin progresión automática el peso queda en el que registró el atleta.
+    if (!_autoProgression) {
+      if (ex.progressionType == ProgressionType.none) return null;
+      return (
+        newWeight: maxWeightUsed,
+        referenceWeight: maxWeightUsed,
+        didProgress: false,
+      );
+    }
+
     switch (ex.progressionType) {
       case ProgressionType.none:
         // No actualiza currentWeight desde la sesión. El usuario edita manual.
@@ -1171,14 +1186,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
     }).toList();
 
     if (changed) {
-      await RoutineService().saveRoutine(Routine(
-        userId: routine.userId,
-        type: routine.type,
-        name: routine.name,
-        weekNumber: routine.weekNumber,
-        createdAt: routine.createdAt,
-        days: updatedDays,
-      ));
+      await RoutineService().saveRoutine(routine.copyWith(days: updatedDays));
       await ExercisePrService().upsertMany(_userId, prUpdates);
     }
 
@@ -1414,14 +1422,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
       final updatedDays = routine.days
           .map((d) => d.dayNumber == _day.dayNumber ? _inRoutineOrder(d) : d)
           .toList();
-      await RoutineService().saveRoutine(Routine(
-        userId: routine.userId,
-        type: routine.type,
-        name: routine.name,
-        weekNumber: routine.weekNumber,
-        createdAt: routine.createdAt,
-        days: updatedDays,
-      ));
+      await RoutineService().saveRoutine(routine.copyWith(days: updatedDays));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

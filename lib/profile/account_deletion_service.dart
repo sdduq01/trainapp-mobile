@@ -16,7 +16,7 @@ import '../trainer/services/user_directory_service.dart';
 /// - Rutina activa y macro ciclo (`routines`, `macrocycles`)
 /// - Vínculos de entrenador, como atleta y como entrenador (`trainer_links`)
 /// - Inscripciones a clases grupales futuras (libera los cupos)
-/// - Pertenencia a un gimnasio (`gym_members`)
+/// - Pertenencia a un gimnasio (`gym_members`) y su premium (`entitlements`)
 /// - Entrada del directorio por email (`user_directory`) y perfil (`profiles`)
 /// - Los drafts de sesión guardados en el dispositivo
 /// - La cuenta de Firebase Authentication
@@ -58,6 +58,10 @@ class AccountDeletionService {
       db.collection('gym_members').doc(uid).delete(),
       UserDirectoryService().deleteDirectoryEntry(uid, email),
     ]);
+    // El premium lo recalcula el servidor al borrarse gym_members; si alcanza
+    // a escribirlo antes, aquí se borra. Los periodos facturados del gimnasio
+    // se conservan (son su historial de cobro).
+    await db.collection('entitlements').doc(uid).delete();
     // El perfil va de último: si algo de lo anterior falla, la cuenta sigue
     // usable y se puede reintentar.
     await db.collection('profiles').doc(uid).delete();

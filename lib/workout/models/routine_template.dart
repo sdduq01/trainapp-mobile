@@ -47,5 +47,6 @@ class RoutineTemplate {
         weekNumber: 1,
         createdAt: DateTime.now(),
         days: days,
+        templateId: id,
       );
 }

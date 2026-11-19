@@ -102,14 +102,7 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
   RoutineDay _copyDay(RoutineDay day, {required List<RoutineExercise> exercises}) =>
       RoutineDay(dayNumber: day.dayNumber, name: day.name, focus: day.focus, exercises: exercises);
 
-  Routine _copyRoutine(List<RoutineDay> days) => Routine(
-        userId: _routine.userId,
-        type: _routine.type,
-        name: _routine.name,
-        weekNumber: _routine.weekNumber,
-        createdAt: _routine.createdAt,
-        days: days,
-      );
+  Routine _copyRoutine(List<RoutineDay> days) => _routine.copyWith(days: days);
 
   // ── Guardar ──────────────────────────────────────────────
 

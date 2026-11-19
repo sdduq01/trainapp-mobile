@@ -95,6 +95,15 @@ class GymService {
     });
   }
 
+  /// El dueño activa o desactiva el premium de un atleta aceptado. El cobro
+  /// lo lleva una Cloud Function a partir de este cambio.
+  Future<void> setPremium(String uid, bool premium) async {
+    await _members.doc(uid).update({
+      'premium': premium,
+      'premiumUpdatedAt': DateTime.now().toIso8601String(),
+    });
+  }
+
   /// Rechaza o sale (el propio usuario) o retira/cancela (el dueño).
   Future<void> deleteMembership(String uid) async {
     await _members.doc(uid).delete();

@@ -16,6 +16,7 @@ const { onSchedule }        = require('firebase-functions/v2/scheduler');
 const { initializeApp }     = require('firebase-admin/app');
 const nodemailer            = require('nodemailer');
 const classes               = require('./classes');
+const premium               = require('./premium');
 
 // La base `trainapp` está en southamerica-east1: los triggers de Firestore
 // deben correr en la misma región.
@@ -128,5 +129,68 @@ exports.generateGymClasses = onSchedule(
   async () => {
     const created = await classes.syncAllSchedules(db());
     logger.info('Clases generadas', { created });
+  },
+);
+
+/**
+ * Premium: al invitar, aceptar, retirar o cambiar el premium de un miembro
+ * del gimnasio, recalcula su `entitlements/{uid}` y su periodo facturable
+ * (ver `premium.js`).
+ */
+exports.syncMemberEntitlement = onDocumentWritten(
+  {
+    document: 'gym_members/{uid}',
+    database: DATABASE_ID,
+    region: REGION,
+  },
+  async event => {
+    const result = await premium.recomputeEntitlement(db(), event.params.uid);
+    if (result.changed) logger.info('Premium actualizado', result);
+  },
+);
+
+/**
+ * Premium: al crear un gimnasio, cambiar su dueño o suspenderlo/reactivarlo,
+ * recalcula al dueño y a todos sus miembros.
+ */
+exports.syncGymEntitlements = onDocumentWritten(
+  {
+    document: 'gyms/{gymId}',
+    database: DATABASE_ID,
+    region: REGION,
+  },
+  async event => {
+    const before = event.data?.before?.data() ?? null;
+    const after  = event.data?.after?.data() ?? null;
+    const statusChanged = (before?.status ?? 'active') !== (after?.status ?? 'active');
+    const ownerChanged  = before?.ownerUid !== after?.ownerUid;
+    if (!statusChanged && !ownerChanged) return;
+
+    const owners = [before?.ownerUid, after?.ownerUid];
+    const results = statusChanged
+      ? await premium.recomputeGym(db(), event.params.gymId, owners)
+      : await Promise.all(owners.filter(Boolean)
+          .map(uid => premium.recomputeEntitlement(db(), uid)));
+    logger.info('Premium del gimnasio recalculado', {
+      gymId: event.params.gymId,
+      changed: results.filter(r => r.changed).length,
+    });
+  },
+);
+
+/**
+ * Facturación: el día 1 de cada mes (hora de Bogotá) genera la factura del
+ * mes anterior de cada gimnasio con atletas premium cobrables.
+ */
+exports.generateGymInvoices = onSchedule(
+  {
+    schedule: '30 0 1 * *',
+    timeZone: 'America/Bogota',
+    region: REGION,
+  },
+  async () => {
+    const { year, month0 } = premium.previousMonth(new Date());
+    const created = await premium.generateInvoices(db(), year, month0);
+    logger.info('Facturas generadas', { month: premium.monthId(year, month0), created });
   },
 );

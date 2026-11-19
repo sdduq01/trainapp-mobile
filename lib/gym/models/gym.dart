@@ -19,6 +19,10 @@ class Gym {
   /// `active` o `suspended`. Solo lo cambia un admin (más adelante, el cobro).
   final String status;
 
+  /// Exento de cobro (gimnasios aliados, pruebas gratuitas). Solo lo cambia
+  /// un admin: sus atletas tienen premium sin generar facturas.
+  final bool billingExempt;
+
   const Gym({
     required this.id,
     required this.name,
@@ -30,6 +34,7 @@ class Gym {
     this.cancelWindowHours = kDefaultCancelWindowHours,
     this.status = 'active',
     this.websiteUrl,
+    this.billingExempt = false,
   });
 
   factory Gym.fromMap(String id, Map<String, dynamic> m) => Gym(
@@ -44,6 +49,7 @@ class Gym {
             kDefaultCancelWindowHours,
         status: m['status'] as String? ?? 'active',
         websiteUrl: m['websiteUrl'] as String?,
+        billingExempt: m['billingExempt'] as bool? ?? false,
       );
 
   Gym copyWith({
@@ -66,5 +72,6 @@ class Gym {
         cancelWindowHours: cancelWindowHours ?? this.cancelWindowHours,
         status: status,
         websiteUrl: websiteUrl ?? this.websiteUrl,
+        billingExempt: billingExempt,
       );
 }

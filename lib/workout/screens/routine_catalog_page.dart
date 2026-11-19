@@ -1,6 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../premium/free_tier.dart';
+import '../../premium/premium_service.dart';
+import '../../premium/premium_widgets.dart';
 import '../../profile/profile_service.dart';
 import '../data/macrocycle_forjado.dart';
 import '../models/custom_routine.dart';
@@ -38,15 +41,44 @@ class RoutineCatalogPage extends StatelessWidget {
             ],
           ),
         ),
-        body: const TabBarView(
-          children: [
-            _TemplateListTab(category: 'recommended', emptyMsg: 'Aún no hay rutinas recomendadas.'),
-            _TemplateListTab(category: 'sport',       emptyMsg: 'Aún no hay rutinas por deporte.'),
-            _TopSecretTab(),
-            _MacroTab(),
-            _TemplateListTab(category: 'limited',     emptyMsg: 'Aún no hay rutinas de edición limitada.'),
-            _CustomTab(),
-          ],
+        // Sin premium solo se usan las rutinas TrainApp (en Recomendadas);
+        // el resto de pestañas muestra el aviso premium.
+        body: PremiumBuilder(
+          builder: (_, premium) => TabBarView(
+            children: [
+              const _TemplateListTab(category: 'recommended', emptyMsg: 'Aún no hay rutinas recomendadas.'),
+              premium
+                  ? const _TemplateListTab(category: 'sport', emptyMsg: 'Aún no hay rutinas por deporte.')
+                  : const PremiumLockedPanel(
+                      title: 'Rutinas por deporte',
+                      description: 'Rutinas pensadas para complementar tu deporte.',
+                    ),
+              premium
+                  ? const _TopSecretTab()
+                  : const PremiumLockedPanel(
+                      title: 'Top Secret',
+                      description: 'Las rutinas ocultas que se ganan completando un macro ciclo.',
+                    ),
+              premium
+                  ? const _MacroTab()
+                  : const PremiumLockedPanel(
+                      title: 'Macro ciclos',
+                      description: 'Un año de entrenamiento por fases con "Forjado por el Hierro".',
+                    ),
+              premium
+                  ? const _TemplateListTab(category: 'limited', emptyMsg: 'Aún no hay rutinas de edición limitada.')
+                  : const PremiumLockedPanel(
+                      title: 'Edición limitada',
+                      description: 'Rutinas especiales que no están en el resto del catálogo.',
+                    ),
+              premium
+                  ? const _CustomTab()
+                  : const PremiumLockedPanel(
+                      title: 'Rutinas personalizadas',
+                      description: 'Arma tus propias rutinas y ejercicios.',
+                    ),
+            ],
+          ),
         ),
       ),
     );
@@ -157,10 +189,21 @@ class _TemplateCard extends StatelessWidget {
             const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerRight,
-              child: FilledButton.icon(
-                icon: const Icon(Icons.check),
-                label: const Text('Usar esta rutina'),
-                onPressed: () => _activateTemplate(context, template),
+              child: PremiumBuilder(
+                builder: (context, premium) =>
+                    premium || FreeTier.isFreeTemplate(template.id)
+                        ? FilledButton.icon(
+                            icon: const Icon(Icons.check),
+                            label: const Text('Usar esta rutina'),
+                            onPressed: () => _activateTemplate(context, template),
+                          )
+                        : OutlinedButton.icon(
+                            icon: const Icon(Icons.workspace_premium,
+                                color: kPremiumColor),
+                            label: const Text('Premium'),
+                            onPressed: () => showPremiumRequired(context,
+                                feature: 'La rutina "${template.name}"'),
+                          ),
               ),
             ),
           ],
@@ -525,14 +568,7 @@ class _MacroTabState extends State<_MacroTab> with AutomaticKeepAliveClientMixin
       // Normaliza la rutina para que deje de estar bloqueada por el macro ciclo.
       final routine = await RoutineService().getRoutine(uid);
       if (routine != null && routine.type == ForjadoPorElHierro.routineType) {
-        await RoutineService().saveRoutine(Routine(
-          userId: routine.userId,
-          type: 'PPL',
-          name: routine.name,
-          weekNumber: routine.weekNumber,
-          createdAt: routine.createdAt,
-          days: routine.days,
-        ));
+        await RoutineService().saveRoutine(routine.copyWith(type: 'PPL'));
       }
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
@@ -969,11 +1005,19 @@ class _CustomTabState extends State<_CustomTab>
 //   Activación: confirma + sobreescribe routines/{uid} + pop con true
 // ═══════════════════════════════════════════════════════════════════════════
 
-Future<void> _activateTemplate(BuildContext context, RoutineTemplate t) =>
-    _activateRoutine(context, name: t.name, build: (uid) => t.toRoutine(uid));
+Future<void> _activateTemplate(BuildContext context, RoutineTemplate t) {
+  if (!FreeTier.isFreeTemplate(t.id) && !PremiumService.instance.isPremium.value) {
+    return showPremiumRequired(context, feature: 'La rutina "${t.name}"');
+  }
+  return _activateRoutine(context, name: t.name, build: (uid) => t.toRoutine(uid));
+}
 
-Future<void> _activateCustomRoutine(BuildContext context, CustomRoutine cr) =>
-    _activateRoutine(context, name: cr.name, build: (uid) => cr.toRoutine(uid));
+Future<void> _activateCustomRoutine(BuildContext context, CustomRoutine cr) {
+  if (!PremiumService.instance.isPremium.value) {
+    return showPremiumRequired(context, feature: 'Usar rutinas personalizadas');
+  }
+  return _activateRoutine(context, name: cr.name, build: (uid) => cr.toRoutine(uid));
+}
 
 Future<void> _activateRoutine(
   BuildContext context, {

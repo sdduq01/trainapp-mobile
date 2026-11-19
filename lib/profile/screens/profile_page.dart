@@ -9,10 +9,15 @@ import '../../core/utils/legal_links.dart';
 import '../../gym/models/gym_member.dart';
 import '../../gym/services/gym_service.dart';
 import '../../onboarding/config/body_fat_options.dart';
+import '../../premium/duty_picker.dart';
+import '../../premium/free_tier.dart';
+import '../../premium/premium_service.dart';
+import '../../premium/premium_widgets.dart';
 import '../../trainer/models/trainer_link.dart';
 import '../../trainer/services/trainer_link_service.dart';
 import '../../workout/services/routine_generator.dart';
 import '../../workout/services/routine_service.dart';
+import '../../workout/services/routine_template_service.dart';
 import '../../workout/services/training_reset_service.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -39,6 +44,10 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _stretchingEnabled = false;
   bool _cardioEnabled = false;
   bool _isTrainer = false;
+  bool _autoProgression = true;
+
+  // Premium otorgado por el gimnasio (bloquea las funciones premium si no).
+  bool _premium = false;
 
   UserProfile? _initial;
   bool _loading = true;
@@ -79,7 +88,12 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _load() async {
-    final profile = await ProfileService().getProfile(_userId);
+    final results = await Future.wait([
+      ProfileService().getProfile(_userId),
+      PremiumService.instance.fetch(_userId),
+    ]);
+    final profile = results[0] as UserProfile?;
+    _premium = results[1] as bool;
     if (!mounted || profile == null) return;
     setState(() {
       _initial = profile;
@@ -96,6 +110,7 @@ class _ProfilePageState extends State<ProfilePage> {
       _stretchingEnabled = profile.stretchingEnabled;
       _cardioEnabled = profile.cardioEnabled;
       _isTrainer = profile.isTrainer;
+      _autoProgression = profile.autoProgressionEnabled;
       _loading = false;
     });
   }
@@ -115,6 +130,10 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _acceptTrainer() async {
+    if (!_premium) {
+      await showPremiumRequired(context, feature: 'Tener entrenador personal');
+      return;
+    }
     setState(() => _trainerLinkBusy = true);
     try {
       await TrainerLinkService().acceptRequest(_userId);
@@ -527,6 +546,7 @@ class _ProfilePageState extends State<ProfilePage> {
       cardioEnabled: _cardioEnabled,
       forjadoHierroCompletado: _initial?.forjadoHierroCompletado ?? false,
       isTrainer: _isTrainer,
+      autoProgressionEnabled: _autoProgression,
     );
 
     final shouldAskRegenerate = _routineAffectingChanged;
@@ -540,10 +560,20 @@ class _ProfilePageState extends State<ProfilePage> {
       if (shouldAskRegenerate && mounted) {
         final yes = await _confirmRegenerate();
         if (yes) {
-          final routine = RoutineGenerator.generate(updated);
-          final hydrated = await RoutineService().hydrateWithPRs(routine);
-          await RoutineService().saveRoutine(hydrated);
-          regenerated = true;
+          if (_premium) {
+            final routine = RoutineGenerator.generate(updated);
+            final hydrated = await RoutineService().hydrateWithPRs(routine);
+            await RoutineService().saveRoutine(hydrated);
+            regenerated = true;
+          } else {
+            // Sin premium la rutina generada es la TrainApp de sus días.
+            final template = await RoutineTemplateService()
+                .getById(FreeTier.templateIdForDays(_trainingDays));
+            if (template != null) {
+              await activateFreeTemplate(_userId, template);
+              regenerated = true;
+            }
+          }
         }
       }
     } catch (e) {
@@ -754,19 +784,33 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
 
                 const SizedBox(height: 24),
+                _sectionTitle('Plan'),
+                const SizedBox(height: 8),
+                _buildPlanCard(),
+
+                const SizedBox(height: 24),
+                _sectionTitle('Progresión'),
+                const SizedBox(height: 4),
+                _premiumSwitch(
+                  title: 'Progresión automática',
+                  subtitle: 'Sube el peso de cada ejercicio según el tipo de '
+                      'progresión que tenga configurado. Apagada, el peso '
+                      'queda en el que registres.',
+                  value: _autoProgression,
+                  onChanged: (v) => setState(() => _autoProgression = v),
+                ),
+
+                const SizedBox(height: 24),
                 _sectionTitle('Intensidad (RIR)'),
                 const SizedBox(height: 4),
-                SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Mostrar intensidad por serie'),
-                  subtitle: const Text(
-                    'Cada ejercicio mostrará su RIR objetivo según la progresión configurada.',
-                    style: TextStyle(fontSize: 12),
-                  ),
+                _premiumSwitch(
+                  title: 'Mostrar intensidad por serie',
+                  subtitle: 'Cada ejercicio mostrará su RIR objetivo según la '
+                      'progresión configurada.',
                   value: _intensityEnabled,
                   onChanged: (v) => setState(() => _intensityEnabled = v),
                 ),
-                if (_intensityEnabled) ...[
+                if (_premium && _intensityEnabled) ...[
                   const SizedBox(height: 8),
                   Text(
                     'Semana FALLO cada $_failureCadence semanas',
@@ -791,34 +835,24 @@ class _ProfilePageState extends State<ProfilePage> {
                 const SizedBox(height: 24),
                 _sectionTitle('Extras de entrenamiento'),
                 const SizedBox(height: 4),
-                SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Calentamiento'),
-                  subtitle: const Text(
-                    'Agrega series de aproximación automáticas (livianas) antes '
-                    'de cada ejercicio con peso registrado.',
-                    style: TextStyle(fontSize: 12),
-                  ),
+                _premiumSwitch(
+                  title: 'Calentamiento',
+                  subtitle: 'Agrega series de aproximación automáticas '
+                      '(livianas) antes de cada ejercicio con peso registrado.',
                   value: _warmupEnabled,
                   onChanged: (v) => setState(() => _warmupEnabled = v),
                 ),
-                SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Estiramientos'),
-                  subtitle: const Text(
-                    'Muestra el grupo "Estiramiento" al agregar ejercicios a tus rutinas.',
-                    style: TextStyle(fontSize: 12),
-                  ),
+                _premiumSwitch(
+                  title: 'Estiramientos',
+                  subtitle: 'Muestra el grupo "Estiramiento" al agregar '
+                      'ejercicios a tus rutinas.',
                   value: _stretchingEnabled,
                   onChanged: (v) => setState(() => _stretchingEnabled = v),
                 ),
-                SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Cardio'),
-                  subtitle: const Text(
-                    'Muestra el grupo "Cardio" al agregar ejercicios a tus rutinas.',
-                    style: TextStyle(fontSize: 12),
-                  ),
+                _premiumSwitch(
+                  title: 'Cardio',
+                  subtitle: 'Muestra el grupo "Cardio" al agregar ejercicios '
+                      'a tus rutinas.',
                   value: _cardioEnabled,
                   onChanged: (v) => setState(() => _cardioEnabled = v),
                 ),
@@ -826,14 +860,10 @@ class _ProfilePageState extends State<ProfilePage> {
                 const SizedBox(height: 24),
                 _sectionTitle('Modo entrenador'),
                 const SizedBox(height: 4),
-                SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Soy entrenador'),
-                  subtitle: const Text(
-                    'Habilita "Mis atletas" para enviar solicitudes y ver/editar '
-                    'la rutina de los atletas que las acepten.',
-                    style: TextStyle(fontSize: 12),
-                  ),
+                _premiumSwitch(
+                  title: 'Soy entrenador',
+                  subtitle: 'Habilita "Mis atletas" para enviar solicitudes y '
+                      'ver/editar la rutina de los atletas que las acepten.',
                   value: _isTrainer,
                   onChanged: (v) => setState(() => _isTrainer = v),
                 ),
@@ -1058,4 +1088,57 @@ class _ProfilePageState extends State<ProfilePage> {
         text,
         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
       );
+
+  /// Interruptor de una función premium: sin premium se ve apagado, con la
+  /// etiqueta "Premium", y al tocarlo explica cómo obtenerlo. El valor
+  /// guardado no se toca.
+  Widget _premiumSwitch({
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    final tile = SwitchListTile.adaptive(
+      contentPadding: EdgeInsets.zero,
+      title: Row(
+        children: [
+          Flexible(child: Text(title)),
+          if (!_premium) ...[
+            const SizedBox(width: 8),
+            const PremiumBadge(),
+          ],
+        ],
+      ),
+      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
+      value: _premium && value,
+      onChanged: _premium ? onChanged : null,
+    );
+    if (_premium) return tile;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => showPremiumRequired(context, feature: title),
+      child: tile,
+    );
+  }
+
+  Widget _buildPlanCard() {
+    final gym = _gymMembership;
+    final viaGym = gym != null && gym.isAccepted;
+    return Card(
+      child: ListTile(
+        leading: Icon(
+          _premium ? Icons.workspace_premium : Icons.person_outline,
+          color: _premium ? kPremiumColor : null,
+        ),
+        title: Text(_premium ? 'Premium' : 'Gratis'),
+        subtitle: Text(
+          _premium
+              ? (viaGym ? 'Activado por ${gym.gymName}.' : 'Activado por tu gimnasio.')
+              : 'Rutinas TrainApp Light Duty, Duty y Hard Duty y tus últimas '
+                  '${FreeTier.historySessions} sesiones. $kPremiumHowTo',
+          style: const TextStyle(fontSize: 12),
+        ),
+      ),
+    );
+  }
 }

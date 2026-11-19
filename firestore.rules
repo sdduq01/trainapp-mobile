@@ -55,6 +55,25 @@ service cloud.firestore {
         get(/databases/$(database)/documents/gyms/$(gymId)).data.ownerUid == request.auth.uid;
     }
 
+    // Premium: lo calcula una Cloud Function en `entitlements/{uid}` (dueño o
+    // entrenador de planta de un gimnasio activo, o atleta al que su gimnasio
+    // se lo activó).
+    function isPremium(uid) {
+      return exists(/databases/$(database)/documents/entitlements/$(uid)) &&
+        get(/databases/$(database)/documents/entitlements/$(uid)).data.premium == true;
+    }
+
+    // Premium de cada usuario. Solo lo escribe el servidor; lo leen el propio
+    // usuario y quien lo entrena (para saber qué funciones aplicar en la
+    // sesión que registra). El usuario puede borrar el suyo al eliminar su
+    // cuenta.
+    match /entitlements/{uid} {
+      allow read: if request.auth != null &&
+        (request.auth.uid == uid || isCoachOf(uid));
+      allow delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if false;
+    }
+
     // Perfil: el propio usuario. El entrenador (personal o del gimnasio) solo
     // lee (necesita la config de intensidad/calentamiento para registrar la
     // sesión del atleta).
@@ -84,14 +103,20 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Ejercicios propios del usuario ("Mis ejercicios")
+    // Ejercicios propios del usuario ("Mis ejercicios"). Crear y editar es
+    // premium; sin premium los sigue viendo y puede borrarlos.
     match /custom_exercises/{userId}/items/{exerciseId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, delete: if request.auth != null && request.auth.uid == userId;
+      allow create, update: if request.auth != null && request.auth.uid == userId &&
+        isPremium(userId);
     }
 
-    // Rutinas personalizadas guardadas del usuario ("Mis rutinas")
+    // Rutinas personalizadas guardadas del usuario ("Mis rutinas"). Igual que
+    // "Mis ejercicios": crear y editar es premium.
     match /custom_routines/{userId}/items/{routineId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, delete: if request.auth != null && request.auth.uid == userId;
+      allow create, update: if request.auth != null && request.auth.uid == userId &&
+        isPremium(userId);
     }
 
     // Sesiones completadas: sessions/{uid}/logs/{sessionId}
@@ -164,15 +189,19 @@ service cloud.firestore {
         (request.auth.uid == athleteUid ||
          resource.data.trainerUid == request.auth.uid);
 
+      // Enviar solicitudes (modo entrenador) es premium.
       allow create: if request.auth != null &&
+        isPremium(request.auth.uid) &&
         request.resource.data.trainerUid == request.auth.uid &&
         request.resource.data.athleteUid == athleteUid &&
         request.resource.data.trainerUid != athleteUid &&
         request.resource.data.status == 'pending';
 
       // El atleta acepta: pending -> accepted, sin cambiar quién es el trainer.
+      // Tener entrenador personal también es premium.
       allow update: if request.auth != null &&
         request.auth.uid == athleteUid &&
+        isPremium(athleteUid) &&
         resource.data.status == 'pending' &&
         request.resource.data.status == 'accepted' &&
         request.resource.data.trainerUid == resource.data.trainerUid;
@@ -349,6 +378,25 @@ service cloud.firestore {
       }
     }
 
+    // ── Facturación del premium ─────────────────────────────────────────
+    // Periodos de premium por atleta y facturas mensuales: los escribe solo
+    // el servidor (`functions/premium.js`). El dueño los ve en el portal; el
+    // admin además marca las facturas como pagadas.
+    match /gyms/{gymId}/billing_athletes/{uid} {
+      allow read: if isAdmin() || isGymOwner(gymId);
+      allow write: if false;
+    }
+
+    match /gyms/{gymId}/invoices/{invoiceId} {
+      allow read: if isAdmin() || isGymOwner(gymId);
+      allow update: if isAdmin() &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'paidAt', 'paidNote']) &&
+        request.resource.data.status in ['pending', 'paid'] &&
+        request.resource.data.paidNote is string;
+      allow create, delete: if false;
+    }
+
     // "Mis clases": el atleta consulta sus inscripciones en todos los
     // gimnasios con una consulta de grupo filtrada por su uid.
     match /{path=**}/enrollments/{enrollmentId} {
@@ -393,6 +441,7 @@ service cloud.firestore {
          isGymTrainerIn(resource.data.gymId));
 
       allow create: if isGymOwner(request.resource.data.gymId) &&
+        !('premium' in request.resource.data) &&
         request.resource.data.status == 'pending' &&
         request.resource.data.role in ['trainer', 'athlete'] &&
         request.resource.data.gymName is string &&
@@ -403,8 +452,17 @@ service cloud.firestore {
         request.auth.uid == uid &&
         resource.data.status == 'pending' &&
         request.resource.data.status == 'accepted' &&
-        request.resource.data.gymId == resource.data.gymId &&
-        request.resource.data.role == resource.data.role;
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'respondedAt']);
+
+      // El dueño (no los entrenadores de planta: cada activación se le
+      // factura) activa o desactiva el premium de un atleta aceptado.
+      allow update: if isGymOwner(resource.data.gymId) &&
+        resource.data.role == 'athlete' &&
+        resource.data.status == 'accepted' &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['premium', 'premiumUpdatedAt']) &&
+        request.resource.data.premium is bool;
 
       // Rechazar/salir (el usuario) o retirar/cancelar (el dueño).
       allow delete: if request.auth != null &&

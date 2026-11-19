@@ -20,4 +20,10 @@ class RoutineTemplateService {
     });
     return list;
   }
+
+  Future<RoutineTemplate?> getById(String id) async {
+    final doc = await db.collection('routine_templates').doc(id).get();
+    if (!doc.exists) return null;
+    return RoutineTemplate.fromMap(doc.id, doc.data()!);
+  }
 }

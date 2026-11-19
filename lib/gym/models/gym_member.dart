@@ -16,6 +16,11 @@ class GymMember {
   final DateTime invitedAt;
   final DateTime? respondedAt;
 
+  /// Premium activado por el dueño (solo atletas aceptados; se factura al
+  /// gimnasio). Lo que de verdad da acceso es `entitlements/{uid}`, que una
+  /// Cloud Function calcula a partir de esto.
+  final bool premium;
+
   const GymMember({
     required this.uid,
     required this.gymId,
@@ -25,12 +30,16 @@ class GymMember {
     required this.email,
     required this.invitedAt,
     this.respondedAt,
+    this.premium = false,
   });
 
   bool get isAccepted => status == GymMemberStatus.accepted;
   bool get isTrainer => role == GymRole.trainer;
 
   String get roleLabel => isTrainer ? 'entrenador' : 'atleta';
+
+  /// Atleta aceptado al que el gimnasio le activó el premium.
+  bool get hasPremium => premium && isAccepted && !isTrainer;
 
   Map<String, dynamic> toMap() => {
         'gymId': gymId,
@@ -57,5 +66,6 @@ class GymMember {
         respondedAt: m['respondedAt'] != null
             ? DateTime.parse(m['respondedAt'] as String)
             : null,
+        premium: m['premium'] as bool? ?? false,
       );
 }
