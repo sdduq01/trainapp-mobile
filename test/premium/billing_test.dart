@@ -67,6 +67,21 @@ void main() {
       expect(a.amountIn(2027, 1), 2839);
     });
 
+    test('quien sale en su mes gratis no aparece como "se cobra desde"', () {
+      final left = athlete(
+        freeFrom: Billing.monthStart(2026, 12),
+        periods: [
+          PremiumPeriod(DateTime.utc(2026, 11, 19, 15), DateTime.utc(2026, 11, 19, 18)),
+        ],
+      );
+      final p = BillingProjection.forMonth([left], 2026, 11);
+      expect(p.freeMonth, isEmpty);
+      expect(p.billable, isEmpty);
+      expect(p.total, 0);
+      // Y en diciembre tampoco se le cobra.
+      expect(left.isBillableIn(2026, 12), isFalse);
+    });
+
     test('proyección y formato', () {
       final list = [
         athlete(

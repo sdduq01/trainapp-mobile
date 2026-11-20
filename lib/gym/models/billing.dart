@@ -172,7 +172,13 @@ class BillingProjection {
       year,
       month,
       athletes.where((a) => a.isBillableIn(year, month)).toList()..sort(byEmail),
-      athletes.where((a) => a.isInFreeMonth(year, month)).toList()..sort(byEmail),
+      // Solo los que siguen con premium: a un atleta que salió en su mes
+      // gratis no se le va a cobrar nada (su registro se conserva para que el
+      // mes gratis no se repita si vuelve).
+      athletes
+          .where((a) => a.active && a.isInFreeMonth(year, month))
+          .toList()
+        ..sort(byEmail),
     );
   }
 
