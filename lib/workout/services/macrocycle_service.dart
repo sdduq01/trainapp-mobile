@@ -1,7 +1,10 @@
+import 'package:cloud_firestore/cloud_firestore.dart' show FieldValue;
+
 import '../../core/firebase/firestore_instance.dart';
 import '../data/macrocycle_forjado.dart';
 import '../models/macrocycle_progress.dart';
 import '../models/routine.dart';
+import 'routine_service.dart';
 
 enum MacroAdvanceKind {
   /// Se registró una sesión pero la fase sigue abierta.
@@ -61,9 +64,71 @@ class MacrocycleService {
         .set(MacrocycleProgress.initial().toMap());
   }
 
-  /// Descarta el macro ciclo activo (p. ej. al activar otra rutina normal).
+  /// Descarta el macro ciclo (el usuario lo abandona a propósito).
   Future<void> abandon(String userId) async {
     await db.collection('macrocycles').doc(userId).delete();
+  }
+
+  /// Antes de reemplazar la rutina activa por otra: una forja en curso queda
+  /// guardada (con una copia de su rutina, si es la activa) en vez de
+  /// perderse. Una forja ya completada se descarta como antes.
+  Future<void> pauseIfActive(String userId) async {
+    final mc = await get(userId);
+    if (mc == null) return;
+    if (mc.completed) return abandon(userId);
+    if (mc.isPaused) return;
+    final routine = await RoutineService().getRoutine(userId);
+    final isForge = routine?.type == ForjadoPorElHierro.routineType;
+    await db.collection('macrocycles').doc(userId).update({
+      'status': MacrocycleProgress.statusPaused,
+      'pausedAt': DateTime.now().toIso8601String(),
+      // Sin la rutina de la forja activa (casos raros), al retomar se usa la
+      // de su fase.
+      'savedRoutine': isForge ? routine!.toMap() : null,
+      if (mc.heatSince == null) 'heatSince': DateTime.now().toIso8601String(),
+    });
+  }
+
+  /// Retoma una forja guardada donde iba: su rutina vuelve a ser la activa
+  /// (con los pesos de referencia al día).
+  Future<Routine?> resume(String userId) async {
+    final mc = await get(userId);
+    if (mc == null || !mc.isPaused) return null;
+    final saved = mc.savedRoutine;
+    final base = saved != null
+        ? Routine.fromMap(userId, saved)
+        : ForjadoPorElHierro.routineForPhase(userId, mc.phaseIndex);
+    final routine = await RoutineService().hydrateWithPRs(base);
+    await RoutineService().saveRoutine(routine);
+    await db.collection('macrocycles').doc(userId).update({
+      'status': MacrocycleProgress.statusActive,
+      'pausedAt': null,
+      'savedRoutine': FieldValue.delete(),
+    });
+    return routine;
+  }
+
+  /// La racha se rompió: la forja se enfría y se pierde. Si su rutina es la
+  /// activa, queda como rutina normal (los pesos no se tocan).
+  Future<void> cool(String userId) async {
+    final mc = await get(userId);
+    if (mc == null || mc.completed) return;
+    await abandon(userId);
+    if (!mc.isPaused) {
+      final routine = await RoutineService().getRoutine(userId);
+      if (routine != null && routine.type == ForjadoPorElHierro.routineType) {
+        await RoutineService().saveRoutine(routine.copyWith(type: 'PPL'));
+      }
+    }
+  }
+
+  /// Forjas anteriores a la regla de la racha: empiezan a medirse desde hoy.
+  Future<void> ensureHeatSince(String userId, MacrocycleProgress mc) async {
+    if (mc.heatSince != null) return;
+    await db
+        .collection('macrocycles')
+        .doc(userId)
+        .update({'heatSince': DateTime.now().toIso8601String()});
   }
 
   /// Registra una sesión completa del [dayNumber] dado y evalúa si se cierra la
@@ -76,7 +141,8 @@ class MacrocycleService {
     if (!ForjadoPorElHierro.trackedDays.contains(dayNumber)) return null;
 
     final mc = await get(userId);
-    if (mc == null || mc.completed) return null;
+    // Guardada no avanza: solo cuentan las sesiones con la rutina de la forja.
+    if (mc == null || mc.completed || mc.isPaused) return null;
 
     final ref = db.collection('macrocycles').doc(userId);
 

@@ -67,4 +67,26 @@ void main() {
       0,
     );
   });
+
+  group('forja (brokeIn)', () {
+    test('sin romper: semanas completas, con un día menos o en riesgo salvada', () {
+      expect(Streak.brokeIn(weeks([4, 3, 2, 4, 0])), isFalse);
+    });
+
+    test('una semana muy corta la rompe', () {
+      expect(Streak.brokeIn(weeks([4, 1, 4, 0])), isTrue);
+    });
+
+    test('en riesgo sin recuperar la rompe, aunque luego se entrene', () {
+      expect(Streak.brokeIn(weeks([4, 2, 3, 4, 0])), isTrue);
+    });
+
+    test('en riesgo pendiente (semana en curso) todavía no la rompe', () {
+      expect(Streak.brokeIn(weeks([4, 2, 1])), isFalse);
+    });
+
+    test('la semana en curso nunca la rompe', () {
+      expect(Streak.brokeIn(weeks([0])), isFalse);
+    });
+  });
 }

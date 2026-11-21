@@ -39,6 +39,18 @@ class ExercisePrService {
     });
   }
 
+  /// Corrección manual del peso de referencia (desde la edición de rutina).
+  /// Con 0 se borra: la próxima rutina que se active no hereda ningún peso.
+  Future<void> setWeight(
+    String userId,
+    String exerciseId,
+    double weight,
+    String unit,
+  ) async {
+    if (weight > 0) return upsert(userId, exerciseId, weight, unit);
+    await db.collection(_root).doc(userId).collection(_items).doc(exerciseId).delete();
+  }
+
   Future<void> upsertMany(
     String userId,
     Map<String, ExercisePr> prs,

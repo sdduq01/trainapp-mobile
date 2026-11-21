@@ -54,6 +54,8 @@ class AccountDeletionService {
           db.collection('custom_exercises').doc(uid).collection('items')),
       deleteCollection(
           db.collection('custom_routines').doc(uid).collection('items')),
+      deleteCollection(
+          db.collection('push_tokens').doc(uid).collection('tokens')),
       db.collection('routines').doc(uid).delete(),
       db.collection('macrocycles').doc(uid).delete(),
       _deleteTrainerLinks(uid),

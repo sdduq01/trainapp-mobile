@@ -9,14 +9,17 @@
  *     (https://myaccount.google.com/apppasswords, requiere verificación en 2 pasos).
  */
 
-const { onDocumentWritten } = require('firebase-functions/v2/firestore');
+const { onDocumentWritten, onDocumentDeleted } = require('firebase-functions/v2/firestore');
 const { defineSecret }      = require('firebase-functions/params');
 const logger                = require('firebase-functions/logger');
 const { onSchedule }        = require('firebase-functions/v2/scheduler');
 const { initializeApp }     = require('firebase-admin/app');
+const { getMessaging }      = require('firebase-admin/messaging');
 const nodemailer            = require('nodemailer');
 const classes               = require('./classes');
 const premium               = require('./premium');
+const notify                = require('./notify');
+const stats                 = require('./stats');
 
 // La base `trainapp` está en southamerica-east1: los triggers de Firestore
 // deben correr en la misma región.
@@ -30,6 +33,7 @@ const GMAIL_APP_PASSWORD = defineSecret('GMAIL_APP_PASSWORD');
 
 const app = initializeApp();
 const db  = () => classes.getFirestore(app, DATABASE_ID);
+const notifyCtx = () => ({ db: db(), messaging: getMessaging(app) });
 
 const escapeHtml = s =>
   String(s ?? '').replace(/[&<>"']/g, c =>
@@ -231,5 +235,113 @@ exports.generateGymInvoices = onSchedule(
     const { year, month0 } = premium.previousMonth(new Date());
     const created = await premium.generateInvoices(db(), year, month0);
     logger.info('Facturas generadas', { month: premium.monthId(year, month0), created });
+  },
+);
+
+// ── Notificaciones push (ver `notify.js`) ────────────────────────────────
+
+/** Antes/después de un trigger onDocumentWritten. */
+const change = event => [
+  event.data?.before?.data() ?? null,
+  event.data?.after?.data() ?? null,
+];
+
+const logSent = (label, params, results) => {
+  const sent = results.reduce((n, r) => n + (r?.sent ?? 0), 0);
+  if (results.length) logger.info(label, { ...params, recipients: results.length, sent });
+};
+
+/** Horario de clases nuevo o reactivado → atletas del gimnasio. */
+exports.notifyScheduleChange = onDocumentWritten(
+  { document: 'gyms/{gymId}/schedules/{scheduleId}', database: DATABASE_ID, region: REGION },
+  async event => {
+    const results = await notify.onScheduleWrite(notifyCtx(), event.params, ...change(event));
+    logSent('Push horario nuevo', event.params, results);
+  },
+);
+
+/** Clase suelta nueva → atletas; cancelada o con hora nueva → inscritos. */
+exports.notifyClassChange = onDocumentWritten(
+  { document: 'gyms/{gymId}/classes/{classId}', database: DATABASE_ID, region: REGION },
+  async event => {
+    const results = await notify.onClassWrite(notifyCtx(), event.params, ...change(event));
+    logSent('Push clase', event.params, results);
+  },
+);
+
+/** Inscripción borrada → push silencioso que borra el recordatorio local. */
+exports.notifyEnrollmentRemoved = onDocumentDeleted(
+  {
+    document: 'gyms/{gymId}/classes/{classId}/enrollments/{uid}',
+    database: DATABASE_ID,
+    region: REGION,
+  },
+  async event => {
+    await notify.onEnrollmentDelete(notifyCtx(), event.params);
+  },
+);
+
+/** Invitación de gimnasio → invitado; aceptada → dueño. */
+exports.notifyGymMember = onDocumentWritten(
+  { document: 'gym_members/{uid}', database: DATABASE_ID, region: REGION },
+  async event => {
+    const results = await notify.onGymMemberWrite(notifyCtx(), event.params, ...change(event));
+    logSent('Push miembro de gimnasio', event.params, results);
+  },
+);
+
+/** Solicitud de entrenador → atleta; aceptada → entrenador. */
+exports.notifyTrainerLink = onDocumentWritten(
+  { document: 'trainer_links/{athleteUid}', database: DATABASE_ID, region: REGION },
+  async event => {
+    const results = await notify.onTrainerLinkWrite(notifyCtx(), event.params, ...change(event));
+    logSent('Push entrenador', event.params, results);
+  },
+);
+
+/** El entrenador editó la rutina del atleta → atleta (máx. 1 cada 3 h). */
+exports.notifyRoutineEdit = onDocumentWritten(
+  { document: 'routines/{uid}', database: DATABASE_ID, region: REGION },
+  async event => {
+    const results = await notify.onRoutineWrite(notifyCtx(), event.params, ...change(event));
+    logSent('Push rutina editada', event.params, results);
+  },
+);
+
+/** Premium del gimnasio activado/terminado; prueba gratis terminada. */
+exports.notifyEntitlement = onDocumentWritten(
+  { document: 'entitlements/{uid}', database: DATABASE_ID, region: REGION },
+  async event => {
+    const results = await notify.onEntitlementWrite(notifyCtx(), event.params, ...change(event));
+    logSent('Push premium', event.params, results);
+  },
+);
+
+/** Cada día a las 10:00: "tu prueba premium termina pronto". */
+exports.remindTrialEnding = onSchedule(
+  { schedule: 'every day 10:00', timeZone: 'America/Bogota', region: REGION },
+  async () => {
+    const results = await notify.remindTrialsEnding(notifyCtx());
+    logSent('Push fin de prueba', {}, results);
+  },
+);
+
+// ── Resumen semanal de entrenamiento (ver `stats.js`) ───────────────────
+
+const datesOf = event => [event.data?.before?.data()?.date, event.data?.after?.data()?.date];
+
+/** Sesión registrada, editada o borrada → recalcula su semana en `session_stats`. */
+exports.syncSessionStats = onDocumentWritten(
+  { document: 'sessions/{uid}/logs/{logId}', database: DATABASE_ID, region: REGION },
+  async event => {
+    await stats.updateStats(db(), event.params.uid, 'sessions', datesOf(event));
+  },
+);
+
+/** Evento de progresión → recalcula las progresiones de su semana. */
+exports.syncProgressionStats = onDocumentWritten(
+  { document: 'progressions/{uid}/logs/{logId}', database: DATABASE_ID, region: REGION },
+  async event => {
+    await stats.updateStats(db(), event.params.uid, 'progressions', datesOf(event));
   },
 );

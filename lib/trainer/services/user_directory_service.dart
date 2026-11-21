@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/firebase/firestore_instance.dart';
 
@@ -17,11 +18,18 @@ class UserDirectoryService {
   /// Crea o actualiza la entrada del directorio para [uid]. Idempotente,
   /// pensado para llamarse tanto al registrarse como (como backfill) cada
   /// vez que una cuenta existente abre la app.
+  ///
+  /// Una vez por cuenta y dispositivo (marca en SharedPreferences): antes
+  /// escribía en cada apertura del inicio.
   Future<void> ensureDirectoryEntry(String uid, String? email) async {
     if (email == null || email.trim().isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'user_directory_ok_${_docId(email)}_$uid';
+    if (prefs.getBool(key) ?? false) return;
     await db.collection('user_directory').doc(_docId(email)).set({
       'uid': uid,
     });
+    await prefs.setBool(key, true);
   }
 
   /// Busca el uid registrado para [email], o null si no existe.

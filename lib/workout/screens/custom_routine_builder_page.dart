@@ -7,6 +7,7 @@ import '../models/exercise.dart';
 import '../models/routine.dart';
 import '../services/custom_routine_service.dart';
 import '../services/exercise_service.dart';
+import '../services/macrocycle_service.dart';
 import '../services/routine_service.dart';
 import '../widgets/create_exercise_dialog.dart';
 
@@ -395,6 +396,7 @@ class _CustomRoutineBuilderPageState extends State<CustomRoutineBuilderPage> {
         createdAt: DateTime.now(),
         days: _days,
       );
+      await MacrocycleService().pauseIfActive(user.uid);
       final hydrated = await RoutineService().hydrateWithPRs(routine);
       await RoutineService().saveRoutine(hydrated);
       // También queda guardada en "Mis rutinas" para reactivarla o borrarla luego.

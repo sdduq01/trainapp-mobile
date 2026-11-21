@@ -41,13 +41,18 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Future<void> _load() async {
-    var sessions = await SessionService().getSessionsForUser(_userId);
+    final service = SessionService();
     final limited = widget.athleteUid == null &&
         !await PremiumService.instance.fetch(_userId);
+    // Sin premium solo se leen las sesiones que se muestran; las ocultas se
+    // cuentan sin leerlas.
+    final sessions = await service.getSessionsForUser(_userId,
+        limit: limited ? FreeTier.historySessions : null);
     var hidden = 0;
-    if (limited && sessions.length > FreeTier.historySessions) {
-      hidden = sessions.length - FreeTier.historySessions;
-      sessions = sessions.take(FreeTier.historySessions).toList();
+    if (limited && sessions.length == FreeTier.historySessions) {
+      try {
+        hidden = await service.countSessions(_userId) - sessions.length;
+      } catch (_) {}
     }
     if (mounted) {
       setState(() {

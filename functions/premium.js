@@ -283,11 +283,13 @@ async function startTrial(db, uid, email, now = new Date()) {
 
 /** Marca como vencidas las pruebas terminadas y recalcula su premium. */
 async function expireTrials(db, now = new Date()) {
+  // Solo las activas: sin el filtro, cada hora se leían todas las pruebas
+  // vencidas de la historia (índice compuesto status + endsAt).
   const snap = await db.collection('trial_requests')
+    .where('status', '==', 'active')
     .where('endsAt', '<=', Timestamp.fromDate(now)).get();
   let expired = 0;
   for (const d of snap.docs) {
-    if (d.data().status !== 'active') continue;
     await d.ref.update({ status: 'expired' });
     await recomputeEntitlement(db, d.id, now);
     expired++;

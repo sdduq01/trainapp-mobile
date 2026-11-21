@@ -14,6 +14,8 @@ import '../../gym/services/gym_service.dart';
 import '../../gym/services/gym_request_service.dart';
 import '../../portal/screens/gym_request_page.dart';
 import '../../onboarding/config/body_fat_options.dart';
+import '../../notifications/notification_settings_page.dart';
+import '../../workout/services/macrocycle_service.dart';
 import '../../onboarding/tutorial/tutorial_service.dart';
 import '../../premium/duty_picker.dart';
 import '../../premium/free_tier.dart';
@@ -664,6 +666,7 @@ class _ProfilePageState extends State<ProfilePage> {
         final yes = await _confirmRegenerate();
         if (yes) {
           if (_premium) {
+            await MacrocycleService().pauseIfActive(_userId);
             final routine = RoutineGenerator.generate(updated);
             final hydrated = await RoutineService().hydrateWithPRs(routine);
             await RoutineService().saveRoutine(hydrated);
@@ -1013,6 +1016,24 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
 
                 const SizedBox(height: 24),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.notifications_outlined),
+                    title: const Text('Notificaciones'),
+                    subtitle: const Text(
+                      'Racha, clases, invitaciones, tu entrenador y premium.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.push<void>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationSettingsPage(),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 Card(
                   child: ListTile(
                     leading: const Icon(Icons.lightbulb_outline),

@@ -7,17 +7,19 @@ import '../models/routine.dart';
 import 'counter_field.dart';
 
 /// Diálogo de edición de parámetros de un [RoutineExercise] (series, reps,
-/// descanso, unidad de peso, progresión). Devuelve el ejercicio actualizado
-/// (conservando `exerciseId`, `name`, `currentWeight` e `isIsometric` del
-/// original), o `null` si se canceló.
+/// descanso, unidad de peso, progresión y, con [editWeight], el peso sugerido
+/// para la próxima sesión). Devuelve el ejercicio actualizado (conservando
+/// `exerciseId`, `name` e `isIsometric` del original, y `currentWeight` si no
+/// se edita), o `null` si se canceló.
 ///
 /// Compartido entre la edición de rutina completa (`EditRoutinePage`) y la
 /// edición de ejercicios restantes desde una sesión activa
 /// (`WorkoutSessionPage`).
 Future<RoutineExercise?> showExerciseEditDialog(
   BuildContext context,
-  RoutineExercise ex,
-) {
+  RoutineExercise ex, {
+  bool editWeight = false,
+}) {
   int sets = ex.sets;
   int repsMin = ex.repsMin;
   int repsMax = ex.repsMax;
@@ -25,6 +27,9 @@ Future<RoutineExercise?> showExerciseEditDialog(
   String weightUnit = ex.weightUnit;
   double progressionStep = ex.progressionStep;
   ProgressionType progressionType = ex.progressionType;
+  final weightCtrl = TextEditingController(
+      text: ex.currentWeight > 0 ? _trim(ex.currentWeight) : '');
+  String? weightError;
 
   const steps = [1.0, 1.25, 2.5, 5.0, 10.0];
 
@@ -143,6 +148,33 @@ Future<RoutineExercise?> showExerciseEditDialog(
                     style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
+                if (editWeight) ...[
+                  const SizedBox(height: 16),
+                  const Text('Peso sugerido',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: weightCtrl,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      border: const OutlineInputBorder(),
+                      suffixText: _unitAbbrev(weightUnit),
+                      hintText: '0',
+                      errorText: weightError,
+                      helperText: 'Con este peso arranca tu próxima sesión. '
+                          'Corrígelo si registraste mal; tus sesiones '
+                          'anteriores no cambian.',
+                      helperMaxLines: 3,
+                    ),
+                    onChanged: (_) {
+                      if (weightError != null) {
+                        setDialogState(() => weightError = null);
+                      }
+                    },
+                  ),
+                ],
                 const SizedBox(height: 16),
                 const Text('Incremento de progresión', style: TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
@@ -185,6 +217,16 @@ Future<RoutineExercise?> showExerciseEditDialog(
             ),
             FilledButton(
               onPressed: () {
+                var weight = ex.currentWeight;
+                if (editWeight) {
+                  final text = weightCtrl.text.trim().replaceAll(',', '.');
+                  final parsed = text.isEmpty ? 0.0 : double.tryParse(text);
+                  if (parsed == null || parsed < 0 || parsed > 1000) {
+                    setDialogState(() => weightError = 'Peso no válido');
+                    return;
+                  }
+                  weight = parsed;
+                }
                 Navigator.pop(
                   ctx,
                   RoutineExercise(
@@ -193,7 +235,7 @@ Future<RoutineExercise?> showExerciseEditDialog(
                     sets: sets,
                     repsMin: repsMin,
                     repsMax: repsMax < repsMin ? repsMin : repsMax,
-                    currentWeight: ex.currentWeight,
+                    currentWeight: weight,
                     restSeconds: restSeconds,
                     weightUnit: weightUnit,
                     progressionStep: progressionStep,
@@ -210,6 +252,9 @@ Future<RoutineExercise?> showExerciseEditDialog(
     ),
   );
 }
+
+String _trim(double v) =>
+    v % 1 == 0 ? v.toStringAsFixed(0) : v.toString();
 
 String _unitAbbrev(String unit) => switch (unit) {
       'lbs' => 'lb',

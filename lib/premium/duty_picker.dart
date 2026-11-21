@@ -10,12 +10,13 @@ import 'free_tier.dart';
 Future<List<RoutineTemplate>> loadFreeTemplates() => FreeTier.freeTemplates();
 
 /// Activa la plantilla [template] como rutina de [uid] (con sus PRs) y
-/// abandona el macro ciclo si había uno.
+/// guarda la forja si había una en curso.
 Future<Routine> activateFreeTemplate(String uid, RoutineTemplate template) async {
+  // La forja en curso queda guardada (se retoma con premium).
+  await MacrocycleService().pauseIfActive(uid);
   final routine =
       await RoutineService().hydrateWithPRs(template.toRoutine(uid));
   await RoutineService().saveRoutine(routine);
-  await MacrocycleService().abandon(uid);
   return routine;
 }
 

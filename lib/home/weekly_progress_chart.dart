@@ -1,15 +1,11 @@
 import 'dart:ui' show ImageFilter;
 
-import 'package:cloud_firestore/cloud_firestore.dart' show SetOptions;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../core/firebase/firestore_instance.dart';
 import '../core/utils/iso_week.dart';
 import '../premium/premium_widgets.dart';
-import '../workout/models/workout_session.dart';
-import '../workout/services/progression_service.dart';
-import '../workout/services/session_service.dart';
-import 'streak.dart';
+import '../notifications/local_reminders.dart';
+import 'streak_service.dart';
 
 class WeeklyProgressChart extends StatefulWidget {
   final int plannedDaysPerWeek;
@@ -19,10 +15,20 @@ class WeeklyProgressChart extends StatefulWidget {
   /// interacción; al tocarla explica cómo obtener el premium.
   final bool locked;
 
+  /// Forja en curso (activa o guardada): la racha también la pone en juego.
+  /// Ver [MacrocycleProgress.atStakeLabel].
+  final String? forgeAtStake;
+
+  /// Con la racha ya calculada (para revisar si la forja se enfrió sin
+  /// volver a leer las sesiones).
+  final void Function(StreakData data)? onLoaded;
+
   const WeeklyProgressChart({
     required this.plannedDaysPerWeek,
     required this.totalRoutineExercises,
     this.locked = false,
+    this.forgeAtStake,
+    this.onLoaded,
     super.key,
   });
 
@@ -60,25 +66,6 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
 
   static int _isoYear(DateTime date) => IsoWeek.year(date);
 
-  static DateTime _mondayOf(DateTime date) =>
-      DateTime(date.year, date.month, date.day - (date.weekday - 1));
-
-  /// Objetivo de las sesiones anteriores a `plannedDays`: los días de la
-  /// rutina activa la primera vez que se calcula, guardado en el perfil para
-  /// que un cambio de rutina posterior no reescriba esas semanas.
-  Future<int> _legacyGoal(List<WorkoutSession> sessions, int planned) async {
-    if (sessions.every((s) => s.plannedDays != null)) return planned;
-    final ref = db.collection('profiles').doc(_userId);
-    try {
-      final saved = (await ref.get()).data()?['streakLegacyGoal'];
-      if (saved is int) return saved;
-      await ref.set({'streakLegacyGoal': planned}, SetOptions(merge: true));
-    } catch (_) {
-      // Sin red: se usa la rutina actual y se guarda en otra ocasión.
-    }
-    return planned;
-  }
-
   /// Datos de ejemplo para la vista bloqueada: no consulta nada del usuario.
   static List<_WeekStat> _demoStats(int currentWeek, int planned) {
     const pattern = [1.0, 0.75, 1.0, 1.0, 0.5, 1.0, 0.75, 1.0];
@@ -101,6 +88,7 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
     final planned = widget.plannedDaysPerWeek;
 
     if (widget.locked) {
+      LocalReminders.cancelStreak();
       setState(() {
         _stats = _demoStats(currentWeek, planned);
         _streak = 3;
@@ -109,49 +97,19 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
       return;
     }
 
-    List<WorkoutSession> sessions = const [];
-    try {
-      sessions = await SessionService().getSessionsForUser(_userId);
-    } catch (_) {
-      // Sin permisos o sin red: el chart carga igual (vacío) en vez de
-      // quedarse girando para siempre.
-    }
-    Map<int, int> progressionsByWeek = {};
-    try {
-      progressionsByWeek =
-          await ProgressionService().getProgressionsByWeek(_userId, currentYear);
-    } catch (_) {
-      // Colección aún sin reglas o sin datos — el chart carga igual sin progresos
-    }
-    final legacyGoal = await _legacyGoal(sessions, planned);
-
-    // Semanas desde la primera sesión hasta la actual (cruzando años, para
-    // que la racha no se reinicie en enero), con el objetivo que tenía la
-    // rutina en cada una: el de su primera sesión que lo guarde; si no
-    // tiene, el de la semana anterior. La semana en curso sin sesiones con
-    // objetivo usa la rutina actual.
-    final thisMonday = _mondayOf(now);
-    final byMonday = <DateTime, List<WorkoutSession>>{};
-    for (final s in sessions) {
-      byMonday.putIfAbsent(_mondayOf(s.date), () => []).add(s);
-    }
-    var monday = byMonday.keys.fold<DateTime>(
-        thisMonday, (min, m) => m.isBefore(min) ? m : min);
-    final records = <DateTime, WeekRecord>{};
-    var goal = legacyGoal;
-    while (!monday.isAfter(thisMonday)) {
-      final week = byMonday[monday] ?? const <WorkoutSession>[];
-      final stamped = week.where((s) => s.plannedDays != null).toList()
-        ..sort((a, b) => a.date.compareTo(b.date));
-      if (stamped.isNotEmpty) {
-        goal = stamped.first.plannedDays!;
-      } else if (monday == thisMonday) {
-        goal = planned;
-      }
-      records[monday] = WeekRecord(done: week.length, planned: goal);
-      monday = DateTime(monday.year, monday.month, monday.day + 7);
-    }
-    final streak = Streak.compute(records.values.toList());
+    final data = await StreakService().load(_userId, planned, now: now);
+    final records = data.weeks;
+    final legacyGoal = data.legacyGoal;
+    final streak = data.streak;
+    // Aviso local "vas a perder tu racha" con el mismo cálculo.
+    LocalReminders.updateStreak(
+      uid: _userId,
+      premium: true,
+      streak: streak,
+      current: data.current,
+      forge: widget.forgeAtStake,
+    );
+    widget.onLoaded?.call(data);
 
     // La gráfica muestra las semanas del año en curso.
     final firstMonday = IsoWeek.firstMonday(currentYear);
@@ -163,7 +121,7 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
         week: i + 1,
         done: r?.done ?? 0,
         planned: r?.planned ?? legacyGoal,
-        progressions: progressionsByWeek[i + 1] ?? 0,
+        progressions: data.progressions[m] ?? 0,
       );
     });
 
@@ -263,7 +221,9 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
           'salvas cumpliendo todos los días de tu rutina la semana '
           'siguiente.\n\n'
           'El objetivo de cada semana es el de la rutina que tenías en ese '
-          'momento; cambiar de rutina no modifica las semanas pasadas.',
+          'momento; cambiar de rutina no modifica las semanas pasadas.\n\n'
+          'Tu forja de Forjado por el Hierro, activa o guardada, vive de tu '
+          'racha: si la racha se pierde, la forja se enfría y pierdes su avance.',
         ),
         actions: [
           TextButton(
@@ -295,11 +255,10 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
         ),
         if (_daysToSave > 0)
           Text(
-            _daysToSave == 1
-                ? 'Tu racha está en riesgo: entrena 1 día más esta semana '
-                    'para salvarla.'
-                : 'Tu racha está en riesgo: entrena $_daysToSave días más '
-                    'esta semana para salvarla.',
+            'Tu racha está en riesgo: entrena '
+            '${_daysToSave == 1 ? '1 día' : '$_daysToSave días'} más esta '
+            'semana para salvarla'
+            '${widget.forgeAtStake == null ? '' : ', o ${widget.forgeAtStake} se enfría'}.',
             style: TextStyle(
               fontSize: 12,
               color: Colors.orange[800],

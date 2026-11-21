@@ -26,6 +26,8 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        // flutter_local_notifications usa APIs de java.time en Android viejos.
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -73,4 +75,5 @@ flutter {
 dependencies {
     // WindowCompat.enableEdgeToEdge en MainActivity.
     implementation("androidx.core:core:1.18.0")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

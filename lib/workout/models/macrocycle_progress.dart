@@ -1,11 +1,19 @@
 import '../data/macrocycle_forjado.dart';
 
-/// Estado del macro ciclo activo del usuario — doc `macrocycles/{uid}`.
+/// Estado del macro ciclo del usuario — doc `macrocycles/{uid}`.
 ///
 /// La definición de fases y de cada Día 4 vive en [ForjadoPorElHierro]; este
 /// doc solo guarda el avance: en qué fase va y cuántas sesiones de cada día
 /// lleva registradas en esa fase.
+///
+/// La forja puede estar activa (es la rutina en uso) o guardada (el usuario
+/// activó otra rutina): guardada conserva el avance y una copia de su rutina
+/// para retomarla donde iba. Activa o guardada, depende de la racha: si la
+/// racha se rompe después de [heatSince], la forja se enfría y se pierde.
 class MacrocycleProgress {
+  static const statusActive = 'active';
+  static const statusPaused = 'paused';
+
   final String templateId;
   final String name;
   final int phaseIndex; // 0-based
@@ -19,6 +27,18 @@ class MacrocycleProgress {
   final String? countedDate;
   final int countedToday;
 
+  final String status;
+  final DateTime? pausedAt;
+
+  /// Desde cuándo se mide si la racha se rompió: el inicio de la forja (las
+  /// forjas de antes de esta regla lo reciben la primera vez que se revisan,
+  /// para no enfriarlas por semanas viejas).
+  final DateTime? heatSince;
+
+  /// Rutina de la forja al guardarla (con las ediciones del usuario), para
+  /// restaurarla al retomar. Formato de `Routine.toMap`.
+  final Map<String, dynamic>? savedRoutine;
+
   const MacrocycleProgress({
     required this.templateId,
     required this.name,
@@ -29,16 +49,36 @@ class MacrocycleProgress {
     this.completedAt,
     this.countedDate,
     this.countedToday = 0,
+    this.status = statusActive,
+    this.pausedAt,
+    this.heatSince,
+    this.savedRoutine,
   });
 
-  factory MacrocycleProgress.initial() => MacrocycleProgress(
-    templateId: ForjadoPorElHierro.templateId,
-    name: ForjadoPorElHierro.routineName,
-    phaseIndex: 0,
-    phaseCounts: {for (final d in ForjadoPorElHierro.trackedDays) d: 0},
-    startedAt: DateTime.now(),
-    completed: false,
-  );
+  factory MacrocycleProgress.initial() {
+    final now = DateTime.now();
+    return MacrocycleProgress(
+      templateId: ForjadoPorElHierro.templateId,
+      name: ForjadoPorElHierro.routineName,
+      phaseIndex: 0,
+      phaseCounts: {for (final d in ForjadoPorElHierro.trackedDays) d: 0},
+      startedAt: now,
+      completed: false,
+      heatSince: now,
+    );
+  }
+
+  bool get isPaused => status == statusPaused;
+
+  /// En curso (activa o guardada): lo que la racha pone en juego.
+  bool get inProgress => !completed;
+
+  /// "fase 2 de 6": para avisos y diálogos.
+  String get phaseLabel => 'fase $currentPhaseNumber de $totalPhases';
+
+  /// Lo que se pierde si se enfría, para los avisos de racha.
+  String get atStakeLabel =>
+      'tu forja ($phaseLabel, $totalSessionsDone de $totalSessionsGoal sesiones)';
 
   int get currentPhaseNumber => phaseIndex + 1;
   int get totalPhases => ForjadoPorElHierro.totalPhases;
@@ -61,6 +101,10 @@ class MacrocycleProgress {
     'completedAt': completedAt?.toIso8601String(),
     'countedDate': countedDate,
     'countedToday': countedToday,
+    'status': status,
+    'pausedAt': pausedAt?.toIso8601String(),
+    'heatSince': heatSince?.toIso8601String(),
+    'savedRoutine': savedRoutine,
   };
 
   factory MacrocycleProgress.fromMap(Map<String, dynamic> m) {
@@ -82,6 +126,10 @@ class MacrocycleProgress {
           : null,
       countedDate: m['countedDate'] as String?,
       countedToday: (m['countedToday'] as num?)?.toInt() ?? 0,
+      status: m['status'] as String? ?? statusActive,
+      pausedAt: DateTime.tryParse(m['pausedAt'] as String? ?? ''),
+      heatSince: DateTime.tryParse(m['heatSince'] as String? ?? ''),
+      savedRoutine: (m['savedRoutine'] as Map?)?.cast<String, dynamic>(),
     );
   }
 }

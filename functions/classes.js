@@ -64,7 +64,13 @@ async function syncSchedule(db, gymId, scheduleId, schedule, now = new Date()) {
   const classes = db.collection('gyms').doc(gymId).collection('classes');
   const desired = desiredClasses(scheduleId, schedule, now);
 
-  const existing = await classes.where('scheduleId', '==', scheduleId).get();
+  // Solo las futuras: las pasadas no se tocan, y sin el filtro cada corrida
+  // diaria leía todas las clases de la historia del horario (índice
+  // compuesto scheduleId + startsAt).
+  const existing = await classes
+    .where('scheduleId', '==', scheduleId)
+    .where('startsAt', '>', Timestamp.fromDate(now))
+    .get();
   const counts = { created: 0, updated: 0, deleted: 0, cancelled: 0, skipped: 0 };
   const ops = [];
 

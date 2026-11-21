@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../notifications/local_reminders.dart';
 import '../models/gym.dart';
 import '../models/gym_class.dart';
 import '../services/gym_class_service.dart';
@@ -72,6 +73,7 @@ class _GymClassesPageState extends State<GymClassesPage> {
         await _service.enroll(c);
         if (mounted) _showMessage('¡Listo! Quedaste inscrito en ${c.name}.');
       }
+      LocalReminders.syncClasses(FirebaseAuth.instance.currentUser!.uid);
     } on Exception catch (e) {
       if (mounted) _showMessage(e.toString().replaceFirst('Exception: ', ''));
     } finally {

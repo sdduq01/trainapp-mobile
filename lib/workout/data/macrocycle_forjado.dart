@@ -33,8 +33,20 @@ class ForjadoPorElHierro {
     'Pierna',
   ];
 
-  /// Mínimo de ejercicios por día exigido al editar la rutina del macro ciclo.
+  /// Mínimo de ejercicios por día base exigido al editar la rutina del macro
+  /// ciclo.
   static const int minExercisesPerDay = 4;
+
+  /// Días base de la forja (los que cuentan para cerrar cada fase). La rutina
+  /// puede tener días extra después de estos: cuentan para la racha pero no
+  /// para la fase.
+  static bool isExtraDay(int dayNumber) => dayNumber > trackedDays.length;
+
+  /// Reglas de personalización, para avisos y diálogos.
+  static String get customizationRule =>
+      'mientras conserve sus ${trackedDays.length} días base con mínimo '
+      '$minExercisesPerDay ejercicios cada uno, puedes cambiar sus ejercicios '
+      'y agregar días extra, y sigue contando para la forja';
 
   /// Anti-trampa: por cada día del calendario, como máximo estas sesiones
   /// cuentan para la forja (no se puede completar el macro ciclo entrando y

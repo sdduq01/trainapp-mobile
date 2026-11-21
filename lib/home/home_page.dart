@@ -31,6 +31,11 @@ import '../workout/screens/workout_session_page.dart';
 import '../workout/screens/history_page.dart';
 import '../workout/widgets/exercise_demo.dart';
 import '../workout/screens/routine_catalog_page.dart';
+import '../notifications/local_reminders.dart';
+import '../notifications/notification_service.dart';
+import '../notifications/push_token_service.dart';
+import '../premium/premium_widgets.dart';
+import 'streak_service.dart';
 import 'weekly_progress_chart.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -71,6 +76,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _premium.addListener(_onPremiumChanged);
+    NotificationService.instance.pendingRoute.addListener(_openPendingRoute);
     _loadRoutine();
     _loadIsTrainer();
     _loadGym();
@@ -81,13 +87,51 @@ class _HomePageState extends State<HomePage> {
       UserDirectoryService()
           .ensureDirectoryEntry(_user.uid, _user.email)
           .catchError((_) {});
+      PushTokenService.register(_user.uid);
+      LocalReminders.syncClasses(_user.uid);
     }
   }
 
   @override
   void dispose() {
     _premium.removeListener(_onPremiumChanged);
+    NotificationService.instance.pendingRoute
+        .removeListener(_openPendingRoute);
     super.dispose();
+  }
+
+  /// Toque en una notificación: abre su pantalla. Si llega antes de que el
+  /// inicio termine de cargar (app abierta desde la notificación), se
+  /// reintenta al terminar de cargar la rutina y el gimnasio.
+  Future<void> _openPendingRoute() async {
+    final pending = NotificationService.instance.pendingRoute;
+    final route = pending.value;
+    if (route == null || !mounted || _loading) return;
+    switch (route) {
+      case NotifRoute.profile:
+        pending.value = null;
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ProfilePage()),
+        );
+        await Future.wait([_loadIsTrainer(), _loadGym()]);
+      case NotifRoute.gymClasses:
+        final gym = _gym;
+        if (gym == null) return; // aún cargando: _loadGym lo reintenta
+        pending.value = null;
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => GymClassesPage(
+              gym: gym,
+              canEnroll: !(_gymMembership?.isTrainer ?? true),
+            ),
+          ),
+        );
+      default:
+        pending.value = null; // home: ya estamos aquí
+        setState(() => _chartKey++);
+    }
   }
 
   void _onPremiumChanged() {
@@ -224,7 +268,12 @@ class _HomePageState extends State<HomePage> {
     if (mounted) {
       setState(() { _routine = routine; _macro = macro; _loading = false; });
       await _enforceFreeTier();
-      _maybeStartTutorial();
+      _openPendingRoute();
+      await _maybeStartTutorial();
+      if (mounted) {
+        await NotificationService.instance
+            .maybeAskPermission(context, _user.uid);
+      }
     }
   }
 
@@ -256,10 +305,105 @@ class _HomePageState extends State<HomePage> {
           _gym = gym;
           _ownedGym = results[1] as Gym?;
         });
+        _openPendingRoute();
       }
     } catch (_) {
       // silencioso: sin logo ni íconos del gimnasio
     }
+  }
+
+  /// Con la racha calculada por la gráfica: la forja (activa o guardada) se
+  /// enfría si la racha se rompió desde que está en curso.
+  bool _coolingInProgress = false;
+
+  Future<void> _checkForgeHeat(StreakData data) async {
+    final macro = _macro;
+    if (macro == null || !macro.inProgress || _coolingInProgress) return;
+    final since = macro.heatSince;
+    try {
+      if (since == null) {
+        // Forja de antes de esta regla: se mide desde hoy.
+        await MacrocycleService().ensureHeatSince(_user!.uid, macro);
+        return;
+      }
+      if (!data.brokeSince(since)) return;
+      _coolingInProgress = true;
+      await MacrocycleService().cool(_user!.uid);
+    } catch (_) {
+      _coolingInProgress = false;
+      return; // sin red: se revisa la próxima vez
+    }
+    if (!mounted) return;
+    await _loadRoutine();
+    _coolingInProgress = false;
+    if (!mounted) return;
+    final lost = macro.atStakeLabel
+        .replaceFirst('tu forja ', 'tu forja de ${macro.name} ');
+    await showDialog<void>(
+      context: context,
+      builder: (dctx) => AlertDialog(
+        icon: const Text('🥶', style: TextStyle(fontSize: 40)),
+        title: const Text('Tu forja se enfrió'),
+        content: Text(
+          'Perdiste tu racha, y con ella $lost. '
+          'El hierro solo se forja en caliente: puedes empezar una forja nueva '
+          'desde Macro ciclos en el catálogo.'
+          '${macro.isPaused ? '' : ' Tu rutina actual se queda como rutina normal y tus pesos no cambian.'}',
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(dctx),
+            child: const Text('Entendido'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Retoma la forja guardada donde iba (reemplaza la rutina actual).
+  Future<void> _resumeForge() async {
+    final macro = _macro;
+    if (macro == null || !macro.isPaused) return;
+    if (!_premium.value) {
+      return showPremiumRequired(context, feature: 'El macro ciclo');
+    }
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dctx) => AlertDialog(
+        title: const Text('Volver a la forja'),
+        content: Text(
+          'Retomas Forjado por el Hierro en la ${macro.phaseLabel}, con '
+          '${macro.sessionsThisPhase} de ${macro.sessionsGoalPerPhase} '
+          'sesiones de la fase, y con tu rutina de la forja tal como la '
+          'dejaste.\n\nTu rutina actual (${_routine?.name ?? ''}) se '
+          'reemplaza; tus pesos se mantienen.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dctx, true),
+            child: const Text('Retomar la forja'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      await MacrocycleService().resume(_user!.uid);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo retomar la forja: $e')),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
+    setState(() { _loading = true; _chartKey++; });
+    await _loadRoutine();
   }
 
   Future<void> _openEdit() async {
@@ -295,11 +439,12 @@ class _HomePageState extends State<HomePage> {
       }
 
       if (_routine == null) return;
-      final sessions = await SessionService().getSessionsForUser(_user.uid);
-      final sessionsThisWeek = sessions
-          .where((s) =>
-              IsoWeek.year(s.date) == isoYear &&
-              IsoWeek.weekNumber(s.date) == currentWeek)
+      // Solo las sesiones de esta semana, no todo el historial.
+      final monday = DateTime(now.year, now.month, now.day - (now.weekday - 1));
+      final sessionsThisWeek = (await SessionService().getSessionsInRange(
+              _user.uid,
+              monday,
+              DateTime(monday.year, monday.month, monday.day + 7)))
           .length;
 
       if (sessionsThisWeek >= _routine!.days.length) {
@@ -539,6 +684,8 @@ class _HomePageState extends State<HomePage> {
             tooltip: 'Cerrar sesión',
             onPressed: () async {
               PremiumService.instance.stop();
+              await LocalReminders.cancelAll();
+              await PushTokenService.unregister(_user!.uid);
               await AuthService().signOut();
               if (context.mounted) {
                 Navigator.of(context).pushAndRemoveUntil(
@@ -562,6 +709,8 @@ class _HomePageState extends State<HomePage> {
                   macro: _macro,
                   chartKey: _chartKey,
                   onSessionCompleted: _onSessionCompleted,
+                  onStreakLoaded: _checkForgeHeat,
+                  onResumeForge: _resumeForge,
                   firstDayKey: _kFirstDay,
                   chartTargetKey: _kChart,
                   gymKey: _kGym,
@@ -580,6 +729,8 @@ class _RoutineView extends StatelessWidget {
   final MacrocycleProgress? macro;
   final int chartKey;
   final VoidCallback onSessionCompleted;
+  final void Function(StreakData data) onStreakLoaded;
+  final VoidCallback onResumeForge;
 
   // Elementos que resalta el tutorial.
   final GlobalKey firstDayKey;
@@ -597,6 +748,8 @@ class _RoutineView extends StatelessWidget {
     required this.macro,
     required this.chartKey,
     required this.onSessionCompleted,
+    required this.onStreakLoaded,
+    required this.onResumeForge,
   });
 
   @override
@@ -704,8 +857,10 @@ class _RoutineView extends StatelessWidget {
         ),
         const SizedBox(height: 20),
 
-        if (macro != null && !macro!.completed) ...[
-          _MacrocycleBanner(macro: macro!),
+        if (macro != null && macro!.inProgress) ...[
+          macro!.isPaused
+              ? _PausedForgeBanner(macro: macro!, onResume: onResumeForge)
+              : _MacrocycleBanner(macro: macro!),
           const SizedBox(height: 16),
         ],
 
@@ -727,10 +882,73 @@ class _RoutineView extends StatelessWidget {
             totalRoutineExercises:
                 routine.days.fold(0, (sum, d) => sum + d.exercises.length),
             locked: !premium,
+            forgeAtStake: macro != null && macro!.inProgress
+                ? macro!.atStakeLabel
+                : null,
+            onLoaded: onStreakLoaded,
           ),
         ),
         const SizedBox(height: 16),
       ],
+    );
+  }
+}
+
+/// Forja guardada (el usuario activó otra rutina): avance y botón para
+/// retomarla. Sigue dependiendo de la racha.
+class _PausedForgeBanner extends StatelessWidget {
+  final MacrocycleProgress macro;
+  final VoidCallback onResume;
+
+  const _PausedForgeBanner({required this.macro, required this.onResume});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFC41E3A).withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.local_fire_department,
+              color: Color(0xFFE8A33D), size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Forja guardada',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${macro.name} · Fase ${macro.currentPhaseNumber}/${macro.totalPhases} · '
+                  '${macro.totalSessionsDone} de ${macro.totalSessionsGoal} sesiones. '
+                  'Mantén viva tu racha para no enfriarla.',
+                  style: const TextStyle(color: Colors.white60, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFC41E3A),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+            ),
+            onPressed: onResume,
+            child: const Text('Retomar'),
+          ),
+        ],
+      ),
     );
   }
 }

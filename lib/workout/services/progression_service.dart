@@ -42,6 +42,21 @@ class ProgressionService {
     return result;
   }
 
+  /// Suma de ejercicios con progresión entre [from] y [to) (semana en curso;
+  /// lee solo los eventos de ese rango).
+  Future<int> getExerciseCountInRange(
+      String userId, DateTime from, DateTime to) async {
+    final snap = await db
+        .collection('progressions')
+        .doc(userId)
+        .collection('logs')
+        .where('date', isGreaterThanOrEqualTo: from.toIso8601String())
+        .where('date', isLessThan: to.toIso8601String())
+        .get();
+    return snap.docs.fold<int>(
+        0, (n, d) => n + (d.data()['exerciseCount'] as int? ?? 0));
+  }
+
   // Devuelve true la primera vez que se completa la meta de sesiones en una semana dada.
   Future<bool> checkAndMarkYeahBuddyMilestone(
       String userId, int weekNumber) async {
@@ -61,8 +76,13 @@ class ProgressionService {
   // Devuelve true la primera vez que una semana supera el 60% de ejercicios de la rutina con progresión.
   Future<bool> checkAndMarkSenecaMilestone(
       String userId, int year, int weekNumber, int totalRoutineExercises) async {
-    final byWeek = await getProgressionsByWeek(userId, year);
-    if ((byWeek[weekNumber] ?? 0) <= totalRoutineExercises * 0.3) return false;
+    // Solo los eventos de esa semana, no los del año entero.
+    final first = IsoWeek.firstMonday(year);
+    final from =
+        DateTime(first.year, first.month, first.day + 7 * (weekNumber - 1));
+    final to = DateTime(from.year, from.month, from.day + 7);
+    final count = await getExerciseCountInRange(userId, from, to);
+    if (count <= totalRoutineExercises * 0.3) return false;
 
     final doc = await db.collection('profiles').doc(userId).get();
     final senecaWeeks = (doc.data()?['senecaWeeks'] as List<dynamic>?)

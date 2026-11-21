@@ -44,6 +44,29 @@ class Streak {
 
   static bool _slips(WeekRecord w) => w.done >= 1 && w.done == w.planned - 2;
 
+  /// ¿Se rompió la racha en alguna de [weeks]? (semanas consecutivas en
+  /// orden cronológico; la última es la semana en curso, que nunca la rompe).
+  /// Se evalúa desde cero, sin arrastrar el estado de semanas anteriores: es
+  /// la regla de la forja, que se enfría si la racha se pierde mientras está
+  /// en curso. Una semana en riesgo rompe solo si la siguiente no se completa.
+  static bool brokeIn(List<WeekRecord> weeks) {
+    var pendingRecovery = false;
+    for (final w in weeks.take(weeks.length - 1)) {
+      if (pendingRecovery) {
+        if (!_full(w)) return true;
+        pendingRecovery = false;
+        continue;
+      }
+      if (_keeps(w)) continue;
+      if (_slips(w)) {
+        pendingRecovery = true;
+        continue;
+      }
+      return true;
+    }
+    return false;
+  }
+
   /// [weeks]: semanas consecutivas en orden cronológico; la última es la
   /// semana en curso.
   static StreakResult compute(List<WeekRecord> weeks) {

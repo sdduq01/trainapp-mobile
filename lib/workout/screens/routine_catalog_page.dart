@@ -15,6 +15,7 @@ import '../services/macrocycle_service.dart';
 import '../services/routine_service.dart';
 import '../services/routine_template_service.dart';
 import 'custom_routine_builder_page.dart';
+import 'edit_routine_page.dart';
 
 /// Catálogo de rutinas: Recomendadas, Deportes, Personalizadas.
 ///
@@ -485,8 +486,11 @@ class _MacroTabState extends State<_MacroTab> with AutomaticKeepAliveClientMixin
           '${ForjadoPorElHierro.sessionsPerDay} sesiones de cada uno de los '
           'cuatro días — sin atajos. Al cerrar la última, el año está hecho y '
           'Top Secret se abre.\n\n'
-          'Puedes editar los ejercicios sin salir del macro ciclo. '
-          'Tus pesos registrados se mantienen.',
+          'Puedes personalizarla sin salir del macro ciclo: '
+          '${ForjadoPorElHierro.customizationRule}. '
+          'Tus pesos registrados se mantienen.\n\n'
+          'La forja vive de tu racha: si la pierdes, se enfría y pierdes su '
+          'avance.',
         ),
         actions: [
           TextButton(
@@ -517,6 +521,47 @@ class _MacroTabState extends State<_MacroTab> with AutomaticKeepAliveClientMixin
         setState(() => _activating = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('No se pudo empezar el macro ciclo: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _resume() async {
+    if (!PremiumService.instance.isPremium.value) {
+      return showPremiumRequired(context, feature: 'El macro ciclo');
+    }
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Volver a la forja'),
+        content: const Text(
+          'Retomas la forja donde la dejaste, con tu rutina de la forja tal '
+          'como estaba. Tu rutina actual se reemplaza; tus pesos se mantienen.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Retomar la forja'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _activating = true);
+    try {
+      await MacrocycleService().resume(uid);
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _activating = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo retomar la forja: $e')),
         );
       }
     }
@@ -673,16 +718,43 @@ class _MacroTabState extends State<_MacroTab> with AutomaticKeepAliveClientMixin
                                       fontWeight: FontWeight.bold)),
                             ],
                           )
-                        else if (inProgress)
+                        else if (inProgress) ...[
                           Text(
-                            'En curso · Fase ${macro.currentPhaseNumber}/'
+                            '${macro.isPaused ? 'Guardada' : 'En curso'} · '
+                            'Fase ${macro.currentPhaseNumber}/'
                             '${macro.totalPhases} · Énfasis '
                             '${macro.currentEmphasis} · '
                             '${macro.sessionsThisPhase}/'
                             '${macro.sessionsGoalPerPhase} sesiones',
                             style: theme.textTheme.bodyMedium
                                 ?.copyWith(fontWeight: FontWeight.bold),
-                          )
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            macro.isPaused
+                                ? 'Entrenas con otra rutina y la forja te '
+                                    'espera donde la dejaste. Vive de tu '
+                                    'racha: si la pierdes, se enfría y se '
+                                    'pierde su avance.'
+                                : 'La forja vive de tu racha: si la pierdes, '
+                                    'se enfría y se pierde su avance. Si '
+                                    'activas otra rutina, la forja queda '
+                                    'guardada.',
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey[700]),
+                          ),
+                          if (macro.isPaused) ...[
+                            const SizedBox(height: 10),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: FilledButton.icon(
+                                icon: const Icon(Icons.local_fire_department),
+                                label: const Text('Retomar la forja'),
+                                onPressed: _activating ? null : _resume,
+                              ),
+                            ),
+                          ],
+                        ]
                         else
                           Align(
                             alignment: Alignment.centerRight,
@@ -1021,21 +1093,79 @@ Future<void> _activateRoutine(
   required String name,
   required Routine Function(String uid) build,
 }) async {
-  final confirm = await showDialog<bool>(
-    context: context,
-    builder: (_) => AlertDialog(
-      title: const Text('Activar rutina'),
-      content: Text(
-        '¿Reemplazar tu rutina actual por "$name"?\n\n'
-        'Los pesos de los ejercicios que ya tienes registrados se mantendrán.',
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  MacrocycleProgress? forge;
+  try {
+    forge = uid == null ? null : await MacrocycleService().get(uid);
+  } catch (_) {}
+  if (!context.mounted) return;
+  final leavesForge = forge != null && forge.inProgress && !forge.isPaused;
+  final String? choice;
+  if (forge != null && leavesForge) {
+    final f = forge; // no nulo dentro del builder
+    final atStake = 'queda guardada en la ${f.phaseLabel}, con '
+        '${f.totalSessionsDone} de ${f.totalSessionsGoal} sesiones';
+    choice = await showDialog<String>(
+      context: context,
+      builder: (dctx) => AlertDialog(
+        title: const Text('Salir de la forja'),
+        content: SingleChildScrollView(
+          child: Text(
+            '¿Solo quieres cambiar ejercicios? No necesitas salir: la forja se '
+            'personaliza desde Editar rutina. '
+            '${_capitalize(ForjadoPorElHierro.customizationRule)}.\n\n'
+            'Si activas "$name", sales de la forja: $atStake. Mientras '
+            'mantengas viva tu racha puedes retomarla donde la dejaste; si la '
+            'pierdes, la forja se enfría. Tus pesos registrados se mantienen.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dctx),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dctx, 'edit'),
+            child: const Text('Editar la forja'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dctx, 'leave'),
+            child: const Text('Salir y activar'),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
-        FilledButton(onPressed: () => Navigator.pop(context, true),  child: const Text('Activar')),
-      ],
-    ),
-  );
-  if (confirm != true || !context.mounted) return;
+    );
+  } else {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Activar rutina'),
+        content: Text(
+          '¿Reemplazar tu rutina actual por "$name"?\n\n'
+          'Los pesos de los ejercicios que ya tienes registrados se mantendrán.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+          FilledButton(onPressed: () => Navigator.pop(context, true),  child: const Text('Activar')),
+        ],
+      ),
+    );
+    choice = ok == true ? 'leave' : null;
+  }
+  if (!context.mounted) return;
+
+  if (choice == 'edit') {
+    final routine = uid == null ? null : await RoutineService().getRoutine(uid);
+    if (routine == null || !context.mounted) return;
+    final updated = await Navigator.push<Routine>(
+      context,
+      MaterialPageRoute(builder: (_) => EditRoutinePage(routine: routine)),
+    );
+    // Guardó la forja editada: vuelve al inicio, que recarga la rutina.
+    if (updated != null && context.mounted) Navigator.pop(context, true);
+    return;
+  }
+  if (choice != 'leave') return;
 
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) return;
@@ -1048,11 +1178,12 @@ Future<void> _activateRoutine(
 
   bool saved = false;
   try {
+    // Activar otra rutina guarda la forja en curso (si la hay) para
+    // retomarla después; va antes de reemplazar la rutina para copiarla.
+    await MacrocycleService().pauseIfActive(user.uid);
     final hydrated =
         await RoutineService().hydrateWithPRs(build(user.uid));
     await RoutineService().saveRoutine(hydrated);
-    // Activar una rutina normal abandona el macro ciclo en curso (si lo hay).
-    await MacrocycleService().abandon(user.uid);
     saved = true;
   } catch (e) {
     if (context.mounted) {
@@ -1068,3 +1199,5 @@ Future<void> _activateRoutine(
     Navigator.pop(context, true); // cierra catálogo con result
   }
 }
+
+String _capitalize(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);

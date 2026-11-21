@@ -1,9 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../onboarding/tutorial/coach_marks.dart';
 import '../../onboarding/tutorial/tutorial_service.dart';
 import '../data/macrocycle_forjado.dart';
 import '../data/muscle_groups.dart';
 import '../models/routine.dart';
+import '../services/exercise_pr_service.dart';
 import '../services/routine_service.dart';
 import '../widgets/add_exercise_sheet.dart';
 import '../widgets/exercise_edit_dialog.dart';
@@ -20,11 +22,17 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
   late Routine _routine;
   bool _saving = false;
 
-  /// El macro ciclo bloquea la estructura: siempre 4 días, mínimo
-  /// [ForjadoPorElHierro.minExercisesPerDay] ejercicios por día. El contenido
-  /// de cada día sí es editable sin salir del macro ciclo.
-  bool get _structureLocked =>
-      widget.routine.type == ForjadoPorElHierro.routineType;
+  /// Pesos sugeridos corregidos a mano en esta edición, por ejercicio.
+  final Map<String, ExercisePr> _weightChanges = {};
+
+  /// El macro ciclo fija sus 4 días base (no se quitan) con mínimo
+  /// [ForjadoPorElHierro.minExercisesPerDay] ejercicios cada uno. Sus
+  /// ejercicios se pueden cambiar y se pueden agregar o quitar días extra
+  /// sin salir del macro ciclo.
+  bool get _isForge => widget.routine.type == ForjadoPorElHierro.routineType;
+
+  bool _isBaseForgeDay(RoutineDay day) =>
+      _isForge && !ForjadoPorElHierro.isExtraDay(day.dayNumber);
 
   @override
   void initState() {
@@ -108,14 +116,14 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
   // ── Mutaciones de rutina ─────────────────────────────────
 
   void _removeExercise(int dayIdx, int exIdx) {
-    if (_structureLocked &&
+    if (_isBaseForgeDay(_routine.days[dayIdx]) &&
         _routine.days[dayIdx].exercises.length <=
             ForjadoPorElHierro.minExercisesPerDay) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'El macro ciclo exige mínimo '
-            '${ForjadoPorElHierro.minExercisesPerDay} ejercicios por día.',
+            'Los días base de la forja necesitan mínimo '
+            '${ForjadoPorElHierro.minExercisesPerDay} ejercicios.',
           ),
         ),
       );
@@ -185,6 +193,17 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
     setState(() => _saving = true);
     try {
       await RoutineService().saveRoutine(_routine);
+      final prs = ExercisePrService();
+      for (final e in _weightChanges.entries) {
+        await prs.setWeight(_routine.userId, e.key, e.value.weight, e.value.unit);
+      }
+      final me = FirebaseAuth.instance.currentUser?.uid;
+      if (me != null && me != _routine.userId) {
+        // El atleta recibe un aviso de que su entrenador cambió la rutina.
+        RoutineService()
+            .markEditedByTrainer(_routine.userId, me)
+            .catchError((_) {});
+      }
       if (mounted) Navigator.pop(context, _routine);
     } catch (e) {
       if (mounted) {
@@ -200,8 +219,33 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
 
   Future<void> _showEditDialog(int dayIdx, int exIdx) async {
     final ex = _routine.days[dayIdx].exercises[exIdx];
-    final updated = await showExerciseEditDialog(context, ex);
-    if (updated != null) _updateExercise(dayIdx, exIdx, updated);
+    final updated =
+        await showExerciseEditDialog(context, ex, editWeight: true);
+    if (updated == null) return;
+    _updateExercise(dayIdx, exIdx, updated);
+    if (updated.currentWeight != ex.currentWeight ||
+        updated.weightUnit != ex.weightUnit) {
+      _applyWeightEverywhere(updated);
+    }
+  }
+
+  /// Un peso corregido vale para el ejercicio en todos los días de la rutina
+  /// (y, al guardar, en su peso de referencia, que heredan las rutinas que se
+  /// activen después). Las sesiones registradas no se tocan.
+  void _applyWeightEverywhere(RoutineExercise updated) {
+    final days = _copyDays()
+        .map((d) => _copyDay(d,
+            exercises: d.exercises
+                .map((e) => e.exerciseId == updated.exerciseId
+                    ? e.copyWith(
+                        currentWeight: updated.currentWeight,
+                        weightUnit: updated.weightUnit)
+                    : e)
+                .toList()))
+        .toList();
+    _weightChanges[updated.exerciseId] =
+        ExercisePr(weight: updated.currentWeight, unit: updated.weightUnit);
+    setState(() => _routine = _copyRoutine(days));
   }
 
   // ── Diálogos de día ──────────────────────────────────────
@@ -279,13 +323,11 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(12),
-        itemCount: (_structureLocked ? 1 : 0) +
-            _routine.days.length +
-            (_structureLocked ? 0 : 1),
+        itemCount: (_isForge ? 1 : 0) + _routine.days.length + 1,
         itemBuilder: (_, i) {
-          if (_structureLocked && i == 0) return _macrocycleNotice();
-          final dayIdx = _structureLocked ? i - 1 : i;
-          if (!_structureLocked && dayIdx == _routine.days.length) {
+          if (_isForge && i == 0) return _macrocycleNotice();
+          final dayIdx = _isForge ? i - 1 : i;
+          if (dayIdx == _routine.days.length) {
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: OutlinedButton.icon(
@@ -312,12 +354,25 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
                   child: Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          'Día ${day.dayNumber} · ${day.name}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Día ${day.dayNumber} · ${day.name}',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            if (_isForge &&
+                                ForjadoPorElHierro.isExtraDay(day.dayNumber))
+                              Text(
+                                'Día extra · cuenta para tu racha, no para '
+                                'la fase',
+                                style: TextStyle(
+                                    fontSize: 11, color: Colors.grey[600]),
+                              ),
+                          ],
                         ),
                       ),
                       TextButton.icon(
@@ -326,7 +381,7 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
                         icon: const Icon(Icons.add, size: 18),
                         label: const Text('Agregar'),
                       ),
-                      if (!_structureLocked)
+                      if (!_isBaseForgeDay(day))
                         IconButton(
                           key: first ? _kTutDeleteDay : null,
                           icon: const Icon(
@@ -405,9 +460,13 @@ class _EditRoutinePageState extends State<EditRoutinePage> {
           borderRadius: BorderRadius.circular(10),
         ),
         child: Text(
-          '🔥 Macro ciclo · 4 días fijos, mínimo '
-          '${ForjadoPorElHierro.minExercisesPerDay} ejercicios por día. '
-          'El Día 4 se regenera al cambiar de fase.',
+          '🔥 Forja · Los días 1 a ${ForjadoPorElHierro.trackedDays.length} '
+          'son la base: no se quitan y llevan mínimo '
+          '${ForjadoPorElHierro.minExercisesPerDay} ejercicios cada uno, pero '
+          'puedes cambiar sus ejercicios y seguir contando para la forja. '
+          'Puedes agregar días extra: cuentan para tu racha, no para cerrar '
+          'la fase. El Día ${ForjadoPorElHierro.trackedDays.length} se '
+          'regenera al cambiar de fase.',
           style: const TextStyle(color: Colors.white70, fontSize: 12),
         ),
       );

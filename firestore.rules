@@ -90,6 +90,30 @@ service cloud.firestore {
       allow read: if isCoachOf(uid);
     }
 
+    // Resumen semanal de entrenamiento: lo escribe solo la Cloud Function
+    // `syncSessionStats` (functions/stats.js); lo lee el dueño y su entrenador.
+    match /session_stats/{uid} {
+      allow read: if request.auth != null &&
+        (request.auth.uid == uid || isCoachOf(uid));
+      allow write: if false;
+    }
+
+    // Tokens FCM de cada dispositivo (doc id = token): solo el dueño. Las
+    // Cloud Functions los leen para mandar los push (functions/notify.js).
+    match /push_tokens/{uid}/tokens/{token} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['token', 'platform', 'updatedAt']) &&
+        request.resource.data.token == token &&
+        request.resource.data.platform is string;
+    }
+
+    // Estado de envío de notificaciones (p. ej. límite de avisos): solo el
+    // servidor.
+    match /notification_state/{uid} {
+      allow read, write: if false;
+    }
+
     // Rutina activa: el propio usuario, o su entrenador (personal o del gimnasio)
     match /routines/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
