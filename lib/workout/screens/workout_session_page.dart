@@ -91,6 +91,10 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
   // Semana de la rutina (1-indexada). Calculada a partir de routine.createdAt.
   int _weekIndex = 1;
 
+  // Días de la rutina activa: se guardan en la sesión como el objetivo de la
+  // semana para la racha.
+  int? _plannedDays;
+
   late TextEditingController _weightCtrl;
   late TextEditingController _repsCtrl;
 
@@ -451,6 +455,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
       }
       if (routine != null) {
         _weekIndex = ProgressionLogic.weekIndexFor(routine);
+        _plannedDays = routine.days.length;
       }
       // Re-prefilar el set activo con el target dinámico (puede haber
       // cambiado tras conocer cadencia/semana).
@@ -930,6 +935,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage>
       completed: true,
       recordedBy:
           _isTrainerSession ? FirebaseAuth.instance.currentUser!.uid : null,
+      plannedDays: _plannedDays,
     );
 
     List<(String, double, double, String)> progressed = [];

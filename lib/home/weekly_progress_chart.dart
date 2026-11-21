@@ -1,12 +1,15 @@
 import 'dart:ui' show ImageFilter;
 
+import 'package:cloud_firestore/cloud_firestore.dart' show SetOptions;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../core/firebase/firestore_instance.dart';
 import '../core/utils/iso_week.dart';
 import '../premium/premium_widgets.dart';
 import '../workout/models/workout_session.dart';
 import '../workout/services/progression_service.dart';
 import '../workout/services/session_service.dart';
+import 'streak.dart';
 
 class WeeklyProgressChart extends StatefulWidget {
   final int plannedDaysPerWeek;
@@ -33,6 +36,8 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
 
   List<_WeekStat>? _stats;
   int _streak = 0;
+  // Días que faltan esta semana para salvar la racha en riesgo (0 = no lo está).
+  int _daysToSave = 0;
 
   static const double _barMaxHeight = 72;
   static const double _barWidth = 20;
@@ -54,6 +59,25 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
   static int _weekNumber(DateTime date) => IsoWeek.weekNumber(date);
 
   static int _isoYear(DateTime date) => IsoWeek.year(date);
+
+  static DateTime _mondayOf(DateTime date) =>
+      DateTime(date.year, date.month, date.day - (date.weekday - 1));
+
+  /// Objetivo de las sesiones anteriores a `plannedDays`: los días de la
+  /// rutina activa la primera vez que se calcula, guardado en el perfil para
+  /// que un cambio de rutina posterior no reescriba esas semanas.
+  Future<int> _legacyGoal(List<WorkoutSession> sessions, int planned) async {
+    if (sessions.every((s) => s.plannedDays != null)) return planned;
+    final ref = db.collection('profiles').doc(_userId);
+    try {
+      final saved = (await ref.get()).data()?['streakLegacyGoal'];
+      if (saved is int) return saved;
+      await ref.set({'streakLegacyGoal': planned}, SetOptions(merge: true));
+    } catch (_) {
+      // Sin red: se usa la rutina actual y se guarda en otra ocasión.
+    }
+    return planned;
+  }
 
   /// Datos de ejemplo para la vista bloqueada: no consulta nada del usuario.
   static List<_WeekStat> _demoStats(int currentWeek, int planned) {
@@ -99,42 +123,55 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
     } catch (_) {
       // Colección aún sin reglas o sin datos — el chart carga igual sin progresos
     }
+    final legacyGoal = await _legacyGoal(sessions, planned);
 
-    // Agrupar sesiones por semana (solo año actual)
-    final Map<int, int> byWeek = {};
+    // Semanas desde la primera sesión hasta la actual (cruzando años, para
+    // que la racha no se reinicie en enero), con el objetivo que tenía la
+    // rutina en cada una: el de su primera sesión que lo guarde; si no
+    // tiene, el de la semana anterior. La semana en curso sin sesiones con
+    // objetivo usa la rutina actual.
+    final thisMonday = _mondayOf(now);
+    final byMonday = <DateTime, List<WorkoutSession>>{};
     for (final s in sessions) {
-      if (_isoYear(s.date) == currentYear) {
-        final w = _weekNumber(s.date);
-        byWeek[w] = (byWeek[w] ?? 0) + 1;
-      }
+      byMonday.putIfAbsent(_mondayOf(s.date), () => []).add(s);
     }
+    var monday = byMonday.keys.fold<DateTime>(
+        thisMonday, (min, m) => m.isBefore(min) ? m : min);
+    final records = <DateTime, WeekRecord>{};
+    var goal = legacyGoal;
+    while (!monday.isAfter(thisMonday)) {
+      final week = byMonday[monday] ?? const <WorkoutSession>[];
+      final stamped = week.where((s) => s.plannedDays != null).toList()
+        ..sort((a, b) => a.date.compareTo(b.date));
+      if (stamped.isNotEmpty) {
+        goal = stamped.first.plannedDays!;
+      } else if (monday == thisMonday) {
+        goal = planned;
+      }
+      records[monday] = WeekRecord(done: week.length, planned: goal);
+      monday = DateTime(monday.year, monday.month, monday.day + 7);
+    }
+    final streak = Streak.compute(records.values.toList());
 
-    final stats = List.generate(
-      currentWeek,
-      (i) => _WeekStat(
+    // La gráfica muestra las semanas del año en curso.
+    final firstMonday = IsoWeek.firstMonday(currentYear);
+    final stats = List.generate(currentWeek, (i) {
+      final m = DateTime(
+          firstMonday.year, firstMonday.month, firstMonday.day + 7 * i);
+      final r = records[m];
+      return _WeekStat(
         week: i + 1,
-        done: byWeek[i + 1] ?? 0,
-        planned: planned,
+        done: r?.done ?? 0,
+        planned: r?.planned ?? legacyGoal,
         progressions: progressionsByWeek[i + 1] ?? 0,
-      ),
-    );
-
-    // Racha: semanas completas consecutivas hacia atrás
-    // La semana actual incompleta no corta la racha
-    int streak = 0;
-    for (int i = stats.length - 1; i >= 0; i--) {
-      final s = stats[i];
-      if (s.done >= s.planned) {
-        streak++;
-      } else if (s.week != currentWeek) {
-        break;
-      }
-    }
+      );
+    });
 
     if (!mounted) return;
     setState(() {
       _stats = stats;
-      _streak = streak;
+      _streak = streak.weeks;
+      _daysToSave = streak.atRisk ? streak.daysToSave : 0;
     });
 
     _scrollToCurrent(currentWeek);
@@ -214,32 +251,84 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
     );
   }
 
-  Widget _buildStreakHeader() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        const Text('🔥', style: TextStyle(fontSize: 26)),
-        const SizedBox(width: 10),
-        RichText(
-          text: TextSpan(
-            style: DefaultTextStyle.of(context).style,
-            children: [
-              TextSpan(
-                text: '$_streak ',
-                style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-              ),
-              TextSpan(
-                text: _streak == 1 ? 'semana' : 'semanas',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-              TextSpan(
-                text: ' de racha',
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-              ),
-            ],
-          ),
+  void _showStreakRules() {
+    showDialog<void>(
+      context: context,
+      builder: (dctx) => AlertDialog(
+        title: const Text('¿Cómo funciona la racha?'),
+        content: const Text(
+          'Cada semana cuenta para tu racha si entrenas al menos los días de '
+          'tu rutina menos uno.\n\n'
+          'Si una semana te faltan dos días, la racha queda en riesgo: la '
+          'salvas cumpliendo todos los días de tu rutina la semana '
+          'siguiente.\n\n'
+          'El objetivo de cada semana es el de la rutina que tenías en ese '
+          'momento; cambiar de rutina no modifica las semanas pasadas.',
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dctx),
+            child: const Text('Entendido'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStreakHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const Text('🔥', style: TextStyle(fontSize: 26)),
+            const SizedBox(width: 10),
+            _buildStreakCount(),
+            IconButton(
+              icon: Icon(Icons.info_outline, size: 18, color: Colors.grey[500]),
+              tooltip: '¿Cómo funciona la racha?',
+              visualDensity: VisualDensity.compact,
+              onPressed: widget.locked ? null : _showStreakRules,
+            ),
+          ],
+        ),
+        if (_daysToSave > 0)
+          Text(
+            _daysToSave == 1
+                ? 'Tu racha está en riesgo: entrena 1 día más esta semana '
+                    'para salvarla.'
+                : 'Tu racha está en riesgo: entrena $_daysToSave días más '
+                    'esta semana para salvarla.',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.orange[800],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
       ],
+    );
+  }
+
+  Widget _buildStreakCount() {
+    return RichText(
+      text: TextSpan(
+        style: DefaultTextStyle.of(context).style,
+        children: [
+          TextSpan(
+            text: '$_streak ',
+            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+          ),
+          TextSpan(
+            text: _streak == 1 ? 'semana' : 'semanas',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          TextSpan(
+            text: ' de racha',
+            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+          ),
+        ],
+      ),
     );
   }
 

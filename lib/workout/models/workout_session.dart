@@ -68,6 +68,9 @@ class WorkoutSession {
   // uid del entrenador si él registró la sesión desde su equipo; null si la
   // registró el propio atleta.
   final String? recordedBy;
+  // Días de la rutina activa al registrar la sesión: el objetivo de esa
+  // semana para la racha. null en sesiones anteriores a este campo.
+  final int? plannedDays;
 
   WorkoutSession({
     required this.id,
@@ -79,6 +82,7 @@ class WorkoutSession {
     required this.exercises,
     required this.completed,
     this.recordedBy,
+    this.plannedDays,
   });
 
   Map<String, dynamic> toMap() => {
@@ -90,6 +94,7 @@ class WorkoutSession {
         'exercises': exercises.map((e) => e.toMap()).toList(),
         'completed': completed,
         if (recordedBy != null) 'recordedBy': recordedBy,
+        if (plannedDays != null) 'plannedDays': plannedDays,
       };
 
   factory WorkoutSession.fromMap(String id, Map<String, dynamic> m) =>
@@ -105,5 +110,6 @@ class WorkoutSession {
             .toList(),
         completed: m['completed'] as bool? ?? false,
         recordedBy: m['recordedBy'] as String?,
+        plannedDays: m['plannedDays'] as int?,
       );
 }
